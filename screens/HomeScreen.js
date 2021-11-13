@@ -34,63 +34,7 @@ const Home = ({ navigation }) => {
   }
 
   const navigator = useNavigation()
-  return (
-    <SafeAreaView style={tw("")}>
-      <TouchableOpacity onPress={() => navigator.navigate("Profile")}>
-        <Text>Go to Profile page</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={logOut}>
-        <Text>Log out</Text>
-      </TouchableOpacity>
-      <View style={tw("mt-24 px-4")}>
-        <Text>Search for an image</Text>
-        <View style={tw("flex flex-row h-10 rounded-md overflow-hidden border")}>
-          <Controller
-            control={control}
-            rules={{
-              required: true,
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={tw("flex-grow px-3 ")}
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-                placeholder='Perfume Name(s)'
-              />
-            )}
-            name='searchTerm'
-          />
-          <TouchableOpacity
-            style={tw(
-              "flex flex-row justify-center text-center items-center px-2 bg-blue-800"
-            )}
-            onPress={handleSubmit(onSubmit)}>
-            <AntDesign name='search1' style={tw("px-5")} size={22} color='white' />
-          </TouchableOpacity>
-        </View>
-      </View>
-      {data.length > 0 && (
-        <View style={tw("px-2")}>
-          <Text style={tw("mt-12 text-center")}>
-            Click on the image to add to your collection
-          </Text>
-          <FlatList
-            horizontal={true}
-            showsHorizontalScrollIndicator={true}
-            data={data}
-            renderItem={({ item, index }) => (
-              <Image
-                source={{ uri: item }}
-                key={item}
-                style={tw("h-36 w-36 mt-3 mx-1")}
-              />
-            )}></FlatList>
-        </View>
-      )}
-      {error && <Text style={tw("mt-12 text-center")}>There were no results</Text>}
-    </SafeAreaView>
-  )
+  return <SafeAreaView style={tw("h-full bg-blue-50")}></SafeAreaView>
 }
 
 export default Home
