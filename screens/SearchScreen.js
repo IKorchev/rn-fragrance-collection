@@ -1,17 +1,21 @@
 import { useNavigation } from "@react-navigation/core"
 import React, { useEffect, useState } from "react"
 import { Text, View, TouchableOpacity, Button, FlatList, Image } from "react-native"
-import { TextInput } from "react-native-gesture-handler"
+import { TextInput, TouchableHighlight } from "react-native-gesture-handler"
 import { useForm, Controller } from "react-hook-form"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { AntDesign } from "@expo/vector-icons"
 import { fetchData } from "../lib/utils/fetchData"
 import tw from "tailwind-rn"
-import useAuth from "../lib/useAuth"
+import Modal from "react-native-modal"
+import ModalContent from "../components/ModalContent"
 
 const SearchScreen = () => {
   const [data, setData] = useState([])
   const [error, setError] = useState(false)
+  const [openModal, setOpenModal] = useState(true)
+  const [urlToAdd, setUrlToAdd] = useState("")
+  const [nameToAdd, setNameToAdd] = useState("")
   const {
     control,
     handleSubmit,
@@ -31,15 +35,21 @@ const SearchScreen = () => {
       setError(true)
     }
   }
+  const toggleModal = () => setOpenModal(!openModal)
 
-  const navigator = useNavigation()
   return (
     <SafeAreaView style={tw("h-full bg-blue-50")}>
+      <View>
+        <Modal
+          isVisible={openModal}
+          backdropColor='rgba(0,0,0,0.3)'
+          onBackdropPress={toggleModal}>
+          <ModalContent toggleModal={toggleModal} imageUrl={urlToAdd} />
+        </Modal>
+      </View>
       <Text style={tw("mb-2 font-bold text-3xl px-5")}>Find fragrances</Text>
-
       <View style={tw("mt-12 px-4")}>
         <Text style={tw("mb-2 font-bold")}>Search image</Text>
-
         <View style={tw("flex flex-row h-10 rounded-md overflow-hidden border")}>
           <Controller
             control={control}
@@ -52,7 +62,7 @@ const SearchScreen = () => {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
-                placeholder='Perfume Name(s)'
+                placeholder='Perfume Name'
               />
             )}
             name='searchTerm'
@@ -77,11 +87,9 @@ const SearchScreen = () => {
             showsHorizontalScrollIndicator={true}
             data={data}
             renderItem={({ item, index }) => (
-              <Image
-                source={{ uri: item }}
-                key={item}
-                style={tw("h-36 w-36 mt-3 mx-1")}
-              />
+              <TouchableHighlight key={item} onPress={toggleModal}>
+                <Image source={{ uri: item }} style={tw("h-36 w-36 mt-3 mx-1")} />
+              </TouchableHighlight>
             )}></FlatList>
         </View>
       )}
