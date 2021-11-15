@@ -1,40 +1,39 @@
 import { useNavigation } from "@react-navigation/core"
-import React, { useEffect, useState } from "react"
-import { Text, View, TouchableOpacity, Button, FlatList, Image } from "react-native"
-import { TextInput } from "react-native-gesture-handler"
-import { useForm, Controller } from "react-hook-form"
-import { SafeAreaView } from "react-native-safe-area-context"
-import { AntDesign } from "@expo/vector-icons"
-import { fetchData } from "../lib/utils/fetchData"
+import React, { useEffect, useRef, useState } from "react"
+import { View, FlatList, Button } from "react-native"
 import tw from "tailwind-rn"
+import ReelImage from "../components/ReelImage"
 import useAuth from "../lib/useAuth"
+import { collection, onSnapshot } from "@firebase/firestore"
+import List from "../components/List"
+const Home = () => {
+  const { db, user } = useAuth()
 
-const Home = ({ navigation }) => {
-  const { logOut } = useAuth()
-  const [data, setData] = useState([])
-  const [error, setError] = useState(false)
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      searchTerm: "",
-    },
-  })
+  const [images, setImages] = useState([])
+  const colRef = collection(db, "users", user.uid, "perfumes")
 
-  const onSubmit = async ({ searchTerm }) => {
-    const res = await fetchData(searchTerm)
-    if (res.length) {
-      setData(res)
-      setError(false)
-    } else {
-      setError(true)
-    }
-  }
+  useEffect(
+    () =>
+      // const colRef =
+      user &&
+      onSnapshot(colRef, (snapshot) => {
+        const arr = snapshot.docs.map((el) => {
+          const { image_url, name } = el.data()
+          return { image_url, name }
+        })
+        setImages(arr)
+      }),
+    [user]
+  )
 
-  const navigator = useNavigation()
-  return <SafeAreaView style={tw("h-full bg-blue-50")}></SafeAreaView>
+  return (
+    <View style={tw("py-44 bg-blue-100 flex items-center")}>
+      {images.length > 0 && <List images={images} />}
+
+      {/* <TouchableOpacity
+        style={tw("bg-red-100 h-2 w-full absolute top-1/2 left-0")}></TouchableOpacity> */}
+    </View>
+  )
 }
 
 export default Home

@@ -13,7 +13,7 @@ import ModalContent from "../components/ModalContent"
 const SearchScreen = () => {
   const [data, setData] = useState([])
   const [error, setError] = useState(false)
-  const [openModal, setOpenModal] = useState(true)
+  const [openModal, setOpenModal] = useState(false)
   const [urlToAdd, setUrlToAdd] = useState("")
   const [nameToAdd, setNameToAdd] = useState("")
   const {
@@ -49,7 +49,6 @@ const SearchScreen = () => {
       </View>
       <Text style={tw("mb-2 font-bold text-3xl px-5")}>Find fragrances</Text>
       <View style={tw("mt-12 px-4")}>
-        <Text style={tw("mb-2 font-bold")}>Search image</Text>
         <View style={tw("flex flex-row h-10 rounded-md overflow-hidden border")}>
           <Controller
             control={control}
@@ -69,7 +68,7 @@ const SearchScreen = () => {
           />
           <TouchableOpacity
             style={tw(
-              "flex flex-row justify-center text-center items-center px-2 bg-red-400"
+              "flex flex-row justify-center text-center items-center px-2 bg-blue-400"
             )}
             onPress={handleSubmit(onSubmit)}>
             <AntDesign name='search1' style={tw("px-5")} size={22} color='white' />
@@ -87,9 +86,14 @@ const SearchScreen = () => {
             showsHorizontalScrollIndicator={true}
             data={data}
             renderItem={({ item, index }) => (
-              <TouchableHighlight key={item} onPress={toggleModal}>
+              <TouchableOpacity
+                key={item}
+                onPress={() => {
+                  setUrlToAdd(item)
+                  toggleModal()
+                }}>
                 <Image source={{ uri: item }} style={tw("h-36 w-36 mt-3 mx-1")} />
-              </TouchableHighlight>
+              </TouchableOpacity>
             )}></FlatList>
         </View>
       )}
