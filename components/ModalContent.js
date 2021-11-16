@@ -8,16 +8,22 @@ import useAuth from "../lib/useAuth"
 const ModalContent = ({ imageUrl, toggleModal }) => {
   const { user } = useAuth()
   const [text, onChangeText] = useState("")
-  const [status, setStatus] = useState(null)
 
   const addFragranceToCollection = async () => {
-    setStatus(null)
-    const data = {
-      image_url: imageUrl,
-      name: text,
-      times_worn: 0,
+    if (text.length < 3) {
+      Alert.alert("Ooops", "The name must be 3 or more characters!")
+      return
+    }
+    if (text.length > 20) {
+      Alert.alert("Ooops", "The name must be less than 20 characters!")
+      return
     }
     try {
+      const data = {
+        image_url: imageUrl,
+        name: text,
+        times_worn: 0,
+      }
       const colRef = collection(db, "users", user.uid, "perfumes")
       const response = await addDoc(colRef, data)
       const docRef = doc(colRef, response.id)
@@ -25,14 +31,15 @@ const ModalContent = ({ imageUrl, toggleModal }) => {
         ...data,
         id: response.id,
       })
-      Alert.alert("OK", "Item Added")
+      Alert.alert("Item added", `${data.name} has been added to your collection! `)
     } catch (error) {
-      Alert.alert("OK", "Something went wrong, please try again later.")
+      Alert.alert("Item was not added", "Something went wrong, please try again later.")
+      console.log(error)
     }
   }
 
   return (
-    <View style={tw("w-full bg-white rounded-lg p-4 relative")}>
+    <View style={tw("bg-white rounded-lg p-4 relative")}>
       <AntDesign
         style={tw("absolute top-3 right-3")}
         name='close'
@@ -55,17 +62,15 @@ const ModalContent = ({ imageUrl, toggleModal }) => {
         />
         <TextInput
           placeholder='Name'
-          style={tw("border p-2 w-5/6 rounded-lg text-lg")}
+          style={tw("border p-2 mt-5 w-5/6 rounded-lg text-lg")}
           value={text}
           onChangeText={onChangeText}
         />
-        <View>
-          <TouchableOpacity onPress={addFragranceToCollection}>
-            <View style={tw("bg-green-300  p-3 rounded-lg mt-2")}>
-              <Text style={tw("text-center")}>Add to collection</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={addFragranceToCollection}>
+          <View style={tw("bg-green-300  p-3 rounded-lg mt-5")}>
+            <Text style={tw("text-center")}>Add to collection</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   )

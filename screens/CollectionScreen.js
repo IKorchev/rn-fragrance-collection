@@ -1,9 +1,11 @@
-import { doc, onSnapshot, collection } from "@firebase/firestore"
+import { onSnapshot, collection } from "@firebase/firestore"
 import React, { useEffect, useState } from "react"
-import { View, Text, FlatList, StyleSheet } from "react-native"
+import Search from "../components/Search"
+import { View, Text, FlatList,} from "react-native"
 import PerfumeCard from "../components/PerfumeCard"
 import useAuth from "../lib/useAuth"
 import tw from "tailwind-rn"
+
 const CollectionScreen = () => {
   const { user, db } = useAuth()
   const [userCollection, setUserCollection] = useState([])
@@ -18,27 +20,26 @@ const CollectionScreen = () => {
     [user]
   )
   return (
-    <View style={[tw("bg-blue-100 h-full overflow-hidden")]}>
-      <Text style={tw("text-3xl text-center my-4")}>Your collection</Text>
-      <View>
+    <View style={[tw("flex-1  bg-gray-800")]}>
+      <View style={tw("px-5 flex-1")}>
+        <Search />
+        <Text style={tw("text-white text-lg my-4 text-center")}>
+          Fragrances in your collection
+        </Text>
         {userCollection && userCollection.length > 0 ? (
           <FlatList
-            style={styles.container}
+            style={tw(" flex-1 ")}
             data={userCollection}
             renderItem={({ item, index }) => <PerfumeCard object={item} />}
           />
         ) : (
-          <Text style={tw("text-xl")}>You have nothing in your collection</Text>
+          <Text style={tw("text-xl text-center")}>
+            You have nothing in your collection
+          </Text>
         )}
       </View>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 100,
-  },
-})
 
 export default CollectionScreen

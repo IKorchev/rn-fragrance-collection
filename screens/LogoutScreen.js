@@ -1,5 +1,5 @@
 import * as React from "react"
-import { View } from "react-native"
+import { View, Alert } from "react-native"
 import { auth } from "../lib/firebase"
 import useAuth from "../lib/useAuth"
 
@@ -7,10 +7,21 @@ export default function LogoutScreen({ navigation }) {
   const { logOut } = useAuth()
   React.useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
-      logOut(auth)
+      return Alert.alert("Log out", "Are you sure?", [
+        {
+          text: "LOG OUT",
+          onPress: () => logOut(auth),
+        },
+        {
+          text: "GO BACK",
+          onPress: () => {
+            navigation.goBack()
+            console.log("Keep me in")
+          },
+        },
+      ])
     })
 
-    // Return the function to unsubscribe from the event so it gets removed on unmount
     return unsubscribe
   }, [navigation])
 
