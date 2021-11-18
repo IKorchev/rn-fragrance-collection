@@ -13,34 +13,33 @@ const List = ({ images }) => {
   const flatListRef = useRef()
   const { incrementWear } = useAuth()
   const diceContainerRef = useRef()
-  // const chosenFrag = useRef(null)
   const [dice, setDice] = useState("dice-6")
-  const [prevNum, setPrevNum] = useState(null)
+  const [prevIndex, setPrevIndex] = useState(null)
   const [chosenFrag, setChosenFrag] = useState()
 
-  const timer = (ms) => new Promise((res) => setTimeout(res, ms))
   const rollDice = async () => {
+    const timer = (ms) => new Promise((res) => setTimeout(res, ms))
     diceContainerRef.current.bounceIn()
-    for (let i = 1; i < 6; i++) {
-      await timer(20)
+    for (let i = 1; i < 8; i++) {
+      await timer(11)
       setDice(`dice-${getRandomNumber(6)}`)
     }
   }
   const pickRandomFragrance = async () => {
     const index = getRandomFragranceIndex()
-    setChosenFrag(images[getRandomFragranceIndex()])
+    setChosenFrag(images[index])
     await flatListRef.current.scrollToIndex({
       animated: true,
       index: index,
       viewPosition: 0.5,
     })
+
     rollDice()
   }
   const getRandomFragranceIndex = () => {
     const randomIndex = Math.floor(Math.random() * images.length)
-    setPrevNum(randomIndex)
-    if (images.length > 1 && prevNum === randomIndex) {
-      console.log("It was the same, rerolling")
+    setPrevIndex(randomIndex)
+    if (images.length > 1 && prevIndex === randomIndex) {
       getRandomFragranceIndex()
     }
     return randomIndex
@@ -50,8 +49,12 @@ const List = ({ images }) => {
       const fragIndex = getRandomFragranceIndex()
       setChosenFrag(images[fragIndex])
       setStartingIndex(fragIndex)
+      setPrevIndex(fragIndex)
     }
   }, [])
+  useEffect(() => {
+    console.log(chosenFrag)
+  }, [chosenFrag])
   return (
     <View style={tw("h-full w-full items-center py-5")}>
       <Text style={tw("text-white text-3xl mb-3 font-bold")}>Today's pick</Text>

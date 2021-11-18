@@ -11,17 +11,15 @@ import {
 } from "react-native"
 import { AntDesign } from "@expo/vector-icons"
 import { fetchData } from "../lib/utils/fetchData"
-import tw, { getColor } from "tailwind-rn"
+import tw from "tailwind-rn"
 import Modal from "react-native-modal"
-import { addDoc, collection, doc, updateDoc } from "@firebase/firestore"
 import useAuth from "../lib/useAuth"
 
-const SearchScreen = () => {
+const SearchModal = ({ isOpen, toggleModal }) => {
   const { user, addFragranceToCollection } = useAuth()
   const [clicked, setClicked] = useState(false)
   const [data, setData] = useState([])
   const [error, setError] = useState(false)
-  const [openModal, setOpenModal] = useState(false)
   const [fragranceUrl, setFragranceUrl] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [fragranceName, setFragranceName] = useState("")
@@ -34,23 +32,27 @@ const SearchScreen = () => {
     setData(res)
     setError(false)
   }
-  const toggleModal = () => setOpenModal(!openModal)
 
   return (
     <View style={tw("relative")}>
       <Modal
-        animationInTiming={700}
-        animationOutTiming={500}
         animationIn='fadeIn'
         animationOut='fadeOut'
-        isVisible={openModal}
+        isVisible={isOpen}
         coverScreen={true}
-        backdropColor='rgba(0,0,0,0.9)'
-        onBackdropPress={toggleModal}>
-        <View style={tw("my-2 bg-gray-900 justify-center p-3 rounded-lg")}>
+        onBackdropPress={() => toggleModal(false)}
+        backdropColor='rgba(0,0,0,0.9)'>
+        <View style={tw("my-2 bg-gray-900 justify-center p-7 rounded-lg")}>
           <Text style={tw("my-2 font-bold text-2xl text-center text-white")}>
             Find fragrances
           </Text>
+          <TouchableOpacity
+            style={tw(
+              "absolute top-2 right-2 flex justify-center text-center items-center px-2"
+            )}
+            onPress={() => toggleModal(false)}>
+            <AntDesign name='close' size={28} color='white' />
+          </TouchableOpacity>
           <View
             style={tw(
               `flex flex-row h-12 rounded-lg overflow-hidden border ${
@@ -58,7 +60,7 @@ const SearchScreen = () => {
               }`
             )}>
             <TextInput
-              style={tw("flex-1 px-3 bg-white ")}
+              style={tw("text-black flex-1 px-3 bg-white ")}
               onChangeText={setSearchTerm}
               placeholder='Perfume name'
             />
@@ -95,7 +97,7 @@ const SearchScreen = () => {
               />
               <TextInput
                 placeholder='Name'
-                style={tw("bg-white text-white border p-2 mt-5  rounded-lg text-lg")}
+                style={tw("bg-white text-black border p-2 mt-5  rounded-lg text-lg")}
                 onChangeText={setFragranceName}
               />
               <TouchableOpacity
@@ -118,24 +120,8 @@ const SearchScreen = () => {
           )}
         </View>
       </Modal>
-      <TouchableOpacity
-        onPress={toggleModal}
-        style={[
-          style.addButton,
-          tw(" bg-green-400 w-12 h-12 items-center justify-center rounded-full"),
-        ]}>
-        <AntDesign name='plus' size={30} color={getColor("white")} />
-      </TouchableOpacity>
     </View>
   )
 }
 
-const style = StyleSheet.create({
-  addButton: {
-    position: "absolute",
-    bottom: 121221,
-    right: 0,
-  },
-})
-
-export default SearchScreen
+export default SearchModal

@@ -3,10 +3,10 @@ import { View, Text, Image } from "react-native"
 import tw from "tailwind-rn"
 const ReelImage = ({ object }) => {
   return (
-    <View style={tw("flex items-center mb-2")}>
+    <View style={tw("flex items-center ")}>
       <Text
         numberOfLines={1}
-        style={tw("px-2 text-3xl text-center font-bold py-2 text-green-100 w-60")}>
+        style={tw("px-2 text-3xl text-center font-bold py-2 text-red-600 w-60")}>
         {object.item.name}
       </Text>
       <Image

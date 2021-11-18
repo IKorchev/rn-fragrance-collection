@@ -26,7 +26,7 @@ const PerfumeCard = ({ object }) => {
         <Text numberOfLines={1} style={tw(" text-white text-lg flex-wrap font-bold")}>
           {object.name}
         </Text>
-        <Text style={tw(" text-white mt-4 flex-wrap font-bold")}>
+        <Text style={tw(" text-white mt-4 flex-wrap font-bold text-gray-300")}>
           {object.times_worn === 0
             ? "Never worn"
             : object.times_worn === 1
