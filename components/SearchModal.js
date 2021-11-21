@@ -1,5 +1,13 @@
 import React, { useState } from "react"
-import { Text, View, TouchableOpacity, FlatList, Image, TextInput } from "react-native"
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  FlatList,
+  Image,
+  TextInput,
+  KeyboardAvoidingView,
+} from "react-native"
 import { AntDesign } from "@expo/vector-icons"
 import { fetchData } from "../lib/utils/fetchData"
 import tw from "tailwind-rn"
@@ -9,8 +17,8 @@ import useTheme from "../Contexts/ThemeContext"
 
 const SearchModal = ({ isOpen, toggleModal }) => {
   const { addFragranceToCollection } = useAuth()
-  const [clicked, setClicked] = useState(false)
   const [data, setData] = useState([])
+  const [error, setError] = useState(false)
   const [fragranceUrl, setFragranceUrl] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [fragranceName, setFragranceName] = useState("")
@@ -26,7 +34,7 @@ const SearchModal = ({ isOpen, toggleModal }) => {
   }
 
   return (
-    <View style={tw("relative")}>
+    <KeyboardAvoidingView style={tw("relative")}>
       <Modal
         animationIn='fadeIn'
         animationOut='fadeOut'
@@ -45,10 +53,7 @@ const SearchModal = ({ isOpen, toggleModal }) => {
             onPress={() => toggleModal(false)}>
             <AntDesign name='close' size={28} color='white' />
           </TouchableOpacity>
-          <View
-            style={tw(
-              `flex flex-row h-12 rounded-lg overflow-hidden border`
-            )}>
+          <View style={tw(`flex flex-row h-12 rounded-lg overflow-hidden border`)}>
             <TextInput
               style={tw("text-black flex-1 px-3 bg-white ")}
               onChangeText={setSearchTerm}
@@ -67,21 +72,24 @@ const SearchModal = ({ isOpen, toggleModal }) => {
             <View style={tw("px-2")}>
               <Text style={tw("text-center font-bold  text-white")}>Choose an image</Text>
               <FlatList
+                style={tw("my-4")}
                 horizontal={true}
                 showsHorizontalScrollIndicator={true}
                 data={data}
-                renderItem={({ item, index }) => (
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
                   <TouchableOpacity
-                    key={item}
-                    onFocus={() => {
-                      setClicked(true)
-                      console.log(clicked)
-                    }}
-                    onBlur={() => {}}
+                    style={tw(
+                      `${item === fragranceUrl ? "border-4 border-green-400" : ""} mx-1`
+                    )}
                     onPress={() => {
                       setFragranceUrl(item)
                     }}>
-                    <Image source={{ uri: item }} style={tw("h-24 w-24 mt-3 mx-1")} />
+                    <Image
+                      resizeMode='cover'
+                      source={{ uri: item }}
+                      style={tw("h-24 w-24")}
+                    />
                   </TouchableOpacity>
                 )}
               />
@@ -110,7 +118,7 @@ const SearchModal = ({ isOpen, toggleModal }) => {
           )}
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 

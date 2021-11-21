@@ -2,7 +2,14 @@ import { onSnapshot, collection } from "@firebase/firestore"
 import React, { useEffect, useState } from "react"
 import { AntDesign } from "@expo/vector-icons"
 import Search from "../components/SearchModal"
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native"
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native"
 import PerfumeCard from "../components/PerfumeCard"
 import useAuth from "../Contexts/AuthContext"
 import tw, { getColor } from "tailwind-rn"
@@ -13,6 +20,10 @@ const CollectionScreen = () => {
   const [userCollection, setUserCollection] = useState([])
   const [isOpen, setIsOpen] = useState(false)
   const { viewColors } = useTheme()
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    setLoading(false)
+  }, [userCollection])
   useEffect(
     () =>
       user &&
@@ -22,25 +33,18 @@ const CollectionScreen = () => {
       }),
     [user]
   )
-  return (
+  return loading ? null : (
     <View style={[tw(`flex-1 items-center ${viewColors.background}`)]}>
-      <View style={tw("px-5 flex-1")}>
-        <Search isOpen={isOpen} toggleModal={setIsOpen} />
+      <View style={tw("flex-1")}>
         <Text style={tw(`${viewColors.font} text-xl my-5 text-center`)}>
           Fragrances in your collection
         </Text>
-        {userCollection && userCollection.length > 0 ? (
-          <FlatList
-            style={tw("flex-1")}
-            data={userCollection}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item, index }) => <PerfumeCard object={item} />}
-          />
-        ) : (
-          <Text style={tw(`${viewColors.font} text-xl text-center`)}>
-            You have nothing in your collection
-          </Text>
-        )}
+        <FlatList
+          style={tw("flex-1")}
+          data={userCollection}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item, index }) => <PerfumeCard object={item} />}
+        />
       </View>
       <TouchableOpacity
         onPress={setIsOpen}
@@ -50,6 +54,7 @@ const CollectionScreen = () => {
         ]}>
         <AntDesign name='plus' size={30} color='white' />
       </TouchableOpacity>
+      <Search isOpen={isOpen} toggleModal={setIsOpen} />
     </View>
   )
 }
@@ -60,10 +65,10 @@ const style = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 1565,
     shadowOffset: {
-      height: -1155,
+      height: 1,
       width: 0,
     },
-    elevation: 15,
+    elevation: 3,
   },
 })
 

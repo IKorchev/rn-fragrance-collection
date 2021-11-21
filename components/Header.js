@@ -1,6 +1,5 @@
 import React, { useRef } from "react"
-import { Text, TouchableOpacity, View } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { Text, TouchableOpacity, View, SafeAreaView } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import tw from "tailwind-rn"
 import * as A from "react-native-animatable"
@@ -13,10 +12,10 @@ export default function Header({ title, navigation }) {
     <SafeAreaView
       style={[
         tw(
-          `${headerColors.background} px-5 justify-center relative h-24 relative border-b border-white`
+          `${headerColors.background} px-5 justify-end relative h-24 relative border-b border-white`
         ),
       ]}>
-      <Text style={tw(`${headerColors.font} text-2xl text-center -mb-5 font-bold`)}>
+      <Text style={tw(`${headerColors.font} text-2xl text-center mb-2 font-bold`)}>
         {title}
       </Text>
 

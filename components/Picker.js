@@ -82,7 +82,7 @@ const Picker = ({ images, colors }) => {
           </TouchableOpacity>
         </View>
         <View style={tw("items-center")}>
-          <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Wear</Text>
+          <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Reroll</Text>
           <TouchableOpacity
             onPress={pickRandomFragrance}
             style={tw("p-3 mx-12 items-center bg-red-400 rounded-full")}>

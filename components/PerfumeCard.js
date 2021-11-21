@@ -11,7 +11,7 @@ const PerfumeCard = ({ object }) => {
     <View
       style={[
         tw(
-          `${cardColors.background} flex-row items-center rounded-xl mx-5 my-1 overflow-hidden`
+          `${cardColors.background} flex-row items-center rounded-sm mx-2 my-1 overflow-hidden`
         ),
         style.cardShadow,
       ]}>
@@ -58,7 +58,7 @@ const style = StyleSheet.create({
     },
     shadowOpacity: 0.32,
     shadowRadius: 5.46,
-    elevation: 9,
+    elevation: 5,
   },
 })
 
