@@ -2,15 +2,17 @@ import { useNavigation } from "@react-navigation/core"
 import React, { useEffect, useState } from "react"
 import { View, Text, TouchableOpacity } from "react-native"
 import tw from "tailwind-rn"
-import useAuth from "../lib/useAuth"
+import useAuth from "../Contexts/AuthContext"
 import { collection, onSnapshot } from "@firebase/firestore"
-import List from "../components/List"
+import List from "../components/Picker"
+import useTheme from "../Contexts/ThemeContext"
 const Home = () => {
   const { db, user } = useAuth()
   const navigator = useNavigation()
   const [images, setImages] = useState([])
   const colRef = collection(db, "users", user.uid, "perfumes")
   const [loading, setLoading] = useState(true)
+  const { viewColors } = useTheme()
   useEffect(
     () =>
       onSnapshot(colRef, (snapshot) => {
@@ -24,14 +26,15 @@ const Home = () => {
   )
 
   return (
-    <View style={tw("h-full flex justify-center bg-gray-800 flex items-center")}>
+    <View
+      style={tw(`${viewColors.background} h-full flex justify-center flex items-center`)}>
       {loading ? (
         <View />
       ) : images.length > 0 ? (
-        <List images={images} />
+        <List colors={viewColors} images={images} />
       ) : (
         <View style={tw("items-center")}>
-          <Text style={tw("text-black text-2xl text-center")}>
+          <Text style={tw(`${viewColors.font} text-2xl text-center`)}>
             You have no fragrances in your collection.
           </Text>
           <TouchableOpacity

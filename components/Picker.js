@@ -4,8 +4,9 @@ import ReelImage from "./ReelImage"
 import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons"
 import tw, { getColor } from "tailwind-rn"
 import * as A from "react-native-animatable"
-import useAuth from "../lib/useAuth"
-const List = ({ images }) => {
+import useAuth from "../Contexts/AuthContext"
+import useTheme from "../Contexts/ThemeContext"
+const Picker = ({ images, colors }) => {
   const getRandomNumber = (max) => {
     return Math.ceil(Math.random() * max)
   }
@@ -16,6 +17,7 @@ const List = ({ images }) => {
   const [dice, setDice] = useState("dice-6")
   const [prevIndex, setPrevIndex] = useState(null)
   const [chosenFrag, setChosenFrag] = useState()
+  const { theme, viewColors } = useTheme()
 
   const rollDice = async () => {
     const timer = (ms) => new Promise((res) => setTimeout(res, ms))
@@ -57,7 +59,7 @@ const List = ({ images }) => {
   }, [chosenFrag])
   return (
     <View style={tw("h-full w-full items-center py-5")}>
-      <Text style={tw("text-white text-3xl mb-3 font-bold")}>Today's pick</Text>
+      <Text style={tw(`${viewColors.font} text-3xl mb-3 font-bold`)}>Today's pick</Text>
       <View style={[styles.dice, tw("h-72 w-60 rounded-xl")]}>
         <FlatList
           ref={flatListRef}
@@ -72,7 +74,7 @@ const List = ({ images }) => {
       </View>
       <View style={tw("mt-12 flex-row")}>
         <View style={tw("items-center")}>
-          <Text style={tw("items-center mb-2 text-lg text-white")}>Wear</Text>
+          <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Wear</Text>
           <TouchableOpacity
             onPress={() => incrementWear(chosenFrag)}
             style={tw("p-3 mx-12 items-center bg-green-300 rounded-full")}>
@@ -80,7 +82,7 @@ const List = ({ images }) => {
           </TouchableOpacity>
         </View>
         <View style={tw("items-center")}>
-          <Text style={tw("items-center mb-2 text-lg text-white")}>Reroll</Text>
+          <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Wear</Text>
           <TouchableOpacity
             onPress={pickRandomFragrance}
             style={tw("p-3 mx-12 items-center bg-red-400 rounded-full")}>
@@ -93,7 +95,7 @@ const List = ({ images }) => {
           name={dice}
           onPress={pickRandomFragrance}
           style={styles.dice}
-          color={getColor("gray-700")}
+          color={theme === "dark" ? "white" : getColor("gray-900")}
           size={80}
         />
       </A.View>
@@ -113,4 +115,4 @@ const styles = StyleSheet.create({
   },
 })
 
-export default List
+export default Picker

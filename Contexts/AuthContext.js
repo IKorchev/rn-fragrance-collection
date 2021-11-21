@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react"
+import React, { useContext, useEffect, useState, createContext } from "react"
 import * as Google from "expo-google-app-auth"
 LogBox.ignoreAllLogs(true)
 import {
@@ -7,11 +7,18 @@ import {
   signInWithCredential,
   signOut,
 } from "@firebase/auth"
-import config from "./utils/googleAuthConfig"
-import { auth, db } from "./firebase"
-import { addDoc, collection, deleteDoc, doc, increment, updateDoc } from "@firebase/firestore"
+import config from "../lib/utils/googleAuthConfig"
+import { auth, db } from "../lib/firebase"
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  increment,
+  updateDoc,
+} from "@firebase/firestore"
 import { Alert, LogBox } from "react-native"
-const AuthContext = React.createContext({})
+const AuthContext = createContext({})
 
 const useAuth = () => {
   return useContext(AuthContext)

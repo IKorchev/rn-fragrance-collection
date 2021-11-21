@@ -1,7 +1,7 @@
 import * as React from "react"
 import { View, Alert } from "react-native"
 import { auth } from "../lib/firebase"
-import useAuth from "../lib/useAuth"
+import useAuth from "../Contexts/AuthContext"
 
 export default function LogoutScreen({ navigation }) {
   const { logOut } = useAuth()

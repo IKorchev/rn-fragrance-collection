@@ -3,7 +3,7 @@ import { View, Text, ImageBackground } from "react-native"
 import { TouchableOpacity } from "react-native-gesture-handler"
 import tailwind from "tailwind-rn"
 import { AntDesign } from "@expo/vector-icons"
-import useAuth from "../lib/useAuth"
+import useAuth from "../Contexts/AuthContext"
 export default function SigninScreen() {
   const { signInWithGoogle } = useAuth()
 

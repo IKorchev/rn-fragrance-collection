@@ -1,28 +1,20 @@
 import React, { useState } from "react"
-import {
-  Text,
-  View,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  TextInput,
-  Alert,
-  StyleSheet,
-} from "react-native"
+import { Text, View, TouchableOpacity, FlatList, Image, TextInput } from "react-native"
 import { AntDesign } from "@expo/vector-icons"
 import { fetchData } from "../lib/utils/fetchData"
 import tw from "tailwind-rn"
 import Modal from "react-native-modal"
-import useAuth from "../lib/useAuth"
+import useAuth from "../Contexts/AuthContext"
+import useTheme from "../Contexts/ThemeContext"
 
 const SearchModal = ({ isOpen, toggleModal }) => {
-  const { user, addFragranceToCollection } = useAuth()
+  const { addFragranceToCollection } = useAuth()
   const [clicked, setClicked] = useState(false)
   const [data, setData] = useState([])
-  const [error, setError] = useState(false)
   const [fragranceUrl, setFragranceUrl] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [fragranceName, setFragranceName] = useState("")
+  const { modalColors } = useTheme()
 
   const handleSearch = async (searchTerm) => {
     const res = await fetchData(searchTerm)
@@ -42,8 +34,8 @@ const SearchModal = ({ isOpen, toggleModal }) => {
         coverScreen={true}
         onBackdropPress={() => toggleModal(false)}
         backdropColor='rgba(0,0,0,0.9)'>
-        <View style={tw("my-2 bg-gray-900 justify-center p-7 rounded-lg")}>
-          <Text style={tw("my-2 font-bold text-2xl text-center text-white")}>
+        <View style={tw(`${modalColors.background} my-2 justify-center p-7 rounded-lg`)}>
+          <Text style={tw(`${modalColors.font} my-2 font-bold text-2xl text-center`)}>
             Find fragrances
           </Text>
           <TouchableOpacity
@@ -55,9 +47,7 @@ const SearchModal = ({ isOpen, toggleModal }) => {
           </TouchableOpacity>
           <View
             style={tw(
-              `flex flex-row h-12 rounded-lg overflow-hidden border ${
-                error && "border-red-500"
-              }`
+              `flex flex-row h-12 rounded-lg overflow-hidden border`
             )}>
             <TextInput
               style={tw("text-black flex-1 px-3 bg-white ")}

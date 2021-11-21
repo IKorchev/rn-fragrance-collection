@@ -1,12 +1,45 @@
-import React from "react"
-import { View, Text } from "react-native"
+import React, { useRef } from "react"
+import { Text, TouchableOpacity, View } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
+import { Ionicons } from "@expo/vector-icons"
 import tw from "tailwind-rn"
-export default function Header({ title, style, navigation }) {
+import * as A from "react-native-animatable"
+import useTheme from "../Contexts/ThemeContext"
+export default function Header({ title, navigation }) {
+  const { headerColors, theme, setTheme, viewColors } = useTheme()
+  const ref = useRef()
+
   return (
-    <View style={[style, tw("px-5 justify-center relative")]}>
-      <Text style={tw("text-green-300 text-2xl text-center -mb-5 font-bold")}>
+    <SafeAreaView
+      style={[
+        tw(
+          `${headerColors.background} px-5 justify-center relative h-24 relative border-b border-white`
+        ),
+      ]}>
+      <Text style={tw(`${headerColors.font} text-2xl text-center -mb-5 font-bold`)}>
         {title}
       </Text>
-    </View>
+
+      <View style={tw("flex-row absolute items-center right-5 top-16 -mt-1")}>
+        <TouchableOpacity
+          onPress={() => {
+            setTheme(() => (theme === "dark" ? "light" : "dark"))
+          }}
+          style={tw("bg-black h-4 justify-center rounded-full w-10")}>
+          <A.Text
+            ref={ref}
+            style={tw(
+              ` h-6 w-6 ${
+                theme === "light" ? "ml-0 bg-gray-300" : "ml-4 bg-green-300"
+              } rounded-full`
+            )}></A.Text>
+        </TouchableOpacity>
+        <Ionicons
+          name={theme === "dark" ? "sunny" : "moon-outline"}
+          style={tw(`ml-2 ${viewColors.font}`)}
+          size={24}
+        />
+      </View>
+    </SafeAreaView>
   )
 }

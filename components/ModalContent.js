@@ -4,7 +4,7 @@ import { AntDesign } from "@expo/vector-icons"
 import { doc, updateDoc, addDoc, collection } from "firebase/firestore"
 import { db } from "../lib/firebase"
 import tw from "tailwind-rn"
-import useAuth from "../lib/useAuth"
+import useAuth from "../Contexts/AuthContext"
 const ModalContent = ({ imageUrl, toggleModal }) => {
   const { user } = useAuth()
   const [text, onChangeText] = useState("")
