@@ -1,6 +1,7 @@
 import React from "react"
 import useAuth from "./Contexts/AuthContext"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
+
 // Screens
 import SigninScreen from "./screens/SigninScreen"
 import HomeScreen from "./screens/HomeScreen"
@@ -22,7 +23,6 @@ const StackNavigator = () => {
       <Stack.Navigator screenOptions={({ route }) => screenOptions(route)}>
         <Stack.Screen name='Home' component={HomeScreen} />
         <Stack.Screen name='Collection' component={CollectionScreen} />
-        {/* <Stack.Screen name='Pick Random' component={CollectionScreen} /> */}
         <Stack.Screen name='Log out' component={LogoutScreen} />
       </Stack.Navigator>
     </TouchableWithoutFeedback>

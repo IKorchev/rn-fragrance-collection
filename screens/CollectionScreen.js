@@ -36,8 +36,8 @@ const CollectionScreen = () => {
   return loading ? null : (
     <View style={[tw(`flex-1 items-center ${viewColors.background}`)]}>
       <View style={tw("flex-1")}>
-        <Text style={tw(`${viewColors.font} text-xl my-5 text-center`)}>
-          Fragrances in your collection
+        <Text style={tw(`${viewColors.font} text-2xl my-5 text-center font-bold`)}>
+          Your collection
         </Text>
         <FlatList
           style={tw("flex-1")}

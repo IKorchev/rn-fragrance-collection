@@ -27,7 +27,9 @@ const Home = () => {
 
   return (
     <View
-      style={tw(`${viewColors.background} h-full flex justify-center flex items-center`)}>
+      style={tw(
+        `${viewColors.background}  h-full flex justify-center flex items-center`
+      )}>
       {loading ? (
         <View />
       ) : images.length > 0 ? (

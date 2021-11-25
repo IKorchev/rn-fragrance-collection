@@ -7,7 +7,9 @@ const useTheme = () => {
 }
 
 export const ThemeContextProvider = ({ children }) => {
-  const [theme, setTheme] = useState("dark")
+  const [theme, setTheme] = useState("light")
+
+  const baseColors = theme === "light" ? "black" : "white"
 
   const headerColors = {
     font: theme === "dark" ? "text-green-300" : "text-black",
@@ -19,7 +21,7 @@ export const ThemeContextProvider = ({ children }) => {
   }
   const viewColors = {
     font: theme === "dark" ? "text-white" : "text-black",
-    background: theme === "dark" ? "bg-gray-800" : "",
+    background: theme === "dark" ? "bg-gray-900" : "",
   }
   const cardColors = {
     font: theme === "dark" ? "text-white" : "text-black",
@@ -29,6 +31,7 @@ export const ThemeContextProvider = ({ children }) => {
   return (
     <ThemeContext.Provider
       value={{
+        baseColors,
         viewColors,
         headerColors,
         theme,

@@ -14,6 +14,7 @@ import tw from "tailwind-rn"
 import Modal from "react-native-modal"
 import useAuth from "../Contexts/AuthContext"
 import useTheme from "../Contexts/ThemeContext"
+import * as A from "react-native-animatable"
 
 const SearchModal = ({ isOpen, toggleModal }) => {
   const { addFragranceToCollection } = useAuth()
@@ -22,17 +23,27 @@ const SearchModal = ({ isOpen, toggleModal }) => {
   const [fragranceUrl, setFragranceUrl] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [fragranceName, setFragranceName] = useState("")
-  const { modalColors } = useTheme()
+  const { baseColors, modalColors } = useTheme()
 
   const handleSearch = async (searchTerm) => {
-    const res = await fetchData(searchTerm)
-    if (!res.length) {
-      setError(true)
-    }
-    setData(res)
+    // const res = await fetchData(searchTerm)
+    // if (!res.length) {
+    //   setError(true)
+    // }
+    // setData(data)
+    setData([
+      "https://upload.wikimedia.org/wikipedia/commons/e/e5/Flacon_Manifesto.jpg",
+
+      "https://eco-beauty.dior.com/dw/image/v2/BDGF_PRD/on/demandware.static/-/Sites-master_dior/default/dw62f926d0/assets/Y0996170/Y0996170_E03_GHC.jpg",
+    ])
     setError(false)
   }
-
+  const handleModalClose = () => {
+    toggleModal(false)
+    setFragranceUrl("")
+    setSearchTerm("")
+    setFragranceName("")
+  }
   return (
     <KeyboardAvoidingView style={tw("relative")}>
       <Modal
@@ -40,7 +51,7 @@ const SearchModal = ({ isOpen, toggleModal }) => {
         animationOut='fadeOut'
         isVisible={isOpen}
         coverScreen={true}
-        onBackdropPress={() => toggleModal(false)}
+        onBackdropPress={handleModalClose}
         backdropColor='rgba(0,0,0,0.9)'>
         <View style={tw(`${modalColors.background} my-2 justify-center p-7 rounded-lg`)}>
           <Text style={tw(`${modalColors.font} my-2 font-bold text-2xl text-center`)}>
@@ -50,8 +61,8 @@ const SearchModal = ({ isOpen, toggleModal }) => {
             style={tw(
               "absolute top-2 right-2 flex justify-center text-center items-center px-2"
             )}
-            onPress={() => toggleModal(false)}>
-            <AntDesign name='close' size={28} color='white' />
+            onPress={handleModalClose}>
+            <AntDesign name='close' size={28} color={baseColors} />
           </TouchableOpacity>
           <View style={tw(`flex flex-row h-12 rounded-lg overflow-hidden border`)}>
             <TextInput
@@ -70,32 +81,46 @@ const SearchModal = ({ isOpen, toggleModal }) => {
           <Text style={tw("text-white mb-2 ml-2 text-sm")}>(min. 3 characters)</Text>
           {data.length > 0 && (
             <View style={tw("px-2")}>
-              <Text style={tw("text-center font-bold  text-white")}>Choose an image</Text>
+              <Text style={tw(`text-center font-bold  text-${baseColors}`)}>
+                Choose an image
+              </Text>
               <FlatList
-                style={tw("my-4")}
+                contentContainerStyle={tw("justify-center items-center h-32")}
                 horizontal={true}
                 showsHorizontalScrollIndicator={true}
                 data={data}
                 keyExtractor={(item) => item}
                 renderItem={({ item }) => (
                   <TouchableOpacity
+                    //prettier-ignore
                     style={tw(
-                      `${item === fragranceUrl ? "border-4 border-green-400" : ""} mx-1`
-                    )}
+                        item === fragranceUrl && "border-2 border-red-300 m-1"
+                      )}
                     onPress={() => {
                       setFragranceUrl(item)
                     }}>
+                    {item === fragranceUrl && (
+                      <Text
+                        style={tw(
+                          "text-red-400 font-bold z-20 -mt-3 text-center absolute top-1/2 w-full"
+                        )}>
+                        SELECTED
+                      </Text>
+                    )}
                     <Image
+                      style={tw(`${item === fragranceUrl && "opacity-50"} h-24 w-24 `)}
                       resizeMode='cover'
                       source={{ uri: item }}
-                      style={tw("h-24 w-24")}
                     />
                   </TouchableOpacity>
                 )}
               />
+              <Text style={tw(`text-${baseColors} my-1`)}>What would you call it?</Text>
               <TextInput
                 placeholder='Name'
-                style={tw("bg-white text-black border p-2 mt-5  rounded-lg text-lg")}
+                style={tw(
+                  "bg-white text-black border border-inset p-2   rounded-lg text-lg"
+                )}
                 onChangeText={setFragranceName}
               />
               <TouchableOpacity

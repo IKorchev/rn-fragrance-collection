@@ -27,8 +27,10 @@ const Picker = ({ images, colors }) => {
       setDice(`dice-${getRandomNumber(6)}`)
     }
   }
+
   const pickRandomFragrance = async () => {
-    const index = getRandomFragranceIndex()
+    let index = getRandomFragranceIndex()
+
     setChosenFrag(images[index])
     await flatListRef.current.scrollToIndex({
       animated: true,
@@ -39,24 +41,21 @@ const Picker = ({ images, colors }) => {
     rollDice()
   }
   const getRandomFragranceIndex = () => {
-    const randomIndex = Math.floor(Math.random() * images.length)
-    setPrevIndex(randomIndex)
-    if (images.length > 1 && prevIndex === randomIndex) {
-      getRandomFragranceIndex()
+    let randomIndex = Math.floor(Math.random() * images.length)
+    if (prevIndex === randomIndex) {
+      let newIndex = Math.floor(Math.random() * images.length)
+      randomIndex = newIndex
     }
+    setPrevIndex(randomIndex)
     return randomIndex
   }
   useLayoutEffect(() => {
-    if (!chosenFrag) {
-      const fragIndex = getRandomFragranceIndex()
-      setChosenFrag(images[fragIndex])
-      setStartingIndex(fragIndex)
-      setPrevIndex(fragIndex)
-    }
+    const fragIndex = getRandomFragranceIndex()
+    setChosenFrag(images[fragIndex])
+    setStartingIndex(fragIndex)
+    setPrevIndex(fragIndex)
   }, [])
-  useEffect(() => {
-    console.log(chosenFrag)
-  }, [chosenFrag])
+
   return (
     <View style={tw("h-full w-full items-center py-5")}>
       <Text style={tw(`${viewColors.font} text-3xl mb-3 font-bold`)}>Today's pick</Text>

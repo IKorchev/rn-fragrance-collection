@@ -1,4 +1,5 @@
 import React from "react"
+import { BlurView } from "expo-blur"
 import { View, Text, ImageBackground } from "react-native"
 import { TouchableOpacity } from "react-native-gesture-handler"
 import tailwind from "tailwind-rn"
@@ -8,24 +9,26 @@ export default function SigninScreen() {
   const { signInWithGoogle } = useAuth()
 
   return (
-    <View style={tailwind("flex-1")}>
+    <BlurView
+      intensity={100}
+      tint='dark'
+      style={tailwind("flex-1 relative justify-center items-center")}>
       <ImageBackground
         resizeMode='contain'
-        style={tailwind("flex-1 justify-center items-center")}
+        style={tailwind("w-full h-full absolute opacity-60")}
         source={{
           uri: "https://p.kindpng.com/picc/s/23-239314_png-perfumes-perfume-images-png-transparent-png.png",
-        }}>
-        <TouchableOpacity
-          onPress={signInWithGoogle}
-          style={tailwind(
-            " w-60 mt-96 bg-white py-3 rounded-xl border border-black flex flex-row justify-center items-center "
-          )}>
-          <AntDesign name='google' style={tailwind("mr-3")} size={20} color='black' />
-          <Text style={tailwind("text-center font-semibold text-lg")}>
-            Sign in with Google
-          </Text>
-        </TouchableOpacity>
-      </ImageBackground>
-    </View>
+        }}></ImageBackground>
+      <TouchableOpacity
+        onPress={signInWithGoogle}
+        style={tailwind(
+          "w-60 mt-96 bg-white py-3 rounded-xl z-50 border border-black flex flex-row justify-center items-center "
+        )}>
+        <AntDesign name='google' style={tailwind("mr-3")} size={28} color='black' />
+        <Text style={tailwind("text-center font-semibold text-lg")}>
+          Sign in with Google
+        </Text>
+      </TouchableOpacity>
+    </BlurView>
   )
 }
