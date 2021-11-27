@@ -43,10 +43,7 @@ export const AuthProvider = ({ children }) => {
       Alert.alert("Ooops", "The name must be 3 or more characters!")
       return
     }
-    if (object.name.length > 20) {
-      Alert.alert("Ooops", "The name must be less than 20 characters!")
-      return
-    }
+
     try {
       const colRef = collection(db, "users", user.uid, "perfumes")
       const response = await addDoc(colRef, object)

@@ -16,7 +16,7 @@ import useAuth from "../Contexts/AuthContext"
 import useTheme from "../Contexts/ThemeContext"
 import * as A from "react-native-animatable"
 
-const SearchModal = ({ isOpen, toggleModal }) => {
+const SearchModal = ({ isOpen, toggleModal, navigation }) => {
   const { addFragranceToCollection } = useAuth()
   const [data, setData] = useState([])
   const [error, setError] = useState(false)
@@ -26,17 +26,12 @@ const SearchModal = ({ isOpen, toggleModal }) => {
   const { baseColors, modalColors } = useTheme()
 
   const handleSearch = async (searchTerm) => {
+    navigation.navigate("Search Results", { term: searchTerm })
     // const res = await fetchData(searchTerm)
-    // if (!res.length) {
+    // if (res.length === 0) {
     //   setError(true)
     // }
-    // setData(data)
-    setData([
-      "https://upload.wikimedia.org/wikipedia/commons/e/e5/Flacon_Manifesto.jpg",
-
-      "https://eco-beauty.dior.com/dw/image/v2/BDGF_PRD/on/demandware.static/-/Sites-master_dior/default/dw62f926d0/assets/Y0996170/Y0996170_E03_GHC.jpg",
-    ])
-    setError(false)
+    // setData(res)
   }
   const handleModalClose = () => {
     toggleModal(false)
@@ -72,7 +67,7 @@ const SearchModal = ({ isOpen, toggleModal }) => {
             />
             <TouchableOpacity
               style={tw(
-                "flex flex-row justify-center text-center items-center px-2 bg-green-400"
+                "flex flex-row justify-center text-center items-center px-2 rounded-lg bg-green-400"
               )}
               onPress={() => handleSearch(searchTerm)}>
               <AntDesign name='search1' style={tw("px-8")} size={22} color='white' />
@@ -89,28 +84,30 @@ const SearchModal = ({ isOpen, toggleModal }) => {
                 horizontal={true}
                 showsHorizontalScrollIndicator={true}
                 data={data}
-                keyExtractor={(item) => item}
+                keyExtractor={(item) => item.imageUrl}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     //prettier-ignore
                     style={tw(
-                        item === fragranceUrl && "border-2 border-red-300 m-1"
+                        item.imageUrl === fragranceUrl ? "border-2 border-red-300 m-1" : "m-1"
                       )}
                     onPress={() => {
-                      setFragranceUrl(item)
+                      setFragranceUrl(item.imageUrl)
                     }}>
-                    {item === fragranceUrl && (
+                    {/* {item.imageUrl === fragranceUrl && (
                       <Text
                         style={tw(
                           "text-red-400 font-bold z-20 -mt-3 text-center absolute top-1/2 w-full"
                         )}>
                         SELECTED
                       </Text>
-                    )}
+                    )} */}
                     <Image
-                      style={tw(`${item === fragranceUrl && "opacity-50"} h-24 w-24 `)}
+                      style={tw(
+                        `${item.imageUrl === fragranceUrl && "opacity-50"} h-24 w-24 `
+                      )}
                       resizeMode='cover'
-                      source={{ uri: item }}
+                      source={{ uri: item.imageUrl }}
                     />
                   </TouchableOpacity>
                 )}

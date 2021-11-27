@@ -15,7 +15,7 @@ import useAuth from "../Contexts/AuthContext"
 import tw, { getColor } from "tailwind-rn"
 import useTheme from "../Contexts/ThemeContext"
 
-const CollectionScreen = () => {
+const CollectionScreen = ({ navigation }) => {
   const { user, db } = useAuth()
   const [userCollection, setUserCollection] = useState([])
   const [isOpen, setIsOpen] = useState(false)
@@ -46,15 +46,6 @@ const CollectionScreen = () => {
           renderItem={({ item, index }) => <PerfumeCard object={item} />}
         />
       </View>
-      <TouchableOpacity
-        onPress={setIsOpen}
-        style={[
-          style.addButton,
-          tw(`bg-green-500 my-5 w-12 h-12 items-center justify-center rounded-full`),
-        ]}>
-        <AntDesign name='plus' size={30} color='white' />
-      </TouchableOpacity>
-      <Search isOpen={isOpen} toggleModal={setIsOpen} />
     </View>
   )
 }
