@@ -15,6 +15,7 @@ import {
   deleteDoc,
   doc,
   increment,
+  onSnapshot,
   updateDoc,
 } from "@firebase/firestore"
 import { Alert, LogBox } from "react-native"
@@ -24,6 +25,9 @@ const useAuth = () => {
   return useContext(AuthContext)
 }
 export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null)
+  const [userCollection, setUserCollection] = useState([])
+
   useEffect(
     () =>
       onAuthStateChanged(auth, (user) => {
@@ -36,7 +40,15 @@ export const AuthProvider = ({ children }) => {
     []
   )
 
-  const [user, setUser] = useState(null)
+  useEffect(
+    () =>
+      user &&
+      onSnapshot(collection(db, "users", user.uid, "perfumes"), (doc) => {
+        const perfumeObject = doc.docs.map((el) => el.data())
+        setUserCollection(perfumeObject)
+      }),
+    [user]
+  )
 
   const addFragranceToCollection = async (object) => {
     if (object.name.length < 3) {
@@ -50,6 +62,7 @@ export const AuthProvider = ({ children }) => {
       const docRef = doc(colRef, response.id)
       await updateDoc(docRef, {
         ...object,
+        times_worn: 0,
         id: response.id,
       })
       Alert.alert("Item added", `${object.name} has been added to your collection! `)
@@ -63,10 +76,6 @@ export const AuthProvider = ({ children }) => {
       const ref = collection(db, "users", user.uid, "perfumes")
       const docRef = doc(ref, object.id)
       await deleteDoc(docRef)
-      Alert.alert(
-        "Remove an item",
-        `${object.name} has been removed from your collection`
-      )
     } catch (err) {
       console.log(err)
     }
@@ -115,6 +124,7 @@ export const AuthProvider = ({ children }) => {
         incrementWear,
         deleteFragrance,
         addFragranceToCollection,
+        userCollection,
       }}>
       {children}
     </AuthContext.Provider>

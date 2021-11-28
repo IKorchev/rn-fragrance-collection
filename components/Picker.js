@@ -6,76 +6,57 @@ import tw, { getColor } from "tailwind-rn"
 import * as A from "react-native-animatable"
 import useAuth from "../Contexts/AuthContext"
 import useTheme from "../Contexts/ThemeContext"
-const Picker = ({ images, colors }) => {
-  const getRandomNumber = (max) => {
-    return Math.ceil(Math.random() * max)
-  }
-  const [startingIndex, setStartingIndex] = useState(null)
-  const flatListRef = useRef()
+import { random } from "lodash"
+import useData from "../Contexts/DataContext"
+const Picker = ({ images }) => {
   const { incrementWear } = useAuth()
+  const { theme, viewColors } = useTheme()
+  const { getNewFrag, fragrance } = useData()
+  const flatListRef = useRef()
   const diceContainerRef = useRef()
   const [dice, setDice] = useState("dice-6")
-  const [prevIndex, setPrevIndex] = useState(null)
-  const [chosenFrag, setChosenFrag] = useState()
-  const { theme, viewColors } = useTheme()
 
   const rollDice = async () => {
     const timer = (ms) => new Promise((res) => setTimeout(res, ms))
     diceContainerRef.current.bounceIn()
+    diceContainerRef.current.rotate(360)
     for (let i = 1; i < 8; i++) {
       await timer(11)
-      setDice(`dice-${getRandomNumber(6)}`)
+      setDice(`dice-${random(1, 6)}`)
     }
   }
-
-  const pickRandomFragrance = async () => {
-    let index = getRandomFragranceIndex()
-
-    setChosenFrag(images[index])
-    await flatListRef.current.scrollToIndex({
+  useEffect(() => {
+    flatListRef.current?.scrollToIndex({
       animated: true,
-      index: index,
-      viewPosition: 0.5,
+      index: fragrance.index,
+
     })
 
-    rollDice()
-  }
-  const getRandomFragranceIndex = () => {
-    let randomIndex = Math.floor(Math.random() * images.length)
-    if (prevIndex === randomIndex) {
-      let newIndex = Math.floor(Math.random() * images.length)
-      randomIndex = newIndex
-    }
-    setPrevIndex(randomIndex)
-    return randomIndex
-  }
-  useLayoutEffect(() => {
-    const fragIndex = getRandomFragranceIndex()
-    setChosenFrag(images[fragIndex])
-    setStartingIndex(fragIndex)
-    setPrevIndex(fragIndex)
-  }, [])
-
+  },[fragrance])
   return (
     <View style={tw("h-full w-full items-center py-5")}>
-      <Text style={tw(`${viewColors.font} text-3xl mb-3 font-bold`)}>Today's pick</Text>
-      <View style={[styles.dice, tw("h-72 w-60 rounded-xl")]}>
-        <FlatList
-          ref={flatListRef}
-          horizontal={true}
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={false}
-          initialScrollIndex={startingIndex}
-          data={images}
-          keyExtractor={(item, index) => item.id}
-          renderItem={(item, index) => <ReelImage object={item} />}></FlatList>
-      </View>
+      <Text style={tw(`${viewColors.font} text-3xl mb-3 font-bold`)}>Your pick</Text>
+      {images.length ? (
+        <View style={[styles.dice, tw("h-72 w-60 py-2 rounded-xl")]}>
+          <FlatList
+            ref={flatListRef}
+            horizontal={true}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            scrollEnabled={false}
+            data={images}
+            keyExtractor={(item, index) => item.id}
+            renderItem={(item, index) => <ReelImage object={item} />}
+          />
+        </View>
+      ) : (
+        <></>
+      )}
       <View style={tw("mt-12 flex-row")}>
         <View style={tw("items-center")}>
           <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Wear</Text>
           <TouchableOpacity
-            onPress={() => incrementWear(chosenFrag)}
+            onPress={() => incrementWear(fragrance.fragrancePicked)}
             style={tw("p-3 mx-12 items-center bg-green-300 rounded-full")}>
             <FontAwesome5 name='spray-can' size={40} color='black' />
           </TouchableOpacity>
@@ -83,7 +64,7 @@ const Picker = ({ images, colors }) => {
         <View style={tw("items-center")}>
           <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Reroll</Text>
           <TouchableOpacity
-            onPress={pickRandomFragrance}
+            onPress={getNewFrag}
             style={tw("p-3 mx-12 items-center bg-red-400 rounded-full")}>
             <MaterialCommunityIcons name='dice-multiple' size={40} color='black' />
           </TouchableOpacity>
@@ -92,7 +73,7 @@ const Picker = ({ images, colors }) => {
       <A.View ref={diceContainerRef} style={tw("mt-12 items-center")}>
         <MaterialCommunityIcons
           name={dice}
-          onPress={pickRandomFragrance}
+          onPress={getNewFrag}
           style={styles.dice}
           color={theme === "dark" ? "white" : getColor("gray-900")}
           size={80}

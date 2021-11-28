@@ -7,13 +7,13 @@ import {
   Image,
   StatusBar,
 } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
+import { Ionicons, SimpleLineIcons } from "@expo/vector-icons"
 import tw, { getColor } from "tailwind-rn"
 import * as A from "react-native-animatable"
 import useTheme from "../Contexts/ThemeContext"
 import useAuth from "../Contexts/AuthContext"
 export default function Header({ title, navigation }) {
-  const { user } = useAuth()
+  const { user, logOut } = useAuth()
   const { headerColors, theme, setTheme, baseColors } = useTheme()
   const ref = useRef()
 
@@ -24,19 +24,10 @@ export default function Header({ title, navigation }) {
           `${headerColors.background} flex-row  relative h-20 relative border-b  border-${baseColors}`
         ),
       ]}>
-      <StatusBar StatusBarStyle={`${baseColors}-content`} />
+      <StatusBar StatusBarStyle={`light-content`} />
       <View style={tw("flex-row w-full px-5 justify-between items-center mt-5 ")}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={tw(
-            "rounded-full items-center border-2 border-green-400 overflow-hidden"
-          )}>
-          <Image
-            source={{ uri: user?.photoURL }}
-            width={20}
-            height={20}
-            style={tw("h-10 w-10 ")}
-          />
+        <TouchableOpacity onPress={logOut}>
+          <SimpleLineIcons name='logout' size={25} color={baseColors} />
         </TouchableOpacity>
 
         <Text style={tw(`${headerColors.font} text-2xl text-center mb-2 font-bold`)}>

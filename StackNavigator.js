@@ -9,20 +9,13 @@ import tw from "tailwind-rn"
 import SigninScreen from "./screens/SigninScreen"
 import HomeScreen from "./screens/HomeScreen"
 import CollectionScreen from "./screens/CollectionScreen"
-import LogoutScreen from "./screens/LogoutScreen"
 import screenOptions from "./lib/utils/screenOptions"
-import { TouchableWithoutFeedback, Keyboard, TouchableOpacity, Text } from "react-native"
+import { TouchableWithoutFeedback, Keyboard } from "react-native"
 import PerfumesTabs from "./screens/secondary/PerfumesTabs"
 const Stack = createBottomTabNavigator()
-const Stack2 = createNativeStackNavigator()
-
-const SearchStack = () => {
-  return <NavigationContainer></NavigationContainer>
-}
 
 const StackNavigator = () => {
   const { user } = useAuth()
-
   return user ? (
     <NavigationContainer>
       <TouchableWithoutFeedback
@@ -32,9 +25,8 @@ const StackNavigator = () => {
         <Stack.Navigator>
           <Stack.Group screenOptions={({ route }) => screenOptions(route)}>
             <Stack.Screen name='Home' component={HomeScreen} />
-            <Stack.Screen name='Collection' component={CollectionScreen} />
             <Stack.Screen name='Add' component={PerfumesTabs} />
-            <Stack.Screen name='Log out' component={LogoutScreen} />
+            <Stack.Screen name='Collection' component={CollectionScreen} />
           </Stack.Group>
         </Stack.Navigator>
       </TouchableWithoutFeedback>

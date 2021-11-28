@@ -12,6 +12,7 @@ import useData from "../../Contexts/DataContext"
 import tw from "tailwind-rn"
 import useTheme from "../../Contexts/ThemeContext"
 import useAuth from "../../Contexts/AuthContext"
+import CustomListItem from "../../components/ListItem"
 
 const data = ["men", "women", "unisex"]
 
@@ -43,7 +44,9 @@ const TopPerfumesScreen = () => {
                 }}
                 style={tw(
                   `${
-                    selected === i ? `bg-gray-500 border-b border-${baseColors}` : ""
+                    selected === i
+                      ? `${viewColors.background} border-b border-${baseColors}`
+                      : ""
                   }  flex-1 p-3 px-5 `
                 )}>
                 <Text
@@ -56,50 +59,15 @@ const TopPerfumesScreen = () => {
             ))}
           </View>
           <FlatList
-            contentContainerStyle={tw("items-center py-5")}
             data={top100[option]}
             keyExtractor={(item) => item.place}
             renderItem={({ item }) => {
               return (
-                <View
-                  style={tw(
-                    `${modalColors.background} flex-row rounded-lg overflow-hidden mt-1 w-96`
-                  )}>
-                  <View style={tw("justify-center items-center w-12")}>
-                    <Text style={tw(`${viewColors.font} text-2xl`)}>{item.place}</Text>
-                  </View>
-                  <Image
-                    height='20'
-                    width='20'
-                    style={tw("h-20 w-20")}
-                    source={{ uri: item.imageUrl }}
-                  />
-                  <View style={tw("flex-row flex-1 justify-between items-center")}>
-                    <View style={tw("px-3 h-full")}>
-                      <Text
-                        numberOfLines={1}
-                        ellipsizeMode='tail'
-                        style={tw(`${viewColors.font} text-lg font-bold`)}>
-                        {item.name.split(" - ")[1]}
-                      </Text>
-                      <Text style={tw(`${viewColors.font}`)}>
-                        {item.name.split(" - ")[0]}
-                      </Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      const obj = {
-                        name: item.name,
-                        image_url: item.imageUrl,
-                        times_worn: 0,
-                      }
-                      addFragranceToCollection(obj)
-                    }}
-                    style={tw("justify-center items-center w-12 bg-green-500")}>
-                    <AntDesign name='hearto' size={20} />
-                  </TouchableOpacity>
-                </View>
+                <CustomListItem
+                  name={item.name}
+                  place={item.place}
+                  imageUrl={item.imageUrl}
+                />
               )
             }}
           />

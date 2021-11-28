@@ -21,7 +21,7 @@ export const ThemeContextProvider = ({ children }) => {
   }
   const viewColors = {
     font: theme === "dark" ? "text-white" : "text-black",
-    background: theme === "dark" ? "bg-gray-900" : "",
+    background: theme === "dark" ? "bg-gray-900" : "bg-gray-50",
   }
   const cardColors = {
     font: theme === "dark" ? "text-white" : "text-black",
