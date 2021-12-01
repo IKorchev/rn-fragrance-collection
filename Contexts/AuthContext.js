@@ -27,7 +27,8 @@ const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [userCollection, setUserCollection] = useState([])
-
+  const [sortedCollection, setSortedCollection] = useState([])
+  const [frag, setFrag] = useState()
   useEffect(
     () =>
       onAuthStateChanged(auth, (user) => {
@@ -44,8 +45,10 @@ export const AuthProvider = ({ children }) => {
     () =>
       user &&
       onSnapshot(collection(db, "users", user.uid, "perfumes"), (doc) => {
-        const perfumeObject = doc.docs.map((el) => el.data())
-        setUserCollection(perfumeObject)
+        const col = doc.docs.map((el) => el.data())
+        const sortedCollection = col.sort((el1, el2) => el1.times_worn < el2.times_worn)
+        setUserCollection(col)
+        setSortedCollection(sortedCollection)
       }),
     [user]
   )
@@ -55,7 +58,6 @@ export const AuthProvider = ({ children }) => {
       Alert.alert("Ooops", "The name must be 3 or more characters!")
       return
     }
-
     try {
       const colRef = collection(db, "users", user.uid, "perfumes")
       const response = await addDoc(colRef, object)
@@ -65,7 +67,6 @@ export const AuthProvider = ({ children }) => {
         times_worn: 0,
         id: response.id,
       })
-      Alert.alert("Item added", `${object.name} has been added to your collection! `)
     } catch (error) {
       Alert.alert("Item was not added", "Something went wrong, please try again later.")
       console.log(error)
@@ -89,12 +90,9 @@ export const AuthProvider = ({ children }) => {
         ...object,
         times_worn: increment(1),
       })
-      Alert.alert(
-        "Success",
-        `The wear count of ${object.name} was incremented successfully! `
-      )
+      Alert.alert("DONE", `${object.name}`)
     } catch (error) {
-      console.log(error)
+      Alert.alert("Oops", `Something went wrong!`)
     }
   }
 
@@ -125,6 +123,9 @@ export const AuthProvider = ({ children }) => {
         deleteFragrance,
         addFragranceToCollection,
         userCollection,
+        sortedCollection,
+        frag,
+        setFrag,
       }}>
       {children}
     </AuthContext.Provider>

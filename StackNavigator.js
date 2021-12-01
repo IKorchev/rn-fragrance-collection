@@ -1,8 +1,8 @@
-import React from "react"
+import "react-native-gesture-handler"
+import React, { useEffect, useState } from "react"
 import useAuth from "./Contexts/AuthContext"
 import { NavigationContainer } from "@react-navigation/native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import { createNativeStackNavigator } from "@react-navigation/native-stack"
 
 import tw from "tailwind-rn"
 // Screens
@@ -16,7 +16,12 @@ const Stack = createBottomTabNavigator()
 
 const StackNavigator = () => {
   const { user } = useAuth()
-  return user ? (
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    setLoading(false)
+  }, [user])
+
+  return loading ? null : user ? (
     <NavigationContainer>
       <TouchableWithoutFeedback
         onPress={() => {

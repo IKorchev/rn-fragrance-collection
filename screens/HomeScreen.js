@@ -1,22 +1,23 @@
-import { useNavigation } from "@react-navigation/core"
-import React from "react"
-import { View, Text, TouchableOpacity } from "react-native"
+import React, { useEffect, useState } from "react"
+import { View, Text } from "react-native"
 import tw from "tailwind-rn"
 import useAuth from "../Contexts/AuthContext"
 import Picker from "../components/Picker"
 import useTheme from "../Contexts/ThemeContext"
+import useData from "../Contexts/DataContext"
+
 const Home = () => {
-  const { userCollection } = useAuth()
-  const navigator = useNavigation()
+  const { frag } = useAuth()
   const { viewColors } = useTheme()
+  const { index } = useData()
   return (
     <View
-      //prettier-ignore
-      style={tw(`${viewColors.background}  h-full flex justify-center flex items-center`)}>
-        <Picker colors={viewColors} images={userCollection} />
-        
-     
-     
+      style={tw(`${viewColors.background} h-full flex justify-center flex items-center`)}>
+      {index >= 0 ? (
+        <Picker fragrance={frag} index={index} />
+      ) : (
+        <Text>Nothing in here</Text>
+      )}
     </View>
   )
 }

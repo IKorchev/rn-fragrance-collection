@@ -13,7 +13,6 @@ import * as A from "react-native-animatable"
 import useTheme from "../Contexts/ThemeContext"
 import useAuth from "../Contexts/AuthContext"
 export default function Header({ title, navigation }) {
-  const { user, logOut } = useAuth()
   const { headerColors, theme, setTheme, baseColors } = useTheme()
   const ref = useRef()
 
@@ -26,14 +25,9 @@ export default function Header({ title, navigation }) {
       ]}>
       <StatusBar StatusBarStyle={`light-content`} />
       <View style={tw("flex-row w-full px-5 justify-between items-center mt-5 ")}>
-        <TouchableOpacity onPress={logOut}>
-          <SimpleLineIcons name='logout' size={25} color={baseColors} />
-        </TouchableOpacity>
-
         <Text style={tw(`${headerColors.font} text-2xl text-center mb-2 font-bold`)}>
           {title}
         </Text>
-
         <View style={tw("flex-row items-center")}>
           <TouchableOpacity
             onPress={() => {
@@ -50,7 +44,8 @@ export default function Header({ title, navigation }) {
                 ` h-5 w-5 ${
                   theme === "light" ? "ml-1 bg-gray-100" : "ml-6 bg-green-300"
                 } rounded-full`
-              )}></A.Text>
+              )}
+            />
             <Ionicons
               name={theme === "dark" ? "sunny" : "moon"}
               color={getColor("yellow-300")}

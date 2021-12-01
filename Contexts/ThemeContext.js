@@ -7,7 +7,7 @@ const useTheme = () => {
 }
 
 export const ThemeContextProvider = ({ children }) => {
-  const [theme, setTheme] = useState("light")
+  const [theme, setTheme] = useState("dark")
 
   const baseColors = theme === "light" ? "black" : "white"
 

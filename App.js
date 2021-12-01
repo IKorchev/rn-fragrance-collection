@@ -9,6 +9,7 @@ import { AuthProvider } from "./Contexts/AuthContext"
 import "react-native-gesture-handler"
 import { DataContextProvider } from "./Contexts/DataContext"
 
+
 export default function App() {
   return (
     <AuthProvider>

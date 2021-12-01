@@ -6,16 +6,15 @@ import useTheme from "../Contexts/ThemeContext"
 import CustomListItem from "../components/ListItem"
 
 const CollectionScreen = () => {
-  const { userCollection } = useAuth()
+  const { sortedCollection } = useAuth()
   const { viewColors } = useTheme()
 
   return (
     <View style={[tw(`flex-1 ${viewColors.background}`)]}>
       <FlatList
-        data={userCollection.sort((el1, el2) => el1.times_worn < el2.times_worn)}
+        data={sortedCollection}
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => {
-          console.log(item.name)
           return (
             <CustomListItem
               name={item.name}

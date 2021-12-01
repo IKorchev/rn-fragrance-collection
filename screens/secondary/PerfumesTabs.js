@@ -22,8 +22,8 @@ const PerfumesTabs = () => {
             backgroundColor: theme === "dark" ? getColor("gray-700") : "white",
           },
         })}>
-        <Tab.Screen name='Search' component={SearchScreen} />
         <Tab.Screen name='Top 100' component={TopPerfumesScreen} />
+        <Tab.Screen name='Search' component={SearchScreen} />
       </Tab.Navigator>
     </View>
   )
