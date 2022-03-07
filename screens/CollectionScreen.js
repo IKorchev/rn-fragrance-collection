@@ -3,7 +3,7 @@ import { View, FlatList } from "react-native"
 import useAuth from "../Contexts/AuthContext"
 import tw from "tailwind-rn"
 import useTheme from "../Contexts/ThemeContext"
-import CustomListItem from "../components/ListItem"
+import CustomListItem from "../components/CollectionListItem"
 
 const CollectionScreen = () => {
   const { sortedCollection } = useAuth()

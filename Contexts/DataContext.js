@@ -1,17 +1,15 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react"
-import { getTop100 } from "../lib/utils/fetchData"
 import useAuth from "./AuthContext"
 import { random } from "lodash"
+import { collection, getDocs } from "firebase/firestore"
 const DataContext = createContext("")
-
 const useData = () => {
   return useContext(DataContext)
 }
 
 export const DataContextProvider = ({ children }) => {
-  const { userCollection, setFrag } = useAuth()
-  const [data, setData] = useState(null)
-  const [top100, setTop100] = useState(null)
+  const options = ["men", "women", "unisex"]
+  const { userCollection, setFrag, db } = useAuth()
   const [index, setIndex] = useState()
   const getNewFrag = () => {
     const max = userCollection.length - 1
@@ -20,30 +18,37 @@ export const DataContextProvider = ({ children }) => {
     setIndex(index)
   }
 
-  const handleData = async () => {
-    const topMen = await getTop100("Men")
-    setTop100({ men: topMen, women: [], unisex: [] })
-    const topWomen = await getTop100("Women")
-    setTop100({ men: topMen, women: topWomen, unisex: [] })
-    const topUnisex = await getTop100("Unisex")
-    setTop100({ men: topMen, women: topWomen, unisex: topUnisex })
-  }
   useEffect(() => {
     if (userCollection.length >= 1) {
       getNewFrag()
-      console.log("running")
     }
   }, [userCollection.length])
+
   useEffect(() => {
     getNewFrag()
-    handleData()
+  }, [])
+
+  const getTop100 = async (query) => {
+    const data = await getDocs(collection(db, query))
+    const els = data.docs.map((el) => ({ id: el.id, ...el.data() }))
+    return els
+  }
+
+  // fetch the data for top 100
+  const data = useMemo(() => {
+    let data = []
+    options.forEach(async (el) => {
+      const t100 = await getTop100(`top-${el}`)
+      const _t100 = t100.sort((el1, el2) => el1.place > el2.place)
+      data.push(_t100)
+    })
+    return data
   }, [])
 
   const obj = {
     getNewFrag,
-    top100,
-    setData,
     data,
+    options,
     index,
   }
   return <DataContext.Provider value={obj}>{children}</DataContext.Provider>

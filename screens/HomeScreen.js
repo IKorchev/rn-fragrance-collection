@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { View, Text } from "react-native"
+import { View, Text, ActivityIndicator } from "react-native"
 import tw from "tailwind-rn"
 import useAuth from "../Contexts/AuthContext"
 import Picker from "../components/Picker"
@@ -11,13 +11,8 @@ const Home = () => {
   const { viewColors } = useTheme()
   const { index } = useData()
   return (
-    <View
-      style={tw(`${viewColors.background} h-full flex justify-center flex items-center`)}>
-      {index >= 0 ? (
-        <Picker fragrance={frag} index={index} />
-      ) : (
-        <Text>Nothing in here</Text>
-      )}
+    <View style={tw(`${viewColors.background} h-full flex justify-center flex items-center`)}>
+      {index >= 0 ? <Picker fragrance={frag} index={index} /> : <ActivityIndicator color='blue' />}
     </View>
   )
 }

@@ -3,12 +3,10 @@ import { SearchBar } from "react-native-elements"
 import { FlatList, KeyboardAvoidingView, ActivityIndicator, Keyboard } from "react-native"
 import { fetchData } from "../../lib/utils/fetchData"
 import tw from "tailwind-rn"
-import useAuth from "../../Contexts/AuthContext"
 import useTheme from "../../Contexts/ThemeContext"
-import CustomListItem from "../../components/ListItem"
+import TopListItem from "../../components/TopListItem"
 
-const SearchScreen = ({ navigation }) => {
-  const [fragranceUrl, setFragranceUrl] = useState("")
+const SearchScreen = () => {
   const [data, setData] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const { baseColors, modalColors, viewColors, theme } = useTheme()
@@ -26,6 +24,7 @@ const SearchScreen = ({ navigation }) => {
       const res = await fetchData(searchTerm)
       setLoading(false)
       setData(res)
+      console.log(res)
     } catch (error) {
       console.log(error)
     }
@@ -37,7 +36,9 @@ const SearchScreen = ({ navigation }) => {
         onSubmitEditing={() => handleSearch(searchTerm)}
         showLoading={loading}
         containerStyle={tw(`${modalColors.background}`)}
-        inputContainerStyle={tw(`${theme === "light" ? "bg-gray-200" : "bg-gray-600"}`)}
+        inputContainerStyle={tw(
+          `${theme === "light" ? "bg-gray-200" : "bg-gray-600"} rounded-full px-2`
+        )}
         inputStyle={tw(`text-${baseColors}`)}
         placeholder='Name (min 3 chars)'
         onChangeText={onChangeText}
@@ -48,13 +49,18 @@ const SearchScreen = ({ navigation }) => {
         <FlatList
           data={data}
           keyExtractor={(item) => item.imageUrl}
-          renderItem={({ item }) => (
-            <CustomListItem
-              place={item.place}
-              name={item.name}
-              imageUrl={item.imageUrl}
-            />
-          )}
+          renderItem={({ item }) => {
+            const { place, name, imageUrl, rating, totalVotes } = item
+            return (
+              <TopListItem
+                place={place}
+                name={name}
+                imageUrl={imageUrl}
+                rating={rating}
+                totalVotes={totalVotes}
+              />
+            )
+          }}
         />
       )}
     </KeyboardAvoidingView>

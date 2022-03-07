@@ -7,6 +7,7 @@ import {
   signInWithCredential,
   signOut,
 } from "@firebase/auth"
+
 import config from "../lib/utils/googleAuthConfig"
 import { auth, db } from "../lib/firebase"
 import {
@@ -14,6 +15,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   increment,
   onSnapshot,
   updateDoc,
@@ -28,6 +30,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [userCollection, setUserCollection] = useState([])
   const [sortedCollection, setSortedCollection] = useState([])
+
   const [frag, setFrag] = useState()
   useEffect(
     () =>
@@ -58,6 +61,12 @@ export const AuthProvider = ({ children }) => {
       Alert.alert("Ooops", "The name must be 3 or more characters!")
       return
     }
+    if (userCollection.find((el) => el.name === object.name)) {
+      Alert.alert("Ooops", `You already have ${object.name} in your collection`)
+      return
+    }
+
+    
     try {
       const colRef = collection(db, "users", user.uid, "perfumes")
       const response = await addDoc(colRef, object)
@@ -67,6 +76,7 @@ export const AuthProvider = ({ children }) => {
         times_worn: 0,
         id: response.id,
       })
+      Alert.alert("Item added successfully", `${object.name}`)
     } catch (error) {
       Alert.alert("Item was not added", "Something went wrong, please try again later.")
       console.log(error)
@@ -90,7 +100,6 @@ export const AuthProvider = ({ children }) => {
         ...object,
         times_worn: increment(1),
       })
-      Alert.alert("DONE", `${object.name}`)
     } catch (error) {
       Alert.alert("Oops", `Something went wrong!`)
     }
