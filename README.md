@@ -12,5 +12,4 @@ The back end is Vercel Cloud function that scrapes for data from _https://www.pa
 
 [Github Link](https://github.com/IKorchev/webscraping-api) to the backend function.
 
-> NOTE: It is not 100% production ready.
 
