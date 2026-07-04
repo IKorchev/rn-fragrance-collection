@@ -1,15 +1,15 @@
 import React, { useState } from "react"
-import { SearchBar } from "react-native-elements"
+import { SearchBar } from "@rneui/themed"
 import { FlatList, KeyboardAvoidingView, ActivityIndicator, Keyboard } from "react-native"
-import { fetchData } from "../../lib/utils/fetchData"
-import tw from "tailwind-rn"
-import useTheme from "../../Contexts/ThemeContext"
-import TopListItem from "../../components/TopListItem"
+import { fetchData } from "../../../../lib/utils/fetchData"
+import { getColor } from "../../../../lib/utils/colors"
+import useTheme from "../../../../Contexts/ThemeContext"
+import TopListItem from "../../../../components/TopListItem"
 
 const SearchScreen = () => {
   const [data, setData] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const { baseColors, modalColors, viewColors, theme } = useTheme()
+  const { modalColors, viewColors, theme, baseTextClass } = useTheme()
   const [loading, setLoading] = useState(false)
 
   const onChangeText = (input) => {
@@ -31,20 +31,24 @@ const SearchScreen = () => {
   }
 
   return (
-    <KeyboardAvoidingView style={tw(`${viewColors.background} flex-1 `)}>
+    <KeyboardAvoidingView className={`${viewColors.background} flex-1`}>
       <SearchBar
         onSubmitEditing={() => handleSearch(searchTerm)}
         showLoading={loading}
-        containerStyle={tw(`${modalColors.background}`)}
-        inputContainerStyle={tw(
-          `${theme === "light" ? "bg-gray-200" : "bg-gray-600"} rounded-full px-2`
-        )}
-        inputStyle={tw(`text-${baseColors}`)}
+        containerStyle={{
+          backgroundColor: getColor(modalColors.background.replace("bg-", "")),
+        }}
+        inputContainerStyle={{
+          backgroundColor: getColor(theme === "light" ? "gray-200" : "gray-600"),
+          borderRadius: 9999,
+          paddingHorizontal: 8,
+        }}
+        inputStyle={{ color: getColor(baseTextClass.replace("text-", "")) }}
         placeholder='Name (min 3 chars)'
         onChangeText={onChangeText}
         value={searchTerm}
       />
-      {loading && <ActivityIndicator size='large' color='blue' style={tw("mt-12")} />}
+      {loading && <ActivityIndicator size='large' color='blue' className='mt-12' />}
       {data && (
         <FlatList
           data={data}
