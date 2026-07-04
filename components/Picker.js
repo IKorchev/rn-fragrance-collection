@@ -78,9 +78,9 @@ const Picker = ({ fragrance, index }) => {
 
     animationLoopRef.current = Animated.timing(animatedOffset, {
       toValue: offsetForIndex(endIndex),
-      duration: 1800 + totalSteps * 58,
+      duration: 1000 + totalSteps * 38,
       useNativeDriver: true,
-      easing: Easing.linear,
+      easing: Easing.out(Easing.cubic),
     })
 
     animationLoopRef.current.start(({ finished }) => {
