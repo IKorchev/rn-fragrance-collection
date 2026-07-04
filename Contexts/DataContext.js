@@ -11,11 +11,16 @@ export const DataContextProvider = ({ children }) => {
   const options = ["men", "women", "unisex"]
   const { userCollection, setFrag, db } = useAuth()
   const [index, setIndex] = useState()
-  const getNewFrag = () => {
+  const getNewFrag = (targetIndex) => {
     const max = userCollection.length - 1
-    let index = random(0, max)
-    setFrag(userCollection[index])
-    setIndex(index)
+    let nextIndex = targetIndex
+
+    if (typeof nextIndex !== "number" || nextIndex < 0 || nextIndex > max) {
+      nextIndex = random(0, max)
+    }
+
+    setFrag(userCollection[nextIndex])
+    setIndex(nextIndex)
   }
 
   useEffect(() => {

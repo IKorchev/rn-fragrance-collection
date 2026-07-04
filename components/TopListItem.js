@@ -1,10 +1,19 @@
 import React from "react"
 import { ListItem } from "@rneui/themed"
 import { Image, TouchableOpacity, Text, View, StyleSheet } from "react-native"
-import { AntDesign } from "@expo/vector-icons"
+import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "../lib/utils/colors"
 import useTheme from "../Contexts/ThemeContext"
 import useAuth from "../Contexts/AuthContext"
+
+const getImageSource = (value) => {
+  if (!value || typeof value !== "string") return null
+
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  return /^(https?:)?\/\//i.test(trimmed) ? { uri: trimmed } : null
+}
 
 const TopListItem = ({ name, place, imageUrl, rating, totalVotes }) => {
   const { addFragranceToCollection } = useAuth()
@@ -12,6 +21,7 @@ const TopListItem = ({ name, place, imageUrl, rating, totalVotes }) => {
   const title = name.split(" - ")[1]
   const brand = name.split(" - ")[0]
   const handleAddFragrance = () => addFragranceToCollection({ name: name, image_url: imageUrl })
+  const imageSource = getImageSource(imageUrl)
 
   return (
     <ListItem
@@ -31,7 +41,13 @@ const TopListItem = ({ name, place, imageUrl, rating, totalVotes }) => {
       <View className={`${baseTextClass} text-lg w-10 h-full justify-center items-center`}>
         <Text className={`${baseTextClass} text-lg font-bold text-center`}>{place}</Text>
       </View>
-      <Image height='20' width='20' className='h-20 w-20' source={{ uri: imageUrl }} />
+      {imageSource ? (
+        <Image height='20' width='20' className='h-20 w-20' source={imageSource} />
+      ) : (
+        <View className='h-20 w-20 items-center justify-center rounded-md border border-gray-300'>
+          <MaterialCommunityIcons name='image-off' size={24} color={getColor("gray-400")} />
+        </View>
+      )}
       <ListItem.Content style={{ padding: 0 }}>
         <ListItem.Title
           style={{ color: getColor(baseColors), fontWeight: "bold" }}

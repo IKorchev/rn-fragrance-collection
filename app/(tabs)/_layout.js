@@ -18,10 +18,7 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Add</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(collection)">
-        <NativeTabs.Trigger.Icon
-          src={require("../../assets/collection-icon.png")}
-          renderingMode='template'
-        />
+        <NativeTabs.Trigger.Icon sf="drop.fill" md="fragrance" />
         <NativeTabs.Trigger.Label>Collection</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
