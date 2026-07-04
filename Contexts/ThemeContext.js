@@ -10,6 +10,8 @@ export const ThemeContextProvider = ({ children }) => {
   const [theme, setTheme] = useState("light")
 
   const baseColors = theme === "light" ? "black" : "white"
+  const baseTextClass = theme === "light" ? "text-black" : "text-white"
+  const baseBorderClass = theme === "light" ? "border-black" : "border-white"
 
   const headerColors = {
     font: theme === "dark" ? "text-green-300" : "text-black",
@@ -32,6 +34,8 @@ export const ThemeContextProvider = ({ children }) => {
     <ThemeContext.Provider
       value={{
         baseColors,
+        baseTextClass,
+        baseBorderClass,
         viewColors,
         headerColors,
         theme,

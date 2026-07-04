@@ -1,14 +1,13 @@
 import React, { useContext, useEffect, useState, createContext } from "react"
-import * as Google from "expo-google-app-auth"
-LogBox.ignoreAllLogs(true)
+import * as Google from "expo-auth-session/providers/google"
+import * as WebBrowser from "expo-web-browser"
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithCredential,
   signOut,
-} from "@firebase/auth"
+} from "firebase/auth"
 
-import config from "../lib/utils/googleAuthConfig"
 import { auth, db } from "../lib/firebase"
 import {
   addDoc,
@@ -19,8 +18,11 @@ import {
   increment,
   onSnapshot,
   updateDoc,
-} from "@firebase/firestore"
-import { Alert, LogBox } from "react-native"
+} from "firebase/firestore"
+import { Alert } from "react-native"
+
+WebBrowser.maybeCompleteAuthSession()
+
 const AuthContext = createContext({})
 
 const useAuth = () => {
@@ -28,33 +30,45 @@ const useAuth = () => {
 }
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const [userCollection, setUserCollection] = useState([])
   const [sortedCollection, setSortedCollection] = useState([])
 
   const [frag, setFrag] = useState()
-  useEffect(
-    () =>
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          setUser(user)
-        } else {
-          setUser(null)
-        }
-      }),
-    []
-  )
 
-  useEffect(
-    () =>
-      user &&
-      onSnapshot(collection(db, "users", user.uid, "perfumes"), (doc) => {
-        const col = doc.docs.map((el) => el.data())
-        const sortedCollection = col.sort((el1, el2) => el1.times_worn < el2.times_worn)
-        setUserCollection(col)
-        setSortedCollection(sortedCollection)
-      }),
-    [user]
-  )
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  })
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (user) => {
+      setUser(user ?? null)
+      setAuthLoading(false)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    return onSnapshot(collection(db, "users", user.uid, "perfumes"), (doc) => {
+      const col = doc.docs.map((el) => el.data())
+      const sortedCollection = col.sort((el1, el2) => el1.times_worn < el2.times_worn)
+      setUserCollection(col)
+      setSortedCollection(sortedCollection)
+    })
+  }, [user])
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { id_token, access_token } = response.params
+      const credential = GoogleAuthProvider.credential(id_token, access_token)
+      signInWithCredential(auth, credential).catch((err) => {
+        console.log(err)
+        setUser(null)
+      })
+    }
+  }, [response])
 
   const addFragranceToCollection = async (object) => {
     if (object.name.length < 3) {
@@ -66,7 +80,7 @@ export const AuthProvider = ({ children }) => {
       return
     }
 
-    
+
     try {
       const colRef = collection(db, "users", user.uid, "perfumes")
       const response = await addDoc(colRef, object)
@@ -105,19 +119,8 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const signInWithGoogle = async () => {
-    try {
-      const response = await Google.logInAsync(config)
-      if (response.type === "success") {
-        const { idToken, accessToken, user } = response
-        const credential = GoogleAuthProvider.credential(idToken, accessToken)
-        await signInWithCredential(auth, credential)
-      }
-    } catch (err) {
-      console.log(err)
-      setUser(null)
-    }
-  }
+  const signInWithGoogle = () => promptAsync()
+
   const logOut = () => {
     signOut(auth)
   }
@@ -125,6 +128,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        authLoading,
         signInWithGoogle,
         logOut,
         db,

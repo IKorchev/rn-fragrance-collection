@@ -5,11 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "userInterfaceStyle": "light",
+    "scheme": "fragrancecollection",
     "updates": {
       "fallbackToCacheTimeout": 0
     },
@@ -18,17 +15,31 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "host.exp.exponent"
+      "bundleIdentifier": "com.korchev.fragrancecollection"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "host.exp.exponent"
+      "package": "com.korchev.fragrancecollection"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-font",
+      "expo-router"
+    ]
   }
 }

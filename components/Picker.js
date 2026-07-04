@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react"
 import { View, FlatList, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons"
-import tw, { getColor } from "tailwind-rn"
+import { getColor } from "../lib/utils/colors"
 import ReelImage from "./ReelImage"
 import useAuth from "../Contexts/AuthContext"
 import useTheme from "../Contexts/ThemeContext"
@@ -19,9 +19,9 @@ const Picker = ({ fragrance, index }) => {
   }, [fragrance?.id, i])
 
   return (
-    <View style={tw("h-full w-full items-center py-12")}>
-      <Text style={tw(`${viewColors.font} text-4xl font-bold `)}>Your pick</Text>
-      <View style={[styles.dice, tw("h-72 w-60 py-1 rounded-xl")]}>
+    <View className='h-full w-full items-center py-12'>
+      <Text className={`${viewColors.font} text-4xl font-bold`}>Your pick</Text>
+      <View className='h-72 w-60 py-1 rounded-xl' style={styles.dice}>
         <FlatList
           ref={flatListRef}
           horizontal={false}
@@ -37,20 +37,20 @@ const Picker = ({ fragrance, index }) => {
           )}
         />
       </View>
-      <View style={tw("mt-12 flex-row")}>
-        <View style={tw("items-center")}>
-          <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Wear</Text>
+      <View className='mt-12 flex-row'>
+        <View className='items-center'>
+          <Text className={`${viewColors.font} items-center mb-2 text-lg`}>Wear</Text>
           <TouchableOpacity
             onPress={() => incrementWear(fragrance)}
-            style={tw("p-3 h-16 w-16 mx-12 items-center justify-center bg-green-200 rounded-full")}>
+            className='p-3 h-16 w-16 mx-12 items-center justify-center bg-green-200 rounded-full'>
             <FontAwesome5 name='spray-can' size={30} color={getColor("green-900")} />
           </TouchableOpacity>
         </View>
-        <View style={tw("items-center")}>
-          <Text style={tw(`${viewColors.font} items-center mb-2 text-lg`)}>Reroll</Text>
+        <View className='items-center'>
+          <Text className={`${viewColors.font} items-center mb-2 text-lg`}>Reroll</Text>
           <TouchableOpacity
             onPress={getNewFrag}
-            style={tw("p-3 h-16 w-16 mx-12 items-center justify-center bg-red-200 rounded-full")}>
+            className='p-3 h-16 w-16 mx-12 items-center justify-center bg-red-200 rounded-full'>
             <MaterialCommunityIcons name='dice-multiple' size={40} color={getColor("red-900")} />
           </TouchableOpacity>
         </View>
