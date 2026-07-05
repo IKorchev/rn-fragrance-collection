@@ -4,64 +4,77 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-A React Native (Expo) mobile app for tracking a personal fragrance/perfume collection. Users sign in with Google, search a scraped fragrance database, add items to their collection, track how many times they've worn each one, and use a random "picker" to choose what to wear. Data is stored in Firebase (Firestore + Auth). Search/Top-100 data comes from a separate backend (a Vercel function that scrapes https://www.parfumo.net/ with Puppeteer — repo: `webscraping-api`, not part of this codebase).
+A React Native (Expo) mobile app for tracking a personal fragrance/perfume collection. Users sign in with Google, search a scraped fragrance database, add items to their collection, track how many times they've worn each one, and use a weighted-random "picker" to choose what to wear. Auth and app data live in Supabase (Postgres + Supabase Auth, with Row Level Security guarding per-user rows) — the same Supabase project as the standalone `fragrance-db` scraper/catalog repo, so the user's collection can eventually FK-reference the canonical `fragrances` table ("Phase B", not yet done). Search data still comes from the old `webscraping-api` backend (Vercel + Puppeteer, not part of this codebase) until Phase B points it at the `fragrance-db` catalog.
 
 ## Commands
 
-There is no test suite, linter, or type checker configured in this project — do not invent `npm test`/`npm run lint` commands.
+There is no test suite or linter configured in this project — do not invent `npm test`/`npm run lint` commands. There IS a type checker: run `yarn typecheck` (`tsc --noEmit`) after changes.
 
 ```bash
 yarn start           # expo start
 yarn android         # expo run:android (local dev-client build)
 yarn ios             # expo run:ios (local dev-client build)
 yarn web             # expo start --web
+yarn typecheck       # tsc --noEmit
 ```
+
+The project is TypeScript-only (`strict: true`, `tsconfig.json` extends `expo/tsconfig.base`; NativeWind `className` props are typed via `nativewind-env.d.ts`). `src/lib/database.types.ts` holds Supabase-generated DB types — regenerate via the Supabase MCP (`generate_typescript_types`) after schema changes; `src/lib/queries.ts` and `src/contexts/auth-context.tsx` derive their row types (`CatalogFragrance`, `TopFragrance`, `UserFragrance`) from it via the `Tables<"...">` helper. Note: `@rneui` icon-prop typings clash with React 19 types — pass `@expo/vector-icons` elements (e.g. `icon={<FontAwesome .../>}`) instead of `{ name, type }` icon objects.
 
 The project is on Expo SDK 57 (`react-native` 0.86, React 19.2). Google Sign-In requires a real dev-client build (`expo run:ios`/`run:android`) rather than plain Expo Go — Expo Go's fixed identity (`host.exp.exponent`) can't satisfy the OAuth redirect URI registered for this app's real bundle ID (`com.korchev.fragrancecollection`).
 
 ### Required local env vars (gitignored, not in repo)
 
 Copy `.env.example` to `.env` and fill in real values — the app compiles with placeholders but auth/data won't work without them:
-- `EXPO_PUBLIC_FIREBASE_*` — Firebase project config (Firebase console → Project settings).
-- `EXPO_PUBLIC_GOOGLE_{IOS,ANDROID,WEB}_CLIENT_ID` — Google Cloud Console OAuth client IDs (Credentials page). The Android client's SHA-1 must match your local debug keystore (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android`).
-- `EXPO_PUBLIC_API_URL` — the `webscraping-api` backend URL, consumed by `lib/utils/fetchData.js`.
+- `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Supabase dashboard → Settings → API (same project as `fragrance-db`). The anon key is safe to embed; RLS does the real access control.
+- `EXPO_PUBLIC_GOOGLE_{IOS,ANDROID,WEB}_CLIENT_ID` — Google Cloud Console OAuth client IDs (Credentials page), registered with Supabase Auth's Google provider. The Android client's SHA-1 must match your local debug keystore (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android`).
+- `EXPO_PUBLIC_API_URL` — the `webscraping-api` backend URL, consumed by `src/lib/utils/fetch-data.ts`.
+
+`db/schema.sql` holds the app's tables (`user_fragrances`, `top_fragrances`, the `increment_wear` RPC, RLS policies) — run it once in the Supabase SQL editor when setting up a new project.
 
 ## Architecture
 
-### Routing (`app/` — Expo Router, file-based)
+### Source layout
+
+All source lives under `src/` (`src/app` is auto-detected by Expo Router). Folder and file names are lowercase kebab-case. Imports across folders use the `@/` alias (`@/* → ./src/*`, defined in `tsconfig.json` `paths`; Metro resolves it natively) — same-directory imports stay relative (`./delete-bottom-sheet`). Static assets (`assets/`, referenced by `app.json`) and `db/schema.sql` stay at the repo root.
+
+### Routing (`src/app/` — Expo Router, file-based)
 
 ```
-app/_layout.js                          — providers + Stack.Protected auth gate (signed-in vs "sign-in")
-app/sign-in.js                          — signed-out screen
-app/(tabs)/_layout.js                   — NativeTabs root tab bar (Home / Add / Collection)
-app/(tabs)/(home)/_layout.js + index.js — Home tab (own Stack, for the custom header)
-app/(tabs)/(collection)/_layout.js + index.js — Collection tab
-app/(tabs)/(add)/_layout.js             — Add tab's Stack (header), wraps the nested top-tabs group
-app/(tabs)/(add)/(top-tabs)/_layout.js + index.js + search.js — Top 100 / Search sub-tabs (js-top-tabs)
+src/app/_layout.tsx                     — providers + Stack.Protected auth gate (signed-in vs "sign-in")
+src/app/sign-in.tsx                     — signed-out screen
+src/app/(tabs)/_layout.tsx              — NativeTabs root tab bar (Home / Add / Collection)
+src/app/(tabs)/(home)/_layout.tsx + index.tsx — Home tab (own Stack, for the custom header)
+src/app/(tabs)/(collection)/_layout.tsx + index.tsx — Collection tab
+src/app/(tabs)/(add)/_layout.tsx        — Add tab's Stack (header), wraps the nested top-tabs group
+src/app/(tabs)/(add)/(top-tabs)/_layout.tsx + index.tsx + search.tsx — Top 100 / Search sub-tabs (js-top-tabs)
 ```
 
-Root layout (`app/_layout.js`) wraps the tree in `AuthProvider > ThemeContextProvider > DataContextProvider`, then renders `<Stack.Protected guard={!!user}>`/`guard={!user}` to switch between `(tabs)` and `sign-in` — this replaces what used to be a manual `user ? <Tabs/> : <SigninScreen/>` check. It also holds an `authLoading` gate (see `Contexts/AuthContext.js`) that renders nothing until Firebase's `onAuthStateChanged` has fired at least once, to avoid a sign-in-screen flash on cold start.
+Root layout (`src/app/_layout.tsx`) wraps the tree in `QueryClientProvider > ToastContextProvider > AuthProvider > ThemeContextProvider`, then renders `<Stack.Protected guard={!!user}>`/`guard={!user}` to switch between `(tabs)` and `sign-in` — this replaces what used to be a manual `user ? <Tabs/> : <SigninScreen/>` check. It also holds an `authLoading` gate (see `src/contexts/auth-context.tsx`) that renders nothing until the initial `supabase.auth.getSession()` resolves, to avoid a sign-in-screen flash on cold start.
 
-**NativeTabs render no header** — each tab (`(home)`, `(collection)`, `(add)`) has its own nested `<Stack>` whose only job is supplying the shared custom `Header.js` via `screenOptions.header`, using `getHeaderTitle` from `expo-router/react-navigation` (not `@react-navigation/elements` directly — Expo Router blocks direct `@react-navigation/*` imports as of SDK 56+; use the `expo-router/react-navigation` and `expo-router/js-top-tabs` re-exports instead).
+**NativeTabs render no header** — each tab (`(home)`, `(collection)`, `(add)`) has its own nested `<Stack>` whose only job is supplying the shared custom `src/components/header.tsx` via `screenOptions.header`, using `getHeaderTitle` from `expo-router/react-navigation` (not `@react-navigation/elements` directly — Expo Router blocks direct `@react-navigation/*` imports as of SDK 56+; use the `expo-router/react-navigation` and `expo-router/js-top-tabs` re-exports instead).
 
-The nested "Top 100"/"Search" sub-tabs under Add use `expo-router/js-top-tabs`'s `createMaterialTopTabNavigator` wrapped in `withLayoutContext` — this is the pattern to follow for any other nested-tab-inside-a-tab section. Route file names (`index.js`/`search.js`) aren't presentable, so labels come from each `Tabs.Screen`/`MaterialTopTabs.Screen`'s `options.title`, not the route name.
+The nested "Top 100"/"Search" sub-tabs under Add use `expo-router/js-top-tabs`'s `createMaterialTopTabNavigator` wrapped in `withLayoutContext` — this is the pattern to follow for any other nested-tab-inside-a-tab section. Route file names (`index.tsx`/`search.tsx`) aren't presentable, so labels come from each `Tabs.Screen`/`MaterialTopTabs.Screen`'s `options.title`, not the route name.
 
-**NativeTabs tradeoffs accepted in this app**: a single `tintColor` (no separate configurable inactive-tab color), no custom `tabBarStyle` (native OS chrome instead — iOS liquid glass / Android Material 3), and the Collection tab's custom hand-drawn icon (originally a live `assets/Collection.js` SVG component) is now a pre-rasterized `assets/collection-icon.png` used via `NativeTabs.Trigger.Icon src={...} renderingMode="template"` (NativeTabs icons can't render arbitrary React components — only SF Symbols/Material Symbols/static images/vector-icon-library glyphs).
+**NativeTabs tradeoffs accepted in this app**: a single `tintColor` (no separate configurable inactive-tab color), no custom `tabBarStyle` (native OS chrome instead — iOS liquid glass / Android Material 3), and the Collection tab's custom hand-drawn icon (originally a live SVG component, since deleted) is now a pre-rasterized `assets/collection-icon.png` used via `NativeTabs.Trigger.Icon src={...} renderingMode="template"` (NativeTabs icons can't render arbitrary React components — only SF Symbols/Material Symbols/static images/vector-icon-library glyphs).
 
 ### Provider stack
 
-- **`Contexts/AuthContext.js`** (`useAuth`) — owns Firebase auth state (`user`, `authLoading`), Google sign-in/out (via `expo-auth-session`, not the old deprecated `expo-google-app-auth`), and is also the sole owner of all Firestore *write* operations for a user's collection: `addFragranceToCollection`, `deleteFragrance`, `incrementWear`. It subscribes to `users/{uid}/perfumes` via `onSnapshot` and exposes both `userCollection` (raw) and `sortedCollection` (sorted by `times_worn`). Also holds `frag`/`setFrag`, the currently "picked" fragrance — this lives here (not in DataContext) because it needs to reset in response to auth/collection changes.
-- **`Contexts/DataContext.js`** (`useData`) — depends on `useAuth()` internally (reads `userCollection`, `db`). Owns the "random picker" logic (`getNewFrag`/`index`) and fetches the read-only Top 100 lists per category (`men`/`women`/`unisex`) from Firestore collections named `top-{category}`.
-- **`Contexts/ThemeContext.js`** (`useTheme`) — light/dark theme. Precomputes plain-string class groups (`headerColors`, `viewColors`, `cardColors`, `modalColors`) plus `baseColors`/`baseTextClass`/`baseBorderClass` that components destructure and interpolate into `className` strings. **Important**: NativeWind's class scanner only picks up complete literal class-name strings appearing in source — a runtime-built string like `` `text-${baseColors}` `` (where `baseColors` is a bare variable) will NOT work, even though it's valid JS. Always use the precomputed `baseTextClass`/`baseBorderClass` fields (or add a new literal-branch field here) instead of interpolating a bare color name into a class string.
+- **`src/contexts/auth-context.tsx`** (`useAuth`) — owns Supabase auth state (`user`, `authLoading`; the Google `id_token` from `expo-auth-session` is exchanged via `supabase.auth.signInWithIdToken`), and is the sole owner of all *write* operations for a user's collection: `addFragranceToCollection`, `requestDelete`/`cancelDelete` (deferred delete with toast-undo window), `updateFragrance`, `incrementWear` (calls the `increment_wear` RPC for an atomic counter + `last_worn` stamp). The collection *read* is a TanStack query (`["collection", user.id]`); writes and Supabase Realtime `postgres_changes` events both invalidate it — do not rely on Realtime alone for UI freshness. Exposes `userCollection` (raw), `sortedCollection` (sorted by `times_worn`), and `visibleSortedCollection` (minus rows pending deletion — screens should render this one). The Supabase user object is shimmed with a `photoURL` field (from `user_metadata.avatar_url`) for `src/components/header.tsx` compatibility. Also owns the picker: `frag`/`setFrag`/`index`/`getNewFrag` (weighted via `src/lib/utils/pick-weighted-index.ts` — inverse `times_worn`, ~85% downweight for anything worn in the last 24h; `last_worn` is an ISO string, `new Date(...)` it before math).
+- **`src/contexts/toast-context.tsx`** (`useToast`) — bottom snackbar (`showToast({ message, actionLabel, onAction })`), used for the delete-undo flow. Sits above `AuthProvider` so any context/screen can use it.
 
-Because `frag`/collection state lives in `AuthContext` and picker/top-100 state lives in `DataContext`, and `DataContext` depends on `AuthContext`, always keep `AuthProvider` above `DataContextProvider` in the tree.
+### Data fetching (TanStack Query — there is no DataContext)
+
+All reads go through TanStack Query (`@tanstack/react-query`; client in `src/lib/query-client.ts`, 5-min staleTime). Shared hooks live in `src/lib/queries.ts`: `useCatalog()` (home-screen Discover list from the `fragrances` catalog), `useTop100()` (one array per `CATEGORY_OPTIONS` entry from `top_fragrances`, rows mapped to camelCase `imageUrl`/`totalVotes` for the list components), and `useFragranceSearch(term)` (webscraping-api; disabled until `term` ≥ `MIN_SEARCH_LENGTH`, so screens gate by setting the submitted term). The collection query lives inside `AuthContext` (needs `user.id` + write invalidation). When adding a new data source, add a hook to `src/lib/queries.ts` rather than fetching in components or creating a new context; queryFns must `throw` on failure (`src/lib/utils/fetch-data.ts` does) so react-query surfaces `error`.
+- **`src/contexts/theme-context.tsx`** (`useTheme`) — light/dark theme. Precomputes plain-string class groups (`headerColors`, `viewColors`, `cardColors`, `modalColors`) plus `baseColors`/`baseTextClass`/`baseBorderClass` that components destructure and interpolate into `className` strings. **Important**: NativeWind's class scanner only picks up complete literal class-name strings appearing in source — a runtime-built string like `` `text-${baseColors}` `` (where `baseColors` is a bare variable) will NOT work, even though it's valid JS. Always use the precomputed `baseTextClass`/`baseBorderClass` fields (or add a new literal-branch field here) instead of interpolating a bare color name into a class string.
+
+`AuthContext` uses `useQueryClient()`/`useQuery()` internally, so `QueryClientProvider` must stay above `AuthProvider` in the tree.
 
 ### Styling
 
-NativeWind v4 (`className` props, Tailwind v3 config in `tailwind.config.js`) — not `tailwind-rn`. Colors referenced outside of `className` (icon `color` props, RN style objects for things Tailwind can't express like `shadowColor`/`shadowOffset`) use `getColor("green-500")` from `lib/utils/colors.js` (a thin wrapper over `tailwindcss/colors`). Third-party UI components from `@rneui/themed` (ListItem, Chip, SearchBar, BottomSheet, Avatar) generally do **not** support `className` on their style-like props (`containerStyle`/`buttonStyle`/`titleStyle`/etc.) — pass real RN style objects (via `getColor()` for theme-driven colors) there instead, not `{ className: "..." }` (that silently no-ops).
+NativeWind v4 (`className` props, Tailwind v3 config in `tailwind.config.js`) — not `tailwind-rn`. Colors referenced outside of `className` (icon `color` props, RN style objects for things Tailwind can't express like `shadowColor`/`shadowOffset`) use `getColor("green-500")` from `src/lib/utils/colors.ts` (a thin wrapper over `tailwindcss/colors`). Third-party UI components from `@rneui/themed` (ListItem, Chip, SearchBar, BottomSheet, Avatar) generally do **not** support `className` on their style-like props (`containerStyle`/`buttonStyle`/`titleStyle`/etc.) — pass real RN style objects (via `getColor()` for theme-driven colors) there instead, not `{ className: "..." }` (that silently no-ops).
 
 ### Data model conventions
 
-- Firestore layout: `users/{uid}/perfumes/{docId}` for a user's collection (fields: `name`, `image_url`, `times_worn`, `id`); `top-{men|women|unisex}` collections for the scraped rankings.
-- `name` is stored as a single `"Brand - Title"` string and split on `" - "` at render time (see `CollectionListItem.js`, `TopListItem.js`) rather than stored as separate fields — keep this convention when adding new fields/components that display fragrance names.
-- List item components (`CollectionListItem.js` for the user's collection, `TopListItem.js` for search/top-100 results) are intentionally separate components with duplicated layout rather than a single parametrized component — this was a deliberate split (see git history) because the two contexts have diverging fields (`place`/`rating`/`totalVotes` vs. `timesWorn`) and actions (add vs. wear/delete). Follow this split rather than re-merging them.
+- Postgres layout (see `db/schema.sql`): `user_fragrances` for a user's collection (`id`, `user_id`, nullable `fragrance_id` FK for Phase B, `name`, `image_url`, `times_worn`, `last_worn`, `created_at`), RLS-scoped to `auth.uid()`; `top_fragrances` (public-read) for the scraped rankings, one table with a `category` column instead of the old per-category Firestore collections.
+- `name` is stored as a single `"Brand - Title"` string and split on `" - "` at render time (see `src/components/collection-list-item.tsx`, `src/components/top-list-item.tsx`) rather than stored as separate fields — keep this convention when adding new fields/components that display fragrance names.
+- List item components (`src/components/collection-list-item.tsx` for the user's collection, `src/components/top-list-item.tsx` for search/top-100 results) are intentionally separate components with duplicated layout rather than a single parametrized component — this was a deliberate split (see git history) because the two contexts have diverging fields (`place`/`rating`/`totalVotes` vs. `timesWorn`) and actions (add vs. wear/delete). Follow this split rather than re-merging them.
