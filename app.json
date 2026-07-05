@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "first-project",
-    "slug": "we",
+    "slug": "fragrance-collection",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "fragrancecollection",
+    "scheme": ["fragrancecollection", "com.korchev.fragrancecollection"],
     "updates": {
       "fallbackToCacheTimeout": 0
     },
@@ -22,7 +22,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.korchev.fragrancecollection"
+      "package": "com.korchev.fragrancecollection",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -39,7 +40,20 @@
         }
       ],
       "expo-font",
-      "expo-router"
-    ]
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b117bfd2-cde2-4241-a9b4-7dd44fa02668"
+      }
+    },
+    "owner": "aven7us"
   }
 }

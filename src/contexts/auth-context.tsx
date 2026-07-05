@@ -8,11 +8,12 @@ import React, {
 } from "react"
 import * as Google from "expo-auth-session/providers/google"
 import * as WebBrowser from "expo-web-browser"
-import { Alert } from "react-native"
+import { Alert, Platform } from "react-native"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { User } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase"
+import { registerForPushNotificationsAsync } from "@/lib/notifications"
 import { pickWeightedIndex } from "@/lib/utils/pick-weighted-index"
 import type { Tables } from "@/lib/database.types"
 
@@ -127,6 +128,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel)
     }
+  }, [user?.id])
+
+  // Register this device for push and remember its Expo token. Upserting on
+  // the token re-homes it if a different account signs in on the same device.
+  useEffect(() => {
+    if (!user?.id) return
+    registerForPushNotificationsAsync().then(async (token) => {
+      if (!token) return
+      const { error } = await supabase
+        .from("user_push_tokens")
+        .upsert(
+          {
+            user_id: user.id,
+            token,
+            platform: Platform.OS,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "token" }
+        )
+      if (error) console.log("Failed to save push token", error)
+    })
   }, [user?.id])
 
   const getNewFrag = (targetIndex?: number) => {
