@@ -2,8 +2,6 @@
 
 A React Native (Expo) app for tracking a personal fragrance collection. Search a ~64k-fragrance database, build your collection, log wears, and let the weighted picker decide what to wear today.
 
-[Demo video](https://streamable.com/qiw7hq) *(older version — UI has since been redesigned)*
-
 ## Features
 
 - **Google sign-in** via Supabase Auth (expo-auth-session)
@@ -20,10 +18,6 @@ A React Native (Expo) app for tracking a personal fragrance collection. Search a
 - **Supabase** — Postgres (with Row Level Security) + Auth + Realtime
 - **TanStack Query** for all data fetching
 - **NativeWind v4** (Tailwind) for styling
-
-Related repos:
-- `fragrance-db` — scraper + catalog database (Postgres/R2) this app reads from *(local project)*
-- [`webscraping-api`](https://github.com/IKorchev/webscraping-api) — legacy Vercel search backend, still powering the Search tab
 
 ## Getting started
 
