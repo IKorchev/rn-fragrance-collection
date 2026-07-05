@@ -6,8 +6,6 @@ import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth, { type FragranceInput } from "@/contexts/auth-context"
 import useToast from "@/contexts/toast-context"
-import DeleteBottomSheet from "./delete-bottom-sheet"
-import EditBottomSheet from "./edit-bottom-sheet"
 
 const getImageSource = (value: string | null | undefined): ImageSourcePropType | null => {
   if (!value || typeof value !== "string") return null
@@ -78,7 +76,7 @@ const CustomListItem = ({
 
   return (
     <ListItem.Swipeable
-      rightWidth={124}
+      rightWidth={54}
       // Edit/Delete are behind a left swipe so the row itself stays readable —
       // only the everyday action (Wear) gets a permanent button.
       rightContent={
@@ -86,19 +84,8 @@ const CustomListItem = ({
           ? (reset) => (
               <View className='flex-1 flex-row items-center justify-end pr-4' style={{ gap: 10 }}>
                 <TouchableOpacity
-                  className={`${buttons.editBg} h-11 w-11 justify-center rounded-full items-center`}
-                  onPress={() => {
-                    reset()
-                    setIsEditVisible(true)
-                  }}>
-                  <AntDesign name='edit' color={getColor(buttons.editIcon)} size={18} />
-                </TouchableOpacity>
-                <TouchableOpacity
                   className={`${buttons.deleteBg} h-11 w-11 justify-center rounded-full items-center`}
-                  onPress={() => {
-                    reset()
-                    setIsDeleteVisible(true)
-                  }}>
+                  onPress={() => handleDelete()}>
                   <AntDesign name='delete' color={getColor(buttons.deleteIcon)} size={18} />
                 </TouchableOpacity>
               </View>
@@ -121,24 +108,6 @@ const CustomListItem = ({
         shadowOffset: { width: 0, height: 2 },
         elevation: theme === "light" ? 2 : 0,
       }}>
-      {isDeleteVisible && (
-        <DeleteBottomSheet
-          isVisible={isDeleteVisible}
-          close={() => setIsDeleteVisible(false)}
-          deleteItem={handleDelete}
-          item={obj}
-        />
-      )}
-      {isEditVisible && (
-        <EditBottomSheet
-          isVisible={isEditVisible}
-          close={() => setIsEditVisible(false)}
-          item={obj}
-          onSave={(newName) => {
-            if (obj.id) updateFragrance({ id: obj.id }, { name: newName })
-          }}
-        />
-      )}
       {place != null && (
         <View className='w-10 h-full justify-center items-center'>
           <Text className={`${baseTextClass} text-lg font-bold text-center`}>{place}</Text>
