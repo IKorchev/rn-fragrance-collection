@@ -49,6 +49,31 @@ CREATE POLICY "own tokens" ON user_push_tokens FOR ALL
   USING ((SELECT auth.uid()) = user_id)
   WITH CHECK ((SELECT auth.uid()) = user_id);
 
+-- Daily wear-reminder push (supabase/functions/send-wear-reminder). pg_cron
+-- invokes the edge function through pg_net; the project URL and anon key are
+-- read from Vault so no keys live in this file — create the two secrets once
+-- (dashboard → Vault, or the commented lines below) before scheduling.
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- SELECT vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+-- SELECT vault.create_secret('<anon key>', 'anon_key');
+
+SELECT cron.schedule(
+  'send-wear-reminder-daily',
+  '0 6 * * *',  -- 06:00 UTC daily
+  $$
+  SELECT net.http_post(
+    url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_url') || '/functions/v1/send-wear-reminder',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key')
+    ),
+    body := '{}'::jsonb
+  ) AS request_id;
+  $$
+);
+
 -- Read-only Top 100 lists. Replaces Firestore top-{men|women|unisex}.
 -- Interim lift-and-shift of the old scraped data; Phase B replaces this with
 -- queries against the real `fragrances` catalog.
