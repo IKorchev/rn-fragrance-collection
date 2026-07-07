@@ -1,20 +1,28 @@
 {
   "expo": {
-    "name": "first-project",
+    "name": "Fragrance Collection",
     "slug": "fragrance-collection",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "scheme": ["fragrancecollection", "com.korchev.fragrancecollection"],
+    "userInterfaceStyle": "automatic",
+    "scheme": [
+      "fragrancecollection",
+      "com.korchev.fragrancecollection"
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "updates": {
+      "url": "https://u.expo.dev/b117bfd2-cde2-4241-a9b4-7dd44fa02668",
       "fallbackToCacheTimeout": 0
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.korchev.fragrancecollection"
     },
     "android": {
@@ -36,7 +44,11 @@
         {
           "image": "./assets/splash.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#09090b"
+          }
         }
       ],
       "expo-font",
@@ -46,7 +58,10 @@
         {
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-image",
+      "expo-apple-authentication",
+      "@react-native-vector-icons/material-icons"
     ],
     "extra": {
       "router": {},

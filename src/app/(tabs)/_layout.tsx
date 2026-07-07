@@ -9,13 +9,9 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs tintColor={tintColor}>
-      <NativeTabs.Trigger name="(home)">
-        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(add)">
-        <NativeTabs.Trigger.Icon sf="plus.square.fill" md="add" />
-        <NativeTabs.Trigger.Label>Add</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="(discover)">
+        <NativeTabs.Trigger.Icon sf="safari.fill" md="explore" />
+        <NativeTabs.Trigger.Label>Discover</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(collection)">
         <NativeTabs.Trigger.Icon sf="drop.fill" md="fragrance" />

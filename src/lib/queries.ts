@@ -1,62 +1,124 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { supabase } from "./supabase"
-import { fetchData } from "./utils/fetch-data"
-import type { Tables } from "./database.types"
+import type { Database, Tables } from "./database.types"
 
-export type CatalogFragrance = Pick<
-  Tables<"fragrances">,
-  "id" | "name" | "brand" | "image_url" | "rating" | "votes" | "year" | "gender"
->
+// The catalog is name/brand/image only — all other scraped Parfumo metadata
+// (ratings, votes, year, gender, notes, …) was dropped as untrustworthy
+// (see CLAUDE.md on note poisoning).
+export type CatalogFragrance =
+  Database["public"]["Functions"]["search_fragrances"]["Returns"][number]
 
-export type TopFragrance = Tables<"top_fragrances"> & {
-  imageUrl: string | null
-  totalVotes: number | null
-}
+export type BrandFacet = Database["public"]["Functions"]["list_brands"]["Returns"][number]
 
-export const CATEGORY_OPTIONS = ["men", "women", "unisex"] as const
+export type TopWornFragrance =
+  Database["public"]["Functions"]["top_worn_fragrances"]["Returns"][number]
+
+export type WearEvent = Tables<"wear_events">
 
 export const MIN_SEARCH_LENGTH = 3
 
-// Browseable slice of the fragrance-db catalog for the home screen
-export const useCatalog = () =>
+export const WEAR_PERIODS = [
+  { key: "day", label: "Today" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+  { key: "year", label: "Year" },
+  { key: "all", label: "All Time" },
+] as const
+
+export type WearPeriod = (typeof WEAR_PERIODS)[number]["key"]
+
+export interface SearchFilters {
+  brand: string | null
+}
+
+export const hasActiveFilters = (filters: SearchFilters) => filters.brand !== null
+
+// Facet lists only change when the catalog is re-scraped
+const FACET_STALE_TIME = 24 * 60 * 60 * 1000
+
+// Community leaderboard: top 100 most-worn fragrances per period. Every
+// period counts wear_events ('all' is just unbounded), so deleted collection
+// rows keep their wears.
+export const useTopWorn = (period: WearPeriod) =>
   useQuery({
-    queryKey: ["catalog"],
-    queryFn: async (): Promise<CatalogFragrance[]> => {
-      const { data, error } = await supabase
-        .from("fragrances")
-        .select("id, name, brand, image_url, rating, votes, year, gender")
-        .order("rating", { ascending: false, nullsFirst: false })
-        .limit(50)
+    queryKey: ["top-worn", period],
+    queryFn: async (): Promise<TopWornFragrance[]> => {
+      const { data, error } = await supabase.rpc("top_worn_fragrances", {
+        period,
+        max_results: 100,
+      })
       if (error) throw error
       return data ?? []
     },
   })
 
-// Top 100 lists — one array per category, in CATEGORY_OPTIONS order
-export const useTop100 = () =>
+// Personal wear diary (name/image are per-event snapshots, so history survives
+// collection-row deletion). RLS already scopes reads to own rows; the explicit
+// user_id filter just keeps the query honest and the cache keyed per user.
+// Newest first — the history screen groups these by calendar day.
+export const useWearHistory = (userId: string | undefined) =>
   useQuery({
-    queryKey: ["top100"],
-    queryFn: async (): Promise<TopFragrance[][]> => {
-      return Promise.all(
-        CATEGORY_OPTIONS.map(async (category) => {
-          const { data, error } = await supabase
-            .from("top_fragrances")
-            .select("*")
-            .eq("category", category)
-          if (error) throw error
-          return (data ?? [])
-            // Keep the camelCase field names the list components already use
-            .map((row) => ({ ...row, imageUrl: row.image_url, totalVotes: row.total_votes }))
-            .sort((el1, el2) => Number(el1.place) - Number(el2.place))
-        })
-      )
+    queryKey: ["wear-history", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<WearEvent[]> => {
+      const { data, error } = await supabase
+        .from("wear_events")
+        .select("*")
+        .eq("user_id", userId!)
+        .order("worn_at", { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return data ?? []
     },
   })
 
-// webscraping-api search — only runs once a long-enough term is submitted
-export const useFragranceSearch = (term: string) =>
+// Whether daily wear reminders are enabled for this user's devices (profile
+// toggle). No token rows yet reads as true — that's the default a new token
+// row gets on registration.
+export const useRemindersEnabled = (userId: string | undefined) =>
   useQuery({
-    queryKey: ["search", term],
-    queryFn: () => fetchData(term),
-    enabled: term.trim().length >= MIN_SEARCH_LENGTH,
+    queryKey: ["reminder-prefs", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase
+        .from("user_push_tokens")
+        .select("reminders_enabled")
+        .eq("user_id", userId!)
+      if (error) throw error
+      return (data ?? []).every((row) => row.reminders_enabled)
+    },
+  })
+
+// Live catalog search (search_fragrances RPC): ranked text match when a term
+// is present, browse mode (by brand) when only the brand filter is active
+export const useFragranceSearch = (term: string, filters: SearchFilters) => {
+  const trimmed = term.trim()
+  const hasTerm = trimmed.length >= MIN_SEARCH_LENGTH
+
+  return useQuery({
+    queryKey: ["search", hasTerm ? trimmed : "", filters.brand],
+    enabled: hasTerm || hasActiveFilters(filters),
+    placeholderData: keepPreviousData, // no result-list flicker while typing
+    queryFn: async (): Promise<CatalogFragrance[]> => {
+      const { data, error } = await supabase.rpc("search_fragrances", {
+        search_term: hasTerm ? trimmed : undefined,
+        filter_brand: filters.brand ?? undefined,
+        max_results: 50,
+      })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+}
+
+// All 704 brands with counts — fetched once, filtered client-side
+export const useBrands = () =>
+  useQuery({
+    queryKey: ["brands"],
+    staleTime: FACET_STALE_TIME,
+    queryFn: async (): Promise<BrandFacet[]> => {
+      const { data, error } = await supabase.rpc("list_brands")
+      if (error) throw error
+      return data ?? []
+    },
   })

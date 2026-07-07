@@ -18,7 +18,10 @@ Deno.serve(async (_req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   )
 
-  const { data: rows, error } = await supabase.from("user_push_tokens").select("token")
+  const { data: rows, error } = await supabase
+    .from("user_push_tokens")
+    .select("token")
+    .eq("reminders_enabled", true)
   if (error) return Response.json({ error: error.message }, { status: 500 })
   if (!rows || rows.length === 0) return Response.json({ sent: 0, removed: 0 })
 

@@ -7,6 +7,8 @@ import React, {
   type ReactNode,
 } from "react"
 import * as Google from "expo-auth-session/providers/google"
+import * as AppleAuthentication from "expo-apple-authentication"
+import * as Haptics from "expo-haptics"
 import * as WebBrowser from "expo-web-browser"
 import { Alert, Platform } from "react-native"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -15,6 +17,8 @@ import type { User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { registerForPushNotificationsAsync } from "@/lib/notifications"
 import { pickWeightedIndex } from "@/lib/utils/pick-weighted-index"
+import { deviceTimeZone } from "@/lib/utils/worn-today"
+import useToast from "@/contexts/toast-context"
 import type { Tables } from "@/lib/database.types"
 
 WebBrowser.maybeCompleteAuthSession()
@@ -29,24 +33,36 @@ export interface FragranceInput {
   id?: string
   name: string
   image_url: string | null
+  // Catalog fragrances.id FK — set when the item was added from catalog search
+  fragrance_id?: string | null
 }
 
 interface AuthContextValue {
   user: AppUser | null
   authLoading: boolean
   signInWithGoogle: () => void
+  signInWithApple: () => Promise<void>
   logOut: () => void
+  // Deletes the auth user (and all their rows, via FK cascade) through the
+  // delete-account edge function. Throws on failure — callers own the confirm
+  // dialog and error alert.
+  deleteAccount: () => Promise<void>
   incrementWear: (object: { id: string }) => Promise<void>
   requestDelete: (object: { id: string }) => void
   cancelDelete: (id: string) => void
   updateFragrance: (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url">>
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
   ) => Promise<void>
   addFragranceToCollection: (object: FragranceInput) => Promise<void>
   userCollection: UserFragrance[]
   sortedCollection: UserFragrance[]
   visibleSortedCollection: UserFragrance[]
+  // Initial-load / failure state of the collection query, so screens can
+  // show a spinner or retry UI instead of a misleading "empty" state
+  collectionPending: boolean
+  collectionError: boolean
+  refetchCollection: () => Promise<unknown>
   frag: UserFragrance | undefined
   setFrag: React.Dispatch<React.SetStateAction<UserFragrance | undefined>>
   getNewFrag: (targetIndex?: number) => void
@@ -66,6 +82,7 @@ const toAppUser = (sessionUser: User | null | undefined): AppUser | null =>
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient()
+  const { showToast } = useToast()
   const [user, setUser] = useState<AppUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
@@ -95,7 +112,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  const { data: collectionData } = useQuery({
+  const {
+    data: collectionData,
+    refetch: refetchCollection,
+    isPending: collectionPending,
+    isError: collectionError,
+  } = useQuery({
     queryKey: ["collection", user?.id],
     enabled: !!user?.id,
     queryFn: async (): Promise<UserFragrance[]> => {
@@ -198,6 +220,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user_id: user!.id,
         name: object.name,
         image_url: object.image_url,
+        fragrance_id: object.fragrance_id ?? null,
         times_worn: 0,
       })
       if (error) throw error
@@ -224,10 +247,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // delete only actually happens once the timeout fires without cancelDelete().
   const requestDelete = (object: { id: string }) => {
     setPendingDeleteIds((prev) => (prev.includes(object.id) ? prev : [...prev, object.id]))
-    deleteTimeouts.current[object.id] = setTimeout(() => {
+    deleteTimeouts.current[object.id] = setTimeout(async () => {
       delete deleteTimeouts.current[object.id]
+      // Keep the row hidden until the delete lands and the refetch drops it —
+      // un-hiding first made it flash back in during the network round-trip.
+      // (On failure the row correctly reappears, since it wasn't deleted.)
+      await performDelete(object)
       setPendingDeleteIds((prev) => prev.filter((id) => id !== object.id))
-      performDelete(object)
     }, 4000)
   }
 
@@ -239,7 +265,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateFragrance = async (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url">>
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
   ) => {
     try {
       const { error } = await supabase.from("user_fragrances").update(updates).eq("id", object.id)
@@ -251,11 +277,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const incrementWear = async (object: { id: string }) => {
+  const invalidateWearQueries = async () => {
+    await invalidateCollection()
+    // increment_wear/undo_wear also touch wear_events — refresh the
+    // leaderboard and the personal wear-history diary
+    queryClient.invalidateQueries({ queryKey: ["top-worn"] })
+    queryClient.invalidateQueries({ queryKey: ["wear-history"] })
+  }
+
+  // Reverses today's wear (mistap protection — see the Undo toast below).
+  const undoWear = async (object: { id: string }) => {
     try {
-      const { error } = await supabase.rpc("increment_wear", { row_id: object.id })
+      const { data: undone, error } = await supabase.rpc("undo_wear", {
+        row_id: object.id,
+        tz: deviceTimeZone,
+      })
       if (error) throw error
-      await invalidateCollection()
+      if (undone) await invalidateWearQueries()
+    } catch (error) {
+      Alert.alert("Oops", "Couldn't undo that wear.")
+      console.log(error)
+    }
+  }
+
+  const incrementWear = async (object: { id: string }) => {
+    // Immediate tactile ack on tap — the RPC round-trip lands later
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    const title = userCollection
+      .find((el) => el.id === object.id)
+      ?.name.split(" - ")
+      .slice(1)
+      .join(" - ")
+    try {
+      // Returns false when the fragrance was already worn today (one wear per
+      // calendar day, in the device's timezone)
+      const { data: counted, error } = await supabase.rpc("increment_wear", {
+        row_id: object.id,
+        tz: deviceTimeZone,
+      })
+      if (error) throw error
+      if (!counted) {
+        showToast({ message: `${title ?? "This one"} was already worn today` })
+        return
+      }
+      await invalidateWearQueries()
+      // A mistap would otherwise cost the whole day (one wear per calendar
+      // day) and permanently skew stats — always offer a short undo window.
+      showToast({
+        message: `Wear logged for ${title ?? "today"}`,
+        actionLabel: "Undo",
+        onAction: () => undoWear(object),
+      })
     } catch (error) {
       Alert.alert("Oops", `Something went wrong!`)
     }
@@ -265,8 +337,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     promptAsync()
   }
 
+  // App Store Guideline 4.8: apps offering Google sign-in must also offer
+  // Apple sign-in on iOS. The identity token is exchanged with Supabase the
+  // same way as Google's.
+  const signInWithApple = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      })
+      if (!credential.identityToken) throw new Error("No identityToken returned")
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "apple",
+        token: credential.identityToken,
+      })
+      if (error) throw error
+    } catch (error) {
+      // User dismissed the native sheet — not an error
+      if ((error as { code?: string })?.code === "ERR_REQUEST_CANCELED") return
+      console.log(error)
+      Alert.alert("Sign in failed", "Something went wrong, please try again.")
+    }
+  }
+
   const logOut = () => {
     supabase.auth.signOut()
+  }
+
+  const deleteAccount = async () => {
+    const { error } = await supabase.functions.invoke("delete-account", { method: "POST" })
+    if (error) throw error
+    // The server-side session is already gone with the user — local scope
+    // avoids a doomed round-trip and clears the stored session.
+    await supabase.auth.signOut({ scope: "local" })
   }
 
   const visibleSortedCollection = sortedCollection.filter(
@@ -279,7 +384,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         authLoading,
         signInWithGoogle,
+        signInWithApple,
         logOut,
+        deleteAccount,
         incrementWear,
         requestDelete,
         cancelDelete,
@@ -288,6 +395,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         userCollection,
         sortedCollection,
         visibleSortedCollection,
+        collectionPending,
+        collectionError,
+        refetchCollection,
         frag,
         setFrag,
         getNewFrag,

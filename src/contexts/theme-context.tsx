@@ -14,8 +14,10 @@ interface ColorGroup {
   background: string
 }
 
-// Tinted action buttons: *Bg is a complete literal className, *Icon is a bare
-// token for getColor(). Soft tint + strong icon reads better than filled circles.
+// Tinted action buttons: *Bg is a complete literal className group (tint +
+// outline), *Icon is a bare token for getColor(). The colored outline is what
+// makes the button read as a button — the tint alone got lost on busy
+// backgrounds (especially the picker's dark scrim).
 interface ButtonGroup {
   wearBg: string
   wearIcon: string
@@ -98,23 +100,23 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
 
   const buttons = dark
     ? {
-        wearBg: "bg-emerald-500/15",
+        wearBg: "bg-emerald-500/25 border border-emerald-400/50",
         wearIcon: "emerald-400",
-        editBg: "bg-sky-500/15",
+        editBg: "bg-sky-500/25 border border-sky-400/50",
         editIcon: "sky-400",
-        deleteBg: "bg-rose-500/15",
+        deleteBg: "bg-rose-500/25 border border-rose-400/50",
         deleteIcon: "rose-400",
-        rerollBg: "bg-amber-500/15",
+        rerollBg: "bg-amber-500/25 border border-amber-400/50",
         rerollIcon: "amber-400",
       }
     : {
-        wearBg: "bg-emerald-100",
+        wearBg: "bg-emerald-200/70 border border-emerald-400/60",
         wearIcon: "emerald-700",
-        editBg: "bg-sky-100",
+        editBg: "bg-sky-200/70 border border-sky-400/60",
         editIcon: "sky-700",
-        deleteBg: "bg-rose-100",
+        deleteBg: "bg-rose-200/70 border border-rose-400/60",
         deleteIcon: "rose-600",
-        rerollBg: "bg-amber-100",
+        rerollBg: "bg-amber-200/70 border border-amber-400/60",
         rerollIcon: "amber-600",
       }
 

@@ -11,22 +11,180 @@ CREATE TABLE IF NOT EXISTS user_fragrances (
   image_url     TEXT,
   times_worn    INT NOT NULL DEFAULT 0,
   last_worn     TIMESTAMPTZ,
+  -- Personal rating/notes — user-entered, so exempt from the
+  -- no-scraped-metadata rule.
+  rating        SMALLINT CONSTRAINT user_fragrances_rating_range CHECK (rating BETWEEN 1 AND 5),
+  notes         TEXT CONSTRAINT user_fragrances_notes_length CHECK (char_length(notes) <= 2000),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Cover both FKs so joins/cascades don't full-scan at scale.
+CREATE INDEX IF NOT EXISTS user_fragrances_fragrance_id_idx ON user_fragrances (fragrance_id);
+CREATE INDEX IF NOT EXISTS user_fragrances_user_id_idx ON user_fragrances (user_id);
 
 ALTER TABLE user_fragrances ENABLE ROW LEVEL SECURITY;
 
 -- The app only ever holds the public anon key — RLS is what keeps each user's
--- rows private (the Firestore-security-rules equivalent).
+-- rows private (the Firestore-security-rules equivalent). auth.uid() is
+-- wrapped in a subquery so Postgres evaluates it once per statement instead
+-- of once per row (see the Postgres best-practices RLS guidance).
 CREATE POLICY "own rows" ON user_fragrances FOR ALL
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
 
--- Atomic wear increment (avoids read-modify-write races)
-CREATE OR REPLACE FUNCTION increment_wear(row_id UUID) RETURNS void AS $$
-  UPDATE user_fragrances
-  SET times_worn = times_worn + 1, last_worn = now()
-  WHERE id = row_id;
-$$ LANGUAGE sql SECURITY INVOKER SET search_path = public;
+-- Wear-event log — one immutable row per wear, powering the windowed
+-- "most worn" leaderboard (times_worn/last_worn can't answer "this week").
+-- name/image are denormalized so history survives collection-row deletion.
+CREATE TABLE IF NOT EXISTS wear_events (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  fragrance_id  UUID REFERENCES fragrances(id),  -- null for legacy/no-FK rows
+  -- Originating collection row, so a wear can be undone precisely. SET NULL
+  -- keeps leaderboard history alive when the collection row is deleted.
+  user_fragrance_id UUID REFERENCES user_fragrances(id) ON DELETE SET NULL,
+  name          TEXT NOT NULL,                   -- "Brand - Title" snapshot
+  image_url     TEXT,
+  worn_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS wear_events_worn_at_idx ON wear_events (worn_at);
+CREATE INDEX IF NOT EXISTS wear_events_user_fragrance_id_idx
+  ON wear_events (user_fragrance_id) WHERE user_fragrance_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS wear_events_fragrance_id_idx ON wear_events (fragrance_id);
+CREATE INDEX IF NOT EXISTS wear_events_user_id_idx ON wear_events (user_id);
+
+ALTER TABLE wear_events ENABLE ROW LEVEL SECURITY;
+
+-- Users write/read only their own events; the cross-user leaderboard goes
+-- through the SECURITY DEFINER aggregate below (no raw rows exposed).
+CREATE POLICY "own events" ON wear_events FOR ALL
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
+
+-- Atomic wear increment (avoids read-modify-write races) + event log, capped
+-- at one wear per calendar day. The app passes the device's IANA timezone so
+-- "day" means the user's day, not UTC's (invalid tz falls back to UTC).
+-- Returns whether the wear was counted (false -> already worn today).
+-- SECURITY INVOKER: the UPDATE is RLS-scoped to the caller's rows, so the
+-- INSERT inherits a legit user_id.
+CREATE OR REPLACE FUNCTION increment_wear(row_id uuid, tz text DEFAULT 'UTC')
+RETURNS boolean
+LANGUAGE plpgsql SECURITY INVOKER
+SET search_path = public
+AS $$
+DECLARE
+  r record;
+BEGIN
+  BEGIN
+    PERFORM now() AT TIME ZONE tz;
+  EXCEPTION WHEN OTHERS THEN
+    tz := 'UTC';
+  END;
+
+  UPDATE user_fragrances u
+  SET times_worn = u.times_worn + 1, last_worn = now()
+  WHERE u.id = row_id
+    AND (u.last_worn IS NULL
+         OR (u.last_worn AT TIME ZONE tz)::date < (now() AT TIME ZONE tz)::date)
+  RETURNING u.user_id, u.fragrance_id, u.name, u.image_url INTO r;
+
+  IF NOT FOUND THEN
+    RETURN false;  -- already worn today (or row not visible under RLS)
+  END IF;
+
+  INSERT INTO wear_events (user_id, fragrance_id, user_fragrance_id, name, image_url)
+  VALUES (r.user_id, r.fragrance_id, row_id, r.name, r.image_url);
+  RETURN true;
+END;
+$$;
+
+-- Reverses today's wear (the toast-undo window after a mistap): deletes
+-- today's wear_event, decrements times_worn, restores last_worn from the
+-- remaining linked events. Returns false when there's nothing to undo today.
+-- SECURITY INVOKER — RLS scopes everything to the caller's own rows.
+-- NOTE: legacy rows whose earlier wears predate wear_events linkage may
+-- restore last_worn to NULL (picker then treats them as not recently worn).
+CREATE OR REPLACE FUNCTION undo_wear(row_id uuid, tz text DEFAULT 'UTC')
+RETURNS boolean
+LANGUAGE plpgsql SECURITY INVOKER
+SET search_path = public
+AS $$
+DECLARE
+  ev_id uuid;
+  prev_worn timestamptz;
+BEGIN
+  BEGIN
+    PERFORM now() AT TIME ZONE tz;
+  EXCEPTION WHEN OTHERS THEN
+    tz := 'UTC';
+  END;
+
+  SELECT id INTO ev_id
+  FROM wear_events
+  WHERE user_fragrance_id = row_id
+    AND (worn_at AT TIME ZONE tz)::date = (now() AT TIME ZONE tz)::date
+  ORDER BY worn_at DESC
+  LIMIT 1;
+
+  IF ev_id IS NULL THEN
+    RETURN false;  -- no wear today (or row not visible under RLS)
+  END IF;
+
+  DELETE FROM wear_events WHERE id = ev_id;
+
+  SELECT max(worn_at) INTO prev_worn
+  FROM wear_events
+  WHERE user_fragrance_id = row_id;
+
+  UPDATE user_fragrances u
+  SET times_worn = GREATEST(u.times_worn - 1, 0), last_worn = prev_worn
+  WHERE u.id = row_id;
+
+  RETURN true;
+END;
+$$;
+
+-- Top-100 most worn across ALL users (the app's "Most Worn" tab). Every
+-- period counts wear_events ('all' just uses an unbounded cutoff), so results
+-- survive collection-row deletion. Groups by catalog FK when present, else
+-- case-insensitive name.
+CREATE OR REPLACE FUNCTION top_worn_fragrances(
+  period text DEFAULT 'all', max_results int DEFAULT 100
+)
+RETURNS TABLE (place bigint, name text, image_url text, fragrance_id uuid, wear_count bigint)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  WITH cutoff AS (
+    SELECT CASE period
+      WHEN 'day'   THEN now() - interval '1 day'
+      WHEN 'week'  THEN now() - interval '7 days'
+      WHEN 'month' THEN now() - interval '30 days'
+      WHEN 'year'  THEN now() - interval '365 days'
+      ELSE '-infinity'::timestamptz
+    END AS t
+  ),
+  counts AS (
+    SELECT
+      COALESCE(w.fragrance_id::text, LOWER(w.name)) AS grp,
+      MAX(w.name) AS name,
+      MAX(w.image_url) AS image_url,
+      w.fragrance_id,
+      COUNT(*)::bigint AS wear_count
+    FROM wear_events w, cutoff c
+    WHERE w.worn_at >= c.t
+    GROUP BY 1, w.fragrance_id
+  )
+  SELECT ROW_NUMBER() OVER (ORDER BY wear_count DESC, name ASC) AS place,
+         name, image_url, fragrance_id, wear_count
+  FROM counts
+  ORDER BY place
+  LIMIT GREATEST(1, LEAST(max_results, 100))
+$$;
+
+-- The app only ever calls this signed-in; no reason to expose the
+-- SECURITY DEFINER aggregate to anonymous clients.
+REVOKE EXECUTE ON FUNCTION top_worn_fragrances(text, int) FROM anon;
 
 -- Realtime change events for the collection screen (postgres_changes needs the
 -- table in the supabase_realtime publication).
@@ -39,8 +197,13 @@ CREATE TABLE IF NOT EXISTS user_push_tokens (
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   token       TEXT NOT NULL UNIQUE,
   platform    TEXT,
+  -- Per-device wear-reminder opt-out (profile toggle); send-wear-reminder
+  -- only pushes to tokens where this is true.
+  reminders_enabled BOOLEAN NOT NULL DEFAULT true,
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS user_push_tokens_user_id_idx ON user_push_tokens (user_id);
 
 ALTER TABLE user_push_tokens ENABLE ROW LEVEL SECURITY;
 
@@ -74,19 +237,6 @@ SELECT cron.schedule(
   $$
 );
 
--- Read-only Top 100 lists. Replaces Firestore top-{men|women|unisex}.
--- Interim lift-and-shift of the old scraped data; Phase B replaces this with
--- queries against the real `fragrances` catalog.
-CREATE TABLE IF NOT EXISTS top_fragrances (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  category    TEXT NOT NULL,   -- 'men' | 'women' | 'unisex'
-  place       INT,
-  name        TEXT NOT NULL,
-  image_url   TEXT,
-  rating      NUMERIC,
-  total_votes INT
-);
-
-ALTER TABLE top_fragrances ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "public read" ON top_fragrances FOR SELECT USING (true);
+-- NOTE: the scraped read-only top_fragrances table (Firestore lift-and-shift)
+-- was dropped by migration drop_scraped_metadata_add_wear_leaderboard — the
+-- Add tab's leaderboard is now the community top_worn_fragrances() above.

@@ -1,5 +1,6 @@
 import React, { useState } from "react"
-import { View, Text, Image, type ImageSourcePropType } from "react-native"
+import { Image } from "expo-image"
+import { View, Text, type ImageSourcePropType } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
@@ -34,8 +35,9 @@ const ReelImage = ({ name, url, imageUrl }: ReelImageProps) => {
       </Text>
       {imageSource && !hasImageError ? (
         <Image
-          resizeMode='contain'
-          className='h-60 w-60 mx-1'
+          contentFit='contain'
+          transition={150}
+          style={{ height: 240, width: 240, marginHorizontal: 4 }}
           source={imageSource}
           onError={() => setHasImageError(true)}
         />

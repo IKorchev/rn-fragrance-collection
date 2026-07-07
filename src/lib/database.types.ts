@@ -16,134 +16,30 @@ export type Database = {
   }
   public: {
     Tables: {
-      fragrance_notes: {
-        Row: {
-          fragrance_id: string
-          id: string
-          note: string
-          position: string | null
-        }
-        Insert: {
-          fragrance_id: string
-          id?: string
-          note: string
-          position?: string | null
-        }
-        Update: {
-          fragrance_id?: string
-          id?: string
-          note?: string
-          position?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fragrance_notes_fragrance_id_fkey"
-            columns: ["fragrance_id"]
-            isOneToOne: false
-            referencedRelation: "fragrances"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       fragrances: {
         Row: {
-          accords: string[] | null
-          bottle_rating: number | null
           brand: string
-          concentration: string | null
           created_at: string | null
-          description: string | null
-          gender: string | null
           id: string
           image_url: string | null
-          in_production: boolean | null
-          longevity_rating: number | null
           name: string
-          perfumers: string[] | null
-          rank_position: number | null
-          rating: number | null
-          review_count: number | null
-          scent_rating: number | null
-          sillage_rating: number | null
           source_url: string | null
-          votes: number | null
-          year: number | null
         }
         Insert: {
-          accords?: string[] | null
-          bottle_rating?: number | null
           brand: string
-          concentration?: string | null
           created_at?: string | null
-          description?: string | null
-          gender?: string | null
           id?: string
           image_url?: string | null
-          in_production?: boolean | null
-          longevity_rating?: number | null
           name: string
-          perfumers?: string[] | null
-          rank_position?: number | null
-          rating?: number | null
-          review_count?: number | null
-          scent_rating?: number | null
-          sillage_rating?: number | null
           source_url?: string | null
-          votes?: number | null
-          year?: number | null
         }
         Update: {
-          accords?: string[] | null
-          bottle_rating?: number | null
           brand?: string
-          concentration?: string | null
           created_at?: string | null
-          description?: string | null
-          gender?: string | null
           id?: string
           image_url?: string | null
-          in_production?: boolean | null
-          longevity_rating?: number | null
           name?: string
-          perfumers?: string[] | null
-          rank_position?: number | null
-          rating?: number | null
-          review_count?: number | null
-          scent_rating?: number | null
-          sillage_rating?: number | null
           source_url?: string | null
-          votes?: number | null
-          year?: number | null
-        }
-        Relationships: []
-      }
-      top_fragrances: {
-        Row: {
-          category: string
-          id: string
-          image_url: string | null
-          name: string
-          place: number | null
-          rating: number | null
-          total_votes: number | null
-        }
-        Insert: {
-          category: string
-          id?: string
-          image_url?: string | null
-          name: string
-          place?: number | null
-          rating?: number | null
-          total_votes?: number | null
-        }
-        Update: {
-          category?: string
-          id?: string
-          image_url?: string | null
-          name?: string
-          place?: number | null
-          rating?: number | null
-          total_votes?: number | null
         }
         Relationships: []
       }
@@ -155,6 +51,8 @@ export type Database = {
           image_url: string | null
           last_worn: string | null
           name: string
+          notes: string | null
+          rating: number | null
           times_worn: number
           user_id: string
         }
@@ -165,6 +63,8 @@ export type Database = {
           image_url?: string | null
           last_worn?: string | null
           name: string
+          notes?: string | null
+          rating?: number | null
           times_worn?: number
           user_id: string
         }
@@ -175,6 +75,8 @@ export type Database = {
           image_url?: string | null
           last_worn?: string | null
           name?: string
+          notes?: string | null
+          rating?: number | null
           times_worn?: number
           user_id?: string
         }
@@ -192,6 +94,7 @@ export type Database = {
         Row: {
           id: string
           platform: string | null
+          reminders_enabled: boolean
           token: string
           updated_at: string
           user_id: string
@@ -199,6 +102,7 @@ export type Database = {
         Insert: {
           id?: string
           platform?: string | null
+          reminders_enabled?: boolean
           token: string
           updated_at?: string
           user_id: string
@@ -206,20 +110,109 @@ export type Database = {
         Update: {
           id?: string
           platform?: string | null
+          reminders_enabled?: boolean
           token?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
+      wear_events: {
+        Row: {
+          fragrance_id: string | null
+          id: string
+          image_url: string | null
+          name: string
+          user_fragrance_id: string | null
+          user_id: string
+          worn_at: string
+        }
+        Insert: {
+          fragrance_id?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          user_fragrance_id?: string | null
+          user_id: string
+          worn_at?: string
+        }
+        Update: {
+          fragrance_id?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          user_fragrance_id?: string | null
+          user_id?: string
+          worn_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wear_events_fragrance_id_fkey"
+            columns: ["fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "fragrances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wear_events_user_fragrance_id_fkey"
+            columns: ["user_fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "user_fragrances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      increment_wear: { Args: { row_id: string }; Returns: undefined }
+      discover_fragrances: {
+        Args: { max_results?: number }
+        Returns: {
+          brand: string
+          id: string
+          image_url: string
+          name: string
+        }[]
+      }
+      increment_wear: {
+        Args: { row_id: string; tz?: string }
+        Returns: boolean
+      }
+      list_brands: {
+        Args: never
+        Returns: {
+          brand: string
+          fragrance_count: number
+        }[]
+      }
+      search_fragrances: {
+        Args: {
+          filter_brand?: string
+          max_results?: number
+          search_term?: string
+        }
+        Returns: {
+          brand: string
+          id: string
+          image_url: string
+          name: string
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      top_worn_fragrances: {
+        Args: { max_results?: number; period?: string }
+        Returns: {
+          fragrance_id: string
+          image_url: string
+          name: string
+          place: number
+          wear_count: number
+        }[]
+      }
+      undo_wear: { Args: { row_id: string; tz?: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

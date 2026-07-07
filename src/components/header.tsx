@@ -1,6 +1,7 @@
 import React, { useEffect } from "react"
 import { Text, TouchableOpacity, View, StatusBar } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { Avatar } from "@rneui/themed"
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated"
@@ -14,8 +15,9 @@ interface HeaderProps {
 }
 
 export default function Header({ title }: HeaderProps) {
+  const router = useRouter()
   const { headerColors, cardBorderColors, theme, setTheme } = useTheme()
-  const { user, logOut } = useAuth()
+  const { user } = useAuth()
   const offset = useSharedValue(theme === "light" ? 0 : 1)
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function Header({ title }: HeaderProps) {
           size={32}
           rounded
           source={user?.photoURL ? { uri: user.photoURL } : undefined}
-          onLongPress={logOut}
+          onPress={() => router.push("/profile")}
         />
         <Text className={`${headerColors.font} text-2xl text-center font-bold`}>{title}</Text>
         <View className='flex-row items-center'>

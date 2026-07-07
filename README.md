@@ -4,12 +4,16 @@ A React Native (Expo) app for tracking a personal fragrance collection. Search a
 
 ## Features
 
-- **Google sign-in** via Supabase Auth (expo-auth-session)
-- **Collection tracking** — wear counter with "last worn" history, swipe-left to edit or delete (with undo toast)
-- **Weighted random picker** — slot-machine reel that favors less-worn fragrances and avoids repeating what you wore in the last 24h
-- **Discover & Top 100** — browse the scraped fragrance catalog and per-gender rankings
-- **Search** — find any fragrance and add it in one tap
+- **Google & Apple sign-in** via Supabase Auth (expo-auth-session / expo-apple-authentication)
+- **Collection tracking** — wear counter with "last worn" history, personal 1–5 rating + notes, swipe-left to delete (with undo toast), search/sort/filter your own collection
+- **Weighted random picker** — slot-machine reel (with haptics) that favors less-worn fragrances and avoids repeating what you wore in the last 24h
+- **Undo a wear** — a mistap doesn't cost the whole day; toast-undo reverses the one-wear-per-day counter
+- **Most Worn leaderboard** — community wear-count rankings, windowed day/week/month/year/all
+- **Search & manual add** — find any catalog fragrance and add it in one tap, or add it by hand if the catalog doesn't have it
+- **Daily wear reminder push**, with an in-app opt-out toggle
+- **In-app account deletion** and a hosted privacy policy (`docs/privacy-policy.md`)
 - **Light/dark theme**, persisted across restarts
+- Offline-aware queries (pause/resume on connectivity change) and empty/error states throughout
 
 ## Stack
 
@@ -35,7 +39,7 @@ Google Sign-In needs a real dev-client build (`yarn ios` / `yarn android`), not 
 |---|---|
 | `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase dashboard → Settings → API |
 | `EXPO_PUBLIC_GOOGLE_{IOS,ANDROID,WEB}_CLIENT_ID` | Google Cloud Console OAuth credentials, registered with Supabase Auth's Google provider |
-| `EXPO_PUBLIC_API_URL` | `webscraping-api` deployment URL (Search tab) |
+| `EXPO_PUBLIC_SENTRY_DSN` (optional) | sentry.io project → Client Keys. Crash reporting is disabled entirely if unset |
 
 For a fresh Supabase project, run `db/schema.sql` once in the SQL editor.
 
@@ -47,7 +51,9 @@ src/
   components/   — UI components
   contexts/     — auth (Supabase + collection writes + picker), theme, toasts
   lib/          — Supabase client, TanStack Query hooks, generated DB types, utils
-db/schema.sql   — app tables (RLS policies, increment_wear RPC)
+db/schema.sql   — app tables (RLS policies, increment_wear/undo_wear RPCs)
+supabase/functions/ — edge functions (send-wear-reminder cron push, delete-account)
+docs/privacy-policy.md — privacy policy to host publicly for store listings
 ```
 
 ```bash

@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from "react-native"
+import * as Haptics from "expo-haptics"
+import { View, Text, Image, StyleSheet, Animated, Easing, PanResponder } from "react-native"
 import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useAuth, { type UserFragrance } from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import { pickWeightedIndex } from "@/lib/utils/pick-weighted-index"
+import { isWornToday } from "@/lib/utils/worn-today"
+import { getImageSource } from "@/lib/utils/image-source"
+import Card from "./card"
 
 interface PickerProps {
   fragrance: UserFragrance | undefined
@@ -13,10 +17,13 @@ interface PickerProps {
 
 const Picker = ({ fragrance, index }: PickerProps) => {
   const { incrementWear, userCollection, getNewFrag } = useAuth()
-  const { theme, viewColors, baseBorderClass, mutedTextClass, buttons } = useTheme()
+  const { theme, baseBorderClass, mutedTextClass } = useTheme()
   const animatedOffset = useRef(new Animated.Value(0)).current
   const animationLoopRef = useRef<Animated.CompositeAnimation | null>(null)
-  const [isSpinning, setIsSpinning] = useState(false)
+  // "settling" = main spin done, overshoot spring still bouncing — the reel is
+  // already on the target card, so UI (wear button) treats it as landed
+  const [spinPhase, setSpinPhase] = useState<"idle" | "spinning" | "settling">("idle")
+  const isSpinning = spinPhase !== "idle"
   const [spinIndex, setSpinIndex] = useState(index ?? 0)
   const currentItem = userCollection[spinIndex]
   const reelItems = userCollection.length
@@ -24,10 +31,10 @@ const Picker = ({ fragrance, index }: PickerProps) => {
         return userCollection[offset % userCollection.length]
       })
     : []
-  const reelHeight = 56
   const [containerHeight, setContainerHeight] = useState(288) // measured via onLayout, 288 (h-72) until then
-  // translateY that puts reel item `i` in the vertical center of the container
-  const offsetForIndex = (i: number) => (containerHeight - reelHeight) / 2 - i * reelHeight
+  // Each reel card fills the whole window (exactly one visible at a time), so
+  // the translateY that centers card `i` is simply -i * cardHeight
+  const offsetForIndex = (i: number) => -i * containerHeight
 
   useEffect(() => {
     if (typeof index === "number" && userCollection[index]) {
@@ -76,89 +83,185 @@ const Picker = ({ fragrance, index }: PickerProps) => {
     // endIndex < 7 * count, always within the 12 * count items rendered in the reel
     const endIndex = startIndex + totalSteps
 
-    setIsSpinning(true)
+    setSpinPhase("spinning")
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     animatedOffset.setValue(offsetForIndex(startIndex))
 
-    animationLoopRef.current = Animated.timing(animatedOffset, {
-      toValue: offsetForIndex(endIndex),
+    // Slot-machine settle: overshoot the final card slightly, then spring back.
+    // Run the two stages separately (not Animated.sequence) so state can flip
+    // to "settling" the moment the main spin lands — waiting for the spring's
+    // finished callback held the wear button back well past the visual stop
+    const spin = Animated.timing(animatedOffset, {
+      toValue: offsetForIndex(endIndex) - containerHeight * (0.12 + Math.min(Math.random(), 0.6)),
       duration: 1000 + totalSteps * 38,
       useNativeDriver: true,
       easing: Easing.out(Easing.cubic),
     })
+    const settle = Animated.spring(animatedOffset, {
+      toValue: offsetForIndex(endIndex),
+      friction: 5,
+      tension: 70,
+      // Default rest thresholds (0.001px) keep the spring "running" long after
+      // it looks settled — sub-pixel rest is good enough to unlock the lever
+      restDisplacementThreshold: 0.5,
+      restSpeedThreshold: 0.5,
+      useNativeDriver: true,
+    })
 
-    animationLoopRef.current.start(({ finished }) => {
+    animationLoopRef.current = spin
+    spin.start(({ finished }) => {
       if (!finished) return
-      animatedOffset.setValue(offsetForIndex(targetIndex))
       setSpinIndex(targetIndex)
-      setIsSpinning(false)
+      setSpinPhase("settling")
+      // The reel visually lands here — the thunk sells the slot machine
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
       getNewFrag(targetIndex)
+      animationLoopRef.current = settle
+      settle.start(({ finished: settled }) => {
+        if (!settled) return
+        animatedOffset.setValue(offsetForIndex(targetIndex))
+        setSpinPhase("idle")
+      })
     })
   }
 
+  // Latest-value refs so the PanResponder (created once) never sees stale state
+  const handleRerollRef = useRef(handleReroll)
+  handleRerollRef.current = handleReroll
+  const isSpinningRef = useRef(isSpinning)
+  isSpinningRef.current = isSpinning
+
+  // Slot-machine arm: drag the knob down the track; releasing past ~55% of the
+  // travel fires a spin, either way the knob springs back up (JS-driven — the
+  // value is set imperatively from the gesture, so it can't be native-driven)
+  const leverTravel = 120
+  const leverY = useRef(new Animated.Value(0)).current
+  const leverDragRef = useRef(0)
+  const resetLever = () => {
+    leverDragRef.current = 0
+    Animated.spring(leverY, {
+      toValue: 0,
+      friction: 4,
+      useNativeDriver: false,
+    }).start()
+  }
+  const leverResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !isSpinningRef.current,
+      onMoveShouldSetPanResponder: (_e, gesture) =>
+        !isSpinningRef.current && Math.abs(gesture.dy) > 4,
+      onPanResponderMove: (_e, gesture) => {
+        const clamped = Math.min(Math.max(gesture.dy, 0), leverTravel)
+        leverDragRef.current = clamped
+        leverY.setValue(clamped)
+      },
+      onPanResponderRelease: () => {
+        const pulled = leverDragRef.current >= leverTravel * 0.55
+        resetLever()
+        if (pulled) handleRerollRef.current()
+      },
+      onPanResponderTerminate: () => resetLever(),
+    })
+  ).current
+
   return (
     <View className='w-full items-center py-12'>
-      <Text className={`${viewColors.font} text-4xl font-bold`}>
-        {isSpinning ? "Spinning..." : "Your pick"}
-      </Text>
-      <View
-        className={`h-72 w-60 rounded-xl overflow-hidden border ${baseBorderClass}`}
-        style={styles.dice}>
-        {currentItem ? (
-          <View
-            className={`flex-1 ${theme === "dark" ? "bg-white/5" : "bg-black/5"}`}
-            onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}>
+      <View className='flex-row h-full -mb-32 items-center justify-center'>
+        <View className={`w-2/3 aspect-square rounded-xl overflow-hidden border ${baseBorderClass}`}>
+          {currentItem ? (
             <View
-              style={{ height: 100 }}
-              className={`absolute inset-x-0 top-0 z-10 ${theme === "dark" ? "bg-black/60" : "bg-white/70"}`}
-            />
-            <View
-              style={{ height: 100 }}
-              className={`absolute inset-x-0 bottom-0 z-10 ${theme === "dark" ? "bg-black/60" : "bg-white/70"}`}
-            />
-            <Animated.View
-              className='absolute inset-x-0 top-0'
-              style={{ transform: [{ translateY: animatedOffset }] }}>
-              {reelItems.map((item, itemIndex) => (
-                <View
-                  key={`${item?.id ?? "slot"}-${itemIndex}`}
-                  style={{ height: reelHeight }}
-                  className='w-full items-center justify-center px-2'>
-                  <Text
-                    numberOfLines={1}
-                    className={`${viewColors.font} text-center text-sm font-semibold`}>
-                    {item?.name ?? ""}
-                  </Text>
-                </View>
-              ))}
-            </Animated.View>
-          </View>
-        ) : (
-          <View className='flex-1 items-center justify-center'>
-            <Text className={`${mutedTextClass}`}>No fragrances yet</Text>
-          </View>
-        )}
-      </View>
-      <View className='mt-12 flex-row'>
-        <View className='items-center'>
-          <Text className={`${mutedTextClass} items-center mb-2 text-lg`}>Wear</Text>
-          <TouchableOpacity
-            onPress={() => fragrance && incrementWear({ id: fragrance.id })}
-            className={`${buttons.wearBg} p-3 h-16 w-16 mx-12 items-center justify-center rounded-full`}>
-            <FontAwesome5 name='spray-can' size={28} color={getColor(buttons.wearIcon)} />
-          </TouchableOpacity>
+              className={`flex-1 ${theme === "dark" ? "bg-white/5" : "bg-black/5"}`}
+              onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+            >
+              <Animated.View
+                className='absolute inset-x-0 top-0'
+                style={{ transform: [{ translateY: animatedOffset }] }}
+              >
+                {reelItems.map((item, itemIndex) => {
+                  const imageSource = getImageSource(item?.image_url)
+                  // "Brand - Title" convention; names without it show as title only
+                  const nameParts = (item?.name ?? "").split(" - ")
+                  const title = nameParts[1] ?? nameParts[0]
+                  const brand = nameParts[1] ? nameParts[0] : ""
+
+                  return (
+                    <View
+                      key={`${item?.id ?? "slot"}-${itemIndex}`}
+                      style={{ height: containerHeight }}
+                      className='w-full'
+                    >
+                      {imageSource ? (
+                        // White backing keeps product shots (white backgrounds)
+                        // from clashing in dark mode
+                        <View className='absolute inset-0 items-center justify-center bg-white'>
+                          <Image
+                            className='h-full w-full'
+                            resizeMode='cover'
+                            source={imageSource}
+                          />
+                        </View>
+                      ) : (
+                        <View className='absolute inset-0 items-center justify-center'>
+                          <MaterialCommunityIcons
+                            name='image-off'
+                            size={40}
+                            color={getColor(theme === "dark" ? "neutral-600" : "neutral-400")}
+                          />
+                        </View>
+                      )}
+
+                   
+                      <Card.Overlay>
+                          <Card.Title color='white'>{title}</Card.Title>
+                          <Card.Subtitle color='white'>{brand}</Card.Subtitle>
+                          <Card.WearInfoText color='white' timesWorn={item?.times_worn ?? 0} lastWorn={item?.last_worn} />
+                      </Card.Overlay>
+                    </View>
+                  )
+                })}
+              </Animated.View>
+              {/* Wear button overlaid on the current card's info strip — hidden
+                  mid-spin so you can't wear a card whizzing by, but shown while
+                  the settle spring bounces (the target card is already landed).
+                  Dimmed once worn today (one wear per day) — still tappable,
+                  the increment_wear round-trip shows the "already worn" toast */}
+              {spinPhase !== "spinning" && (
+                <Card.ActionButton
+                  variant='wear'
+                  size='lg'
+                  className='absolute bottom-2.5 right-2.5'
+                  style={styles.knob}
+                  dimmed={isWornToday(currentItem.last_worn)}
+                  onPress={() => incrementWear({ id: currentItem.id })}>
+                  {(iconColor) => <FontAwesome5 name='spray-can' size={22} color={iconColor} />}
+                </Card.ActionButton>
+              )}
+            </View>
+          ) : (
+            <View className='flex-1 items-center justify-center'>
+              <Text className={`${mutedTextClass}`}>No fragrances yet</Text>
+            </View>
+          )}
         </View>
-        <View className='items-center'>
-          <Text className={`${mutedTextClass} items-center mb-2 text-lg`}>Reroll</Text>
-          <TouchableOpacity
-            onPress={handleReroll}
-            disabled={isSpinning}
-            className={`${buttons.rerollBg} p-3 h-16 w-16 mx-12 items-center justify-center rounded-full`}>
-            <MaterialCommunityIcons
-              name='dice-multiple'
-              size={36}
-              color={getColor(buttons.rerollIcon)}
-            />
-          </TouchableOpacity>
+        {/* Slot-machine arm — drag the knob down and release to spin */}
+        <View className='ml-5 h-60 w-12 items-center'>
+          <View
+            className={`absolute top-1 bottom-1 w-1.5 rounded-full ${theme === "dark" ? "bg-white/15" : "bg-black/10"}`}
+          />
+          <Animated.View
+            {...leverResponder.panHandlers}
+            style={{ transform: [{ translateY: leverY }] }}
+            className='mt-1 items-center justify-center'
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+          >
+            <View
+              className='h-11 w-11 rounded-full bg-red-500 border-2 border-red-700'
+              style={styles.knob}
+            >
+              <View className='absolute left-2 top-2 h-3 w-3 rounded-full bg-red-300' />
+            </View>
+          </Animated.View>
+          <Text className={`${mutedTextClass} absolute -bottom-6 text-xs`}>Pull</Text>
         </View>
       </View>
     </View>
@@ -166,14 +269,15 @@ const Picker = ({ fragrance, index }: PickerProps) => {
 }
 
 const styles = StyleSheet.create({
-  dice: {
+  knob: {
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
 })
 
