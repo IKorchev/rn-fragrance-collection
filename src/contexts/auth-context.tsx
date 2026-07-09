@@ -13,11 +13,19 @@ import * as WebBrowser from "expo-web-browser"
 import { Alert, Platform } from "react-native"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { User } from "@supabase/supabase-js"
+import Purchases, { type CustomerInfo } from "react-native-purchases"
 
 import { supabase } from "@/lib/supabase"
 import { registerForPushNotificationsAsync } from "@/lib/notifications"
 import { pickWeightedIndex } from "@/lib/utils/pick-weighted-index"
 import { deviceTimeZone } from "@/lib/utils/worn-today"
+import {
+  purchasesEnabled,
+  configurePurchases,
+  identifyPurchaser,
+  resetPurchaser,
+  isProFromCustomerInfo,
+} from "@/lib/purchases"
 import useToast from "@/contexts/toast-context"
 import type { Tables } from "@/lib/database.types"
 
@@ -59,6 +67,10 @@ interface AuthContextValue {
   // null clears the caller's rating (tap-to-clear on the detail sheet).
   rateFragrance: (fragranceId: string, rating: number | null) => Promise<void>
   addFragranceToCollection: (object: FragranceInput) => Promise<void>
+  // Pro-tier entitlement — sourced from RevenueCat's local CustomerInfo cache
+  // (instant, no network round-trip); always false when purchases aren't
+  // configured (see src/lib/purchases.ts).
+  isPro: boolean
   userCollection: UserFragrance[]
   sortedCollection: UserFragrance[]
   visibleSortedCollection: UserFragrance[]
@@ -89,6 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { showToast } = useToast()
   const [user, setUser] = useState<AppUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [isPro, setIsPro] = useState(false)
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
   const deleteTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
@@ -115,6 +128,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Configure once as early as possible (RevenueCat's own recommendation);
+  // no-ops if EXPO_PUBLIC_REVENUECAT_*_API_KEY isn't set.
+  useEffect(() => {
+    configurePurchases()
+  }, [])
+
+  // CustomerInfo is the client-side source of truth for UI gating — instant,
+  // no network round-trip. The `subscriptions` table (synced by the
+  // revenuecat-webhook edge function) is only for server-side enforcement.
+  useEffect(() => {
+    if (!purchasesEnabled) return
+    const listener = (info: CustomerInfo) => setIsPro(isProFromCustomerInfo(info))
+    Purchases.addCustomerInfoUpdateListener(listener)
+    return () => {
+      Purchases.removeCustomerInfoUpdateListener(listener)
+    }
+  }, [])
+
+  // Links RevenueCat's app_user_id to the Supabase user id so the webhook
+  // can attribute purchases to the right row in `subscriptions`.
+  useEffect(() => {
+    if (!purchasesEnabled || !user?.id) return
+    identifyPurchaser(user.id).then((result) => {
+      if (result) setIsPro(isProFromCustomerInfo(result.customerInfo))
+    })
+  }, [user?.id])
 
   const {
     data: collectionData,
@@ -396,12 +436,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const logOut = () => {
+    resetPurchaser()
     supabase.auth.signOut()
   }
 
   const deleteAccount = async () => {
     const { error } = await supabase.functions.invoke("delete-account", { method: "POST" })
     if (error) throw error
+    await resetPurchaser()
     // The server-side session is already gone with the user — local scope
     // avoids a doomed round-trip and clears the stored session.
     await supabase.auth.signOut({ scope: "local" })
@@ -426,6 +468,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateFragrance,
         rateFragrance,
         addFragranceToCollection,
+        isPro,
         userCollection,
         sortedCollection,
         visibleSortedCollection,
