@@ -54,6 +54,10 @@ interface AuthContextValue {
     object: { id: string },
     updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
   ) => Promise<void>
+  // Community rating for a catalog-linked fragrance (fragrance_ratings table,
+  // separate from the manual-add-only rating column on updateFragrance above).
+  // null clears the caller's rating (tap-to-clear on the detail sheet).
+  rateFragrance: (fragranceId: string, rating: number | null) => Promise<void>
   addFragranceToCollection: (object: FragranceInput) => Promise<void>
   userCollection: UserFragrance[]
   sortedCollection: UserFragrance[]
@@ -277,6 +281,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const rateFragrance = async (fragranceId: string, rating: number | null) => {
+    try {
+      if (rating === null) {
+        const { error } = await supabase
+          .from("fragrance_ratings")
+          .delete()
+          .eq("user_id", user!.id)
+          .eq("fragrance_id", fragranceId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from("fragrance_ratings").upsert(
+          {
+            user_id: user!.id,
+            fragrance_id: fragranceId,
+            rating,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,fragrance_id" }
+        )
+        if (error) throw error
+      }
+      queryClient.invalidateQueries({ queryKey: ["my-rating", user?.id, fragranceId] })
+      queryClient.invalidateQueries({ queryKey: ["fragrance-ratings"] })
+    } catch (error) {
+      Alert.alert("Update failed", "Something went wrong, please try again later.")
+      console.log(error)
+    }
+  }
+
   const invalidateWearQueries = async () => {
     await invalidateCollection()
     // increment_wear/undo_wear also touch wear_events — refresh the
@@ -391,6 +424,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         requestDelete,
         cancelDelete,
         updateFragrance,
+        rateFragrance,
         addFragranceToCollection,
         userCollection,
         sortedCollection,

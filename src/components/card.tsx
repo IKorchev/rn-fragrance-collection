@@ -134,7 +134,22 @@ const Subtitle = ({ children, color, centered }: { children: ReactNode; color?: 
 }
 
 
-const WearInfoText = ({ timesWorn, lastWorn, centered, color }: { timesWorn: number; lastWorn?: string | null; centered?: boolean; color?: string }) => {
+const WearInfoText = ({
+  timesWorn,
+  lastWorn,
+  centered,
+  color,
+  avgRating,
+  ratingCount,
+}: {
+  timesWorn: number
+  lastWorn?: string | null
+  centered?: boolean
+  color?: string
+  // Community rating — appended inline so this stays within the card's fixed row height
+  avgRating?: number | null
+  ratingCount?: number | null
+}) => {
   const { mutedColors } = useTheme()
   const lastWornFormatted = lastWorn ? Intl.DateTimeFormat("en", {
     dateStyle: 'long'
@@ -144,6 +159,9 @@ const WearInfoText = ({ timesWorn, lastWorn, centered, color }: { timesWorn: num
     <>
       <Text className={`text-xs ${`text-${color || mutedColors}`} ${centered ? "text-center" : ""}`}>
         Times worn: <Text className='font-bold'>{timesWorn}</Text>
+        {avgRating != null && ratingCount ? (
+          <Text className='font-bold'>{`  ·  ★ ${avgRating.toFixed(1)} (${ratingCount})`}</Text>
+        ) : null}
       </Text>
       {lastWorn && (
         <Text className={`text-xs ${`text-${color || mutedColors}`} ${centered ? "text-center" : ""}`}>

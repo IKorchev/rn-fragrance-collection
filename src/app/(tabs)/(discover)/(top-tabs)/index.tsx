@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { View, FlatList, ActivityIndicator, Text, RefreshControl } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Chip } from "@rneui/themed"
-import { useTopWorn, WEAR_PERIODS, type WearPeriod } from "@/lib/queries"
+import { useTopWorn, useFragranceRatings, WEAR_PERIODS, type WearPeriod } from "@/lib/queries"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import useTheme from "@/contexts/theme-context"
@@ -13,6 +13,7 @@ const MostWornScreen = () => {
   const insets = useSafeAreaInsets()
   const [period, setPeriod] = useState<WearPeriod>("week")
   const { data, isLoading, error, refetch } = useTopWorn(period)
+  const { data: ratings } = useFragranceRatings((data ?? []).map((item) => item.fragrance_id))
   const { refreshing, onRefresh } = usePullToRefresh(refetch)
   const { theme, viewColors, accentColors, mutedColors, cardBorderColors, mutedTextClass } =
     useTheme()
@@ -80,6 +81,8 @@ const MostWornScreen = () => {
               imageUrl={item.image_url}
               wearCount={item.wear_count}
               fragranceId={item.fragrance_id}
+              avgRating={item.fragrance_id ? ratings?.[item.fragrance_id]?.avg : undefined}
+              ratingCount={item.fragrance_id ? ratings?.[item.fragrance_id]?.count : undefined}
             />
           )}
           ListEmptyComponent={

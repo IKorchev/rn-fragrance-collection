@@ -13,9 +13,20 @@ interface TopListItemProps {
   wearCount?: number | null
   // Catalog fragrances.id — present for search results and FK'd leaderboard rows
   fragranceId?: string | null
+  // Community rating aggregate — batch-fetched by the parent list screen
+  avgRating?: number | null
+  ratingCount?: number | null
 }
 
-const TopListItem = ({ name, place, imageUrl, wearCount, fragranceId }: TopListItemProps) => {
+const TopListItem = ({
+  name,
+  place,
+  imageUrl,
+  wearCount,
+  fragranceId,
+  avgRating,
+  ratingCount,
+}: TopListItemProps) => {
   const router = useRouter()
   const { addFragranceToCollection } = useAuth()
   const [brand, title] = name.split(" - ")
@@ -33,6 +44,9 @@ const TopListItem = ({ name, place, imageUrl, wearCount, fragranceId }: TopListI
       params: {
         name,
         ...(imageUrl ? { imageUrl } : {}),
+        // Lets the detail sheet resolve the community rating even when this
+        // row isn't in the user's collection (no `id` param to key off of)
+        ...(fragranceId ? { fragranceId } : {}),
       },
     })
 
@@ -43,7 +57,7 @@ const TopListItem = ({ name, place, imageUrl, wearCount, fragranceId }: TopListI
       <Card.Content>
         <Card.Title>{title}</Card.Title>
         <Card.Subtitle>{brand}</Card.Subtitle>
-        <Card.WearInfoText timesWorn={wearCount || 0} />
+        <Card.WearInfoText timesWorn={wearCount || 0} avgRating={avgRating} ratingCount={ratingCount} />
       </Card.Content>
       <Card.ActionButton variant='wear' className='mr-3' onPress={handleAddFragrance}>
         {(iconColor) => <AntDesign name='plus' color={iconColor} size={22} />}

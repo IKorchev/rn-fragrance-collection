@@ -15,6 +15,12 @@ export type TopWornFragrance =
 
 export type WearEvent = Tables<"wear_events">
 
+// Community rating aggregate for one catalog fragrance, keyed for lookup
+export interface RatingSummary {
+  avg: number
+  count: number
+}
+
 export const MIN_SEARCH_LENGTH = 3
 
 export const WEAR_PERIODS = [
@@ -69,6 +75,46 @@ export const useWearHistory = (userId: string | undefined) =>
         .limit(500)
       if (error) throw error
       return data ?? []
+    },
+  })
+
+// Community rating average + count for a batch of catalog fragrance ids —
+// one call for a whole page of search/leaderboard rows instead of N+1.
+// Ids with no ratings yet are simply absent from the returned map.
+export const useFragranceRatings = (fragranceIds: (string | null | undefined)[]) => {
+  const ids = Array.from(new Set(fragranceIds.filter((id): id is string => !!id))).sort()
+
+  return useQuery({
+    queryKey: ["fragrance-ratings", ids],
+    enabled: ids.length > 0,
+    queryFn: async (): Promise<Record<string, RatingSummary>> => {
+      const { data, error } = await supabase.rpc("get_fragrance_ratings", {
+        fragrance_ids: ids,
+      })
+      if (error) throw error
+      return Object.fromEntries(
+        (data ?? []).map((r) => [r.fragrance_id, { avg: r.avg_rating, count: Number(r.rating_count) }])
+      )
+    },
+  })
+}
+
+// The signed-in user's own rating for a catalog-linked fragrance (the detail
+// sheet's star widget for catalog items — manual adds use user_fragrances.rating
+// directly instead, since they have no fragrance_id to key this table on).
+export const useMyRating = (userId: string | undefined, fragranceId: string | undefined) =>
+  useQuery({
+    queryKey: ["my-rating", userId, fragranceId],
+    enabled: !!userId && !!fragranceId,
+    queryFn: async (): Promise<number | null> => {
+      const { data, error } = await supabase
+        .from("fragrance_ratings")
+        .select("rating")
+        .eq("user_id", userId!)
+        .eq("fragrance_id", fragranceId!)
+        .maybeSingle()
+      if (error) throw error
+      return data?.rating ?? null
     },
   })
 

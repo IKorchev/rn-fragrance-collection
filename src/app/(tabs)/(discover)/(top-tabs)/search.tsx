@@ -11,6 +11,7 @@ import {
 } from "react-native"
 import {
   useFragranceSearch,
+  useFragranceRatings,
   useBrands,
   hasActiveFilters,
   MIN_SEARCH_LENGTH,
@@ -50,6 +51,7 @@ const SearchScreen = () => {
     filters
   )
   const { data: brands, isLoading: brandsLoading } = useBrands()
+  const { data: ratings } = useFragranceRatings((data ?? []).map((item) => item.id))
 
   const trimmedLength = debouncedTerm.trim().length
   const filtersActive = hasActiveFilters(filters)
@@ -152,6 +154,8 @@ const SearchScreen = () => {
               name={`${item.brand} - ${item.name}`}
               imageUrl={item.image_url}
               fragranceId={item.id}
+              avgRating={ratings?.[item.id]?.avg}
+              ratingCount={ratings?.[item.id]?.count}
             />
           )}
           ListFooterComponent={

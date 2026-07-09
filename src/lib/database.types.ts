@@ -16,6 +16,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      fragrance_ratings: {
+        Row: {
+          created_at: string
+          fragrance_id: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fragrance_id: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fragrance_id?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fragrance_ratings_fragrance_id_fkey"
+            columns: ["fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "fragrances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fragrances: {
         Row: {
           brand: string
@@ -174,6 +209,14 @@ export type Database = {
           id: string
           image_url: string
           name: string
+        }[]
+      }
+      get_fragrance_ratings: {
+        Args: { fragrance_ids: string[] }
+        Returns: {
+          avg_rating: number
+          fragrance_id: string
+          rating_count: number
         }[]
       }
       increment_wear: {

@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS user_fragrances (
   times_worn    INT NOT NULL DEFAULT 0,
   last_worn     TIMESTAMPTZ,
   -- Personal rating/notes — user-entered, so exempt from the
-  -- no-scraped-metadata rule.
+  -- no-scraped-metadata rule. rating is manual-add-only (fragrance_id IS
+  -- NULL) — catalog-linked items rate through fragrance_ratings below, which
+  -- also powers the cross-user community average.
   rating        SMALLINT CONSTRAINT user_fragrances_rating_range CHECK (rating BETWEEN 1 AND 5),
   notes         TEXT CONSTRAINT user_fragrances_notes_length CHECK (char_length(notes) <= 2000),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -183,8 +185,51 @@ AS $$
 $$;
 
 -- The app only ever calls this signed-in; no reason to expose the
--- SECURITY DEFINER aggregate to anonymous clients.
-REVOKE EXECUTE ON FUNCTION top_worn_fragrances(text, int) FROM anon;
+-- SECURITY DEFINER aggregate to anonymous clients. Postgres grants EXECUTE to
+-- the PUBLIC pseudo-role by default, and every role (including anon)
+-- implicitly has whatever PUBLIC has — REVOKE ... FROM anon alone does NOT
+-- block it, so PUBLIC must be revoked too, with authenticated re-granted.
+REVOKE EXECUTE ON FUNCTION top_worn_fragrances(text, int) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION top_worn_fragrances(text, int) TO authenticated;
+
+-- Community fragrance ratings — decoupled from user_fragrances so a rating
+-- survives collection-row deletion/duplication and isn't tied to ownership.
+-- One rating per user per catalog fragrance. Mirrors the wear_events split:
+-- own-rows RLS here, cross-user aggregation only via a SECURITY DEFINER RPC.
+CREATE TABLE IF NOT EXISTS fragrance_ratings (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  fragrance_id  UUID NOT NULL REFERENCES fragrances(id) ON DELETE CASCADE,
+  rating        SMALLINT NOT NULL CONSTRAINT fragrance_ratings_rating_range CHECK (rating BETWEEN 1 AND 5),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, fragrance_id)
+);
+
+CREATE INDEX IF NOT EXISTS fragrance_ratings_fragrance_id_idx ON fragrance_ratings (fragrance_id);
+
+ALTER TABLE fragrance_ratings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own ratings" ON fragrance_ratings FOR ALL
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
+
+-- Community average + count for a batch of catalog fragrance ids — batched so
+-- a list screen makes one call for a whole page instead of N+1.
+CREATE OR REPLACE FUNCTION get_fragrance_ratings(fragrance_ids uuid[])
+RETURNS TABLE (fragrance_id uuid, avg_rating double precision, rating_count bigint)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT fr.fragrance_id, avg(fr.rating)::double precision, count(*)::bigint
+  FROM fragrance_ratings fr
+  WHERE fr.fragrance_id = ANY(fragrance_ids)
+  GROUP BY fr.fragrance_id
+$$;
+
+REVOKE EXECUTE ON FUNCTION get_fragrance_ratings(uuid[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_fragrance_ratings(uuid[]) TO authenticated;
 
 -- Realtime change events for the collection screen (postgres_changes needs the
 -- table in the supabase_realtime publication).
