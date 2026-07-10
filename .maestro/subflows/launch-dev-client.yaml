@@ -1,0 +1,16 @@
+# Shared launch step: deep-link the dev client straight into the Metro bundle,
+# skipping the dev-launcher home screen. Requires Metro running on the host
+# (yarn start) — 10.0.2.2 is the emulator's alias for the host's localhost.
+# Do NOT clearState here: the Supabase session lives in AsyncStorage and
+# Google sign-in can't be automated, so a wiped session bricks every flow.
+appId: com.korchev.fragrancecollection
+env:
+  DEV_SERVER_URL: "http%3A%2F%2F10.0.2.2%3A8081"
+---
+- openLink: com.korchev.fragrancecollection://expo-development-client/?url=${DEV_SERVER_URL}
+# First bundle build after Metro starts can take a while
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 90000
+# The app restores the last-viewed tab — normalize to Discover as the start state
+- tapOn: "Discover"

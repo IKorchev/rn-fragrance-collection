@@ -1,0 +1,19 @@
+# Catalog search: typing a query on the Search sub-tab returns live results
+# from the search_fragrances RPC.
+appId: com.korchev.fragrancecollection
+tags:
+  - search
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+
+- tapOn: "Search"
+- tapOn: "Search name or brand"
+- inputText: "sauvage"
+# no hideKeyboard here: on Android it falls back to a back-press, which can
+# exit the app entirely if the keyboard already dismissed itself
+
+# Results render as split Brand / Title rows ("Dior - Sauvage" -> "Sauvage" + "Dior")
+- extendedWaitUntil:
+    visible: "Sauvage.*"
+    timeout: 20000
+- assertVisible: "Dior"

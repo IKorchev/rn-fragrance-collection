@@ -1,0 +1,25 @@
+# App boots into the Discover tab (signed-in session assumed on the device),
+# both sub-tabs render, and the Collection tab loads.
+appId: com.korchev.fragrancecollection
+tags:
+  - smoke
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+
+# Discover tab: Most Worn / Search sub-tabs are present
+- assertVisible: "Search"
+- assertVisible: "Leaderboard"
+
+# Leaderboard renders its period chips
+- tapOn: "Leaderboard"
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 10000
+- assertVisible: "Week"
+- assertVisible: "All Time"
+
+# Collection tab renders (list with filter bar, or the empty state)
+- tapOn: "Collection"
+- extendedWaitUntil:
+    visible: "Search your collection|Your collection is empty"
+    timeout: 15000
