@@ -13,6 +13,23 @@ Notifications.setNotificationHandler({
   }),
 })
 
+// Action buttons on the daily wear reminder — the send-wear-reminder edge
+// function stamps this categoryId + a suggested userFragranceId in data.
+// Android only applies category changes after an app restart.
+export const WEAR_REMINDER_CATEGORY = "wear-reminder"
+export const WEAR_REMINDER_ACTIONS = {
+  wear: "wear-now",
+  openPicker: "open-picker",
+} as const
+
+if (Platform.OS !== "web") {
+  // Both actions open the app — the wear RPC needs the signed-in session
+  Notifications.setNotificationCategoryAsync(WEAR_REMINDER_CATEGORY, [
+    { identifier: WEAR_REMINDER_ACTIONS.wear, buttonTitle: "Wear it" },
+    { identifier: WEAR_REMINDER_ACTIONS.openPicker, buttonTitle: "Open picker" },
+  ]).catch((error) => console.log("Failed to register notification category", error))
+}
+
 // Asks for permission and returns the Expo push token, or null when push
 // isn't available (simulator, permission denied, or no EAS projectId yet —
 // `eas init` writes extra.eas.projectId into app.json).

@@ -2,7 +2,9 @@
 // Invoked by pg_cron (see db/schema.sql) with the anon key as Bearer JWT;
 // reads tokens with the service role (RLS bypass is intentional — this is
 // the trusted sender), sends via Expo's push API, and prunes tokens Expo
-// reports as DeviceNotRegistered.
+// reports as DeviceNotRegistered. Each user gets a suggested fragrance and
+// the "wear-reminder" action category (buttons registered in
+// src/lib/notifications.ts).
 import { createClient } from "npm:@supabase/supabase-js@2"
 
 type PushTicket = {
@@ -10,6 +12,42 @@ type PushTicket = {
   id?: string
   message?: string
   details?: { error?: string }
+}
+
+type FragranceRow = {
+  id: string
+  user_id: string
+  name: string
+  times_worn: number | null
+  last_worn: string | null
+}
+
+const RECENTLY_WORN_MS = 24 * 60 * 60 * 1000
+
+// Mirrors src/lib/utils/pick-weighted-index.ts
+const pickWeighted = (col: FragranceRow[]): FragranceRow | null => {
+  if (!col.length) return null
+  const now = Date.now()
+  const weights = col.map((item) => {
+    let weight = 1 / ((item.times_worn ?? 0) + 1)
+    const lastWornMs = item.last_worn ? new Date(item.last_worn).getTime() : null
+    if (lastWornMs && now - lastWornMs < RECENTLY_WORN_MS) {
+      weight *= 0.15
+    }
+    return weight
+  })
+  const total = weights.reduce((sum, w) => sum + w, 0)
+  let r = Math.random() * total
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return col[i]
+  }
+  return col[col.length - 1]
+}
+
+const titleOf = (name: string) => {
+  const parts = name.split(" - ")
+  return parts[1] ?? parts[0]
 }
 
 Deno.serve(async (_req) => {
@@ -20,16 +58,46 @@ Deno.serve(async (_req) => {
 
   const { data: rows, error } = await supabase
     .from("user_push_tokens")
-    .select("token")
+    .select("user_id, token")
     .eq("reminders_enabled", true)
   if (error) return Response.json({ error: error.message }, { status: 500 })
   if (!rows || rows.length === 0) return Response.json({ sent: 0, removed: 0 })
 
-  const messages = rows.map(({ token }) => ({
-    to: token,
-    title: "Fragrance Collection",
-    body: "Time to pick today's fragrance 👃✨",
-  }))
+  const userIds = [...new Set(rows.map((r) => r.user_id))]
+  const { data: fragRows, error: fragError } = await supabase
+    .from("user_fragrances")
+    .select("id, user_id, name, times_worn, last_worn")
+    .in("user_id", userIds)
+  if (fragError) return Response.json({ error: fragError.message }, { status: 500 })
+
+  const byUser = new Map<string, FragranceRow[]>()
+  for (const frag of (fragRows ?? []) as FragranceRow[]) {
+    const list = byUser.get(frag.user_id) ?? []
+    list.push(frag)
+    byUser.set(frag.user_id, list)
+  }
+  const suggestionByUser = new Map<string, FragranceRow | null>()
+  for (const id of userIds) {
+    suggestionByUser.set(id, pickWeighted(byUser.get(id) ?? []))
+  }
+
+  const messages = rows.map(({ user_id, token }) => {
+    const suggestion = suggestionByUser.get(user_id)
+    if (!suggestion) {
+      return {
+        to: token,
+        title: "Fragrance Collection",
+        body: "Time to pick today's fragrance 👃✨",
+      }
+    }
+    return {
+      to: token,
+      title: "Fragrance Collection",
+      body: `Time for ${titleOf(suggestion.name)}? 👃✨`,
+      categoryId: "wear-reminder",
+      data: { userFragranceId: suggestion.id, name: suggestion.name },
+    }
+  })
 
   const staleTokens: string[] = []
   let sent = 0

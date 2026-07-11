@@ -9,13 +9,19 @@ import React, {
 import * as Google from "expo-auth-session/providers/google"
 import * as AppleAuthentication from "expo-apple-authentication"
 import * as Haptics from "expo-haptics"
+import * as Notifications from "expo-notifications"
 import * as WebBrowser from "expo-web-browser"
+import { router } from "expo-router"
 import { Alert, Platform } from "react-native"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { User } from "@supabase/supabase-js"
 
 import { supabase } from "@/lib/supabase"
-import { registerForPushNotificationsAsync } from "@/lib/notifications"
+import {
+  registerForPushNotificationsAsync,
+  WEAR_REMINDER_ACTIONS,
+  WEAR_REMINDER_CATEGORY,
+} from "@/lib/notifications"
 import { pickWeightedIndex } from "@/lib/utils/pick-weighted-index"
 import { deviceTimeZone } from "@/lib/utils/worn-today"
 import useToast from "@/contexts/toast-context"
@@ -365,6 +371,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       Alert.alert("Oops", `Something went wrong!`)
     }
   }
+
+  // Wear-reminder push actions (categories in src/lib/notifications.ts,
+  // payload from the send-wear-reminder edge function). Held until user +
+  // collection are ready — the wear RPC needs the session; the ref stops
+  // re-handling the same response when deps change.
+  const reminderResponse = Notifications.useLastNotificationResponse()
+  const handledReminderKey = useRef<string | null>(null)
+  useEffect(() => {
+    if (!reminderResponse || !user?.id || collectionPending) return
+    const { actionIdentifier, notification } = reminderResponse
+    const content = notification.request.content
+    if (content.categoryIdentifier !== WEAR_REMINDER_CATEGORY) return
+    const key = `${notification.request.identifier}:${actionIdentifier}`
+    if (handledReminderKey.current === key) return
+    handledReminderKey.current = key
+
+    if (actionIdentifier === WEAR_REMINDER_ACTIONS.wear) {
+      const suggestedId = (content.data as Record<string, unknown> | null)?.userFragranceId
+      if (typeof suggestedId === "string") incrementWear({ id: suggestedId })
+    } else {
+      // Body taps and "Open picker" both land on the picker. Deferred: a push
+      // issued while the activity is still resuming from the notification tap
+      // is dropped silently (still dropped at 300ms; 1200ms is reliable)
+      setTimeout(() => router.push("/picker"), 1200)
+    }
+  }, [reminderResponse, user?.id, collectionPending])
 
   const signInWithGoogle = () => {
     promptAsync()
