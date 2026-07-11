@@ -197,6 +197,7 @@ const CollectionScreen = () => {
       {hasCollection && (
         <TouchableOpacity
           onPress={() => router.push("/picker")}
+          testID='picker-fab'
           className={`${theme === "dark" ? "bg-emerald-500" : "bg-emerald-600"} absolute right-5 h-14 w-14 items-center justify-center rounded-full`}
           style={{
             bottom: insets.bottom + 64,

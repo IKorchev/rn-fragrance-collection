@@ -7,10 +7,23 @@ appId: com.korchev.fragrancecollection
 env:
   DEV_SERVER_URL: "http%3A%2F%2F10.0.2.2%3A8081"
 ---
+# Fresh process every flow — relaunch-over-running-app occasionally wedges the
+# dev client on a blank screen
+- stopApp
 - openLink: com.korchev.fragrancecollection://expo-development-client/?url=${DEV_SERVER_URL}
 # First bundle build after Metro starts can take a while
 - extendedWaitUntil:
     visible: "Discover"
     timeout: 90000
-# The app restores the last-viewed tab — normalize to Discover as the start state
+# The app restores the last-viewed tab — normalize to Discover as the start
+# state. The restore can land AFTER our first tap and bounce the app back to
+# the restored tab, so retry when Discover's sub-tabs didn't appear.
 - tapOn: "Discover"
+- runFlow:
+    when:
+      notVisible: "Leaderboard"
+    commands:
+      - tapOn: "Discover"
+- extendedWaitUntil:
+    visible: "Leaderboard"
+    timeout: 10000

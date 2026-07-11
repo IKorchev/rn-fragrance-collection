@@ -1,0 +1,35 @@
+# Wear + undo round-trip on the first collection row. Wears mutate real
+# Supabase data and one wear per calendar day makes strays costly, so the
+# flow ALWAYS undoes the wear it logs (which also keeps it re-runnable).
+# If the row was already worn today (outside the test), the "already worn"
+# toast has no Undo — the conditional block just skips and the flow passes.
+appId: com.korchev.fragrancecollection
+tags:
+  - wear
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+
+- tapOn: "Collection"
+- extendedWaitUntil:
+    visible: "Search your collection"
+    timeout: 15000
+
+# Wear the first (least-worn) row
+- tapOn:
+    id: "wear-button"
+    index: 0
+- extendedWaitUntil:
+    visible: "Wear logged for .*|.* was already worn today"
+    timeout: 10000
+
+# Undo appears only on the success toast — always take it back
+- runFlow:
+    when:
+      visible: "Undo"
+    commands:
+      - tapOn: "Undo"
+      - extendedWaitUntil:
+          notVisible: "Wear logged for .*"
+          timeout: 6000
+      # undo_wear failure surfaces as an "Oops" alert
+      - assertNotVisible: "Oops"

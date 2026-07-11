@@ -1,0 +1,42 @@
+# Slot-machine picker: FAB opens the fullScreenModal, pulling the lever spins
+# the reel and lands on a card, X closes back to the Collection tab.
+# Read-only — never taps the picker's wear button.
+appId: com.korchev.fragrancecollection
+tags:
+  - picker
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+
+- tapOn: "Collection"
+- extendedWaitUntil:
+    visible: "Search your collection"
+    timeout: 15000
+
+# FAB only renders when the collection is non-empty
+- tapOn:
+    id: "picker-fab"
+- extendedWaitUntil:
+    visible: "Pull"
+    timeout: 10000
+- assertVisible:
+    id: "picker-wear-button"
+
+# Pull the lever: drag the knob down past ~55% of its travel and release
+- swipe:
+    from:
+      id: "picker-lever"
+    direction: DOWN
+
+# The wear button hides while the reel spins and returns once it lands
+- extendedWaitUntil:
+    visible:
+      id: "picker-wear-button"
+    timeout: 15000
+- assertVisible: "Times worn: .*"
+
+# X is the only way out of the fullScreenModal
+- tapOn:
+    id: "picker-close"
+- extendedWaitUntil:
+    visible: "Search your collection"
+    timeout: 10000

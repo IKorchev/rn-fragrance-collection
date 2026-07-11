@@ -183,6 +183,8 @@ interface ActionButtonProps {
   className?: string
   // For what className can't express (e.g. shadow when floating over an image)
   style?: StyleProp<ViewStyle>
+  // Icon-only button — testID is the only way Maestro flows can target it
+  testID?: string
   // Render prop so the tinted icon color stays paired with the variant's background
   children: (iconColor: string) => ReactNode
 }
@@ -194,6 +196,7 @@ const ActionButton = ({
   size = "md",
   className,
   style,
+  testID,
   children,
 }: ActionButtonProps) => {
   const { buttons } = useTheme()
@@ -214,6 +217,7 @@ const ActionButton = ({
     <TouchableOpacity
       className={`${bgByVariant[variant]} ${size === "lg" ? "h-12 w-12" : "h-11 w-11"} justify-center rounded-full items-center ${dimmed ? "opacity-40" : ""} ${className ?? ""}`}
       style={style}
+      testID={testID}
       onPress={onPress}>
       {children(getColor(iconByVariant[variant]))}
     </TouchableOpacity>

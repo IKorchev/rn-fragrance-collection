@@ -1,0 +1,39 @@
+# Legal screens: profile sheet links to the Privacy Policy and Terms &
+# Conditions formSheets and both render their content.
+appId: com.korchev.fragrancecollection
+tags:
+  - legal
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+
+# Profile opens from the header avatar
+- tapOn:
+    id: "profile-avatar"
+- extendedWaitUntil:
+    visible: "Wear history"
+    timeout: 10000
+
+- tapOn: "Privacy Policy"
+- extendedWaitUntil:
+    visible: "What we collect"
+    timeout: 10000
+# Later sections start below the sheet's fold — scroll to them
+- scrollUntilVisible:
+    element:
+      text: "Data retention and deletion"
+    direction: DOWN
+- back
+
+# The Terms row starts below the profile sheet's 0.65 detent fold
+- scrollUntilVisible:
+    element:
+      text: "Terms & Conditions"
+    direction: DOWN
+- tapOn: "Terms & Conditions"
+- extendedWaitUntil:
+    visible: "Acceptable use"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Limitation of liability"
+    direction: DOWN

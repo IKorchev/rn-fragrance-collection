@@ -41,12 +41,14 @@ export default function Header({ title }: HeaderProps) {
       }}>
       <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} />
       <View className='flex-row w-full px-5 pb-3 pt-1 justify-between items-center'>
-        <Avatar
-          size={32}
-          rounded
-          source={user?.photoURL ? { uri: user.photoURL } : undefined}
-          onPress={() => router.push("/profile")}
-        />
+        {/* @rneui Avatar's typings take no testID — the wrapper owns press + testID */}
+        <TouchableOpacity testID='profile-avatar' onPress={() => router.push("/profile")}>
+          <Avatar
+            size={32}
+            rounded
+            source={user?.photoURL ? { uri: user.photoURL } : undefined}
+          />
+        </TouchableOpacity>
         <Text className={`${headerColors.font} text-2xl text-center font-bold`}>{title}</Text>
         <View className='flex-row items-center'>
           <TouchableOpacity

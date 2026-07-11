@@ -21,6 +21,7 @@ const PickerScreen = () => {
       <TouchableOpacity
         className='absolute right-4 z-10 h-10 w-10 items-center justify-center'
         style={{ top: insets.top + 8 }}
+        testID='picker-close'
         onPress={() => router.back()}>
         <AntDesign name='close' size={26} color={getColor(mutedColors)} />
       </TouchableOpacity>

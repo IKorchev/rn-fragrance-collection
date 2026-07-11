@@ -230,6 +230,7 @@ const Picker = ({ fragrance, index }: PickerProps) => {
                   variant='wear'
                   size='lg'
                   className='absolute bottom-2.5 right-2.5'
+                  testID='picker-wear-button'
                   style={styles.knob}
                   dimmed={isWornToday(currentItem.last_worn)}
                   onPress={() => incrementWear({ id: currentItem.id })}>
@@ -252,6 +253,7 @@ const Picker = ({ fragrance, index }: PickerProps) => {
             {...leverResponder.panHandlers}
             style={{ transform: [{ translateY: leverY }] }}
             className='mt-1 items-center justify-center'
+            testID='picker-lever'
             hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
           >
             <View

@@ -88,6 +88,27 @@ function RootNavigator() {
         <Stack.Protected guard={!user}>
           <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         </Stack.Protected>
+        {/* Outside both guards — the sign-in screen links here too */}
+        <Stack.Screen
+          name="privacy-policy"
+          options={{
+            headerShown: false,
+            presentation: "formSheet",
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            sheetAllowedDetents: [0.75, 1],
+          }}
+        />
+        <Stack.Screen
+          name="terms"
+          options={{
+            headerShown: false,
+            presentation: "formSheet",
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            sheetAllowedDetents: [0.75, 1],
+          }}
+        />
       </Stack>
     </TouchableWithoutFeedback>
   )

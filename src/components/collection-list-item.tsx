@@ -67,6 +67,7 @@ const CollectionListItem = ({ id, name, imageUrl, timesWorn, lastWorn }: Collect
       <Card.ActionButton
         variant='wear'
         className='mr-3'
+        testID='wear-button'
         dimmed={isWornToday(lastWorn)}
         onPress={() => incrementWear({ id })}>
         {(iconColor) => <FontAwesome5 name='spray-can' color={iconColor} size={17} />}

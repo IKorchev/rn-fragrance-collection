@@ -186,6 +186,26 @@ const ProfileScreen = () => {
       </View>
 
       <TouchableOpacity
+        onPress={() => router.push("/privacy-policy")}
+        className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
+        <MaterialCommunityIcons name='shield-lock-outline' size={20} color={mutedIconColor} />
+        <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>
+          Privacy Policy
+        </Text>
+        <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => router.push("/terms")}
+        className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
+        <MaterialCommunityIcons name='file-document-outline' size={20} color={mutedIconColor} />
+        <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>
+          Terms & Conditions
+        </Text>
+        <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
         onPress={handleSignOut}
         className={`flex-row items-center justify-center w-full mt-8 py-3 rounded-2xl ${
           theme === "dark"
