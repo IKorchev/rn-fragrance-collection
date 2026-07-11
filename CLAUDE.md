@@ -10,7 +10,7 @@ Release-readiness pieces live alongside the core app: `supabase/functions/delete
 
 ## Commands
 
-There is no unit-test suite or linter configured in this project — do not invent `npm test`/`npm run lint` commands. There IS a type checker: run `yarn typecheck` (`tsc --noEmit`) after changes. For on-device verification there are Maestro E2E flows (see "Maestro E2E flows" below).
+There is no unit-test suite or linter configured in this project — do not invent `npm test`/`npm run lint` commands. There IS a type checker: run `yarn typecheck` (`tsc --noEmit`) after changes. For on-device verification there are Maestro E2E flows (load the `maestro-e2e` skill).
 
 ```bash
 yarn start           # expo start
@@ -24,38 +24,11 @@ The project is TypeScript-only (`strict: true`, `tsconfig.json` extends `expo/ts
 
 The project is on Expo SDK 57 (`react-native` 0.86, React 19.2). Google Sign-In requires a real dev-client build (`expo run:ios`/`run:android`) rather than plain Expo Go — Expo Go's fixed identity (`host.exp.exponent`) can't satisfy the OAuth redirect URI registered for this app's real bundle ID (`com.korchev.fragrancecollection`).
 
-### Maestro E2E flows (`.maestro/`)
+### Deep-dive skills (load on demand — don't duplicate their content here)
 
-Maestro (`maestro` on PATH; Android via adb) drives the app on the local emulator for real-device verification. `maestro test .maestro` runs the whole suite (`.maestro/config.yaml` globs `flows/*.yaml`; `maestro test .maestro/flows/<name>.yaml` runs one). Prerequisites, in order:
-
-1. **Emulator running** — `Pixel_10_Pro_XL` AVD, boot with `emulator -avd Pixel_10_Pro_XL` (`%LOCALAPPDATA%\Android\Sdk\emulator\`), wait for `adb shell getprop sys.boot_completed` = 1. The dev-client build (`com.korchev.fragrancecollection`) must already be installed (`yarn android` once).
-2. **Metro on 8081** — check `http://localhost:8081/status` FIRST; it is usually already running from the user's own dev session. Only start `expo start` if it isn't.
-3. **Signed-in session on the device** — Google sign-in cannot be automated (and Claude must not perform sign-ins), so flows assume a persisted Supabase session in AsyncStorage. **Never use `clearState`** in a flow: it wipes the session and bricks the whole suite until the user manually signs in again.
-
-Flow conventions (learned the hard way — keep following them):
-- Every flow starts with `runFlow: ../subflows/launch-dev-client.yaml`, which deep-links the dev client straight into Metro (`com.korchev.fragrancecollection://expo-development-client/?url=<encoded Metro URL>`, `10.0.2.2` = host localhost) — this skips the dev-launcher home screen — then waits for the "Discover" tab label and taps it, because the app restores the last-viewed tab and flows need a deterministic start.
-- **Don't use `hideKeyboard`** — on Android it falls back to a back-press, which exits the app if the keyboard already dismissed itself. Assert on content that renders above the keyboard instead.
-- If typed text mysteriously never reaches an input (Gboard opens its customization panel instead), reset it with `adb shell am force-stop com.google.android.inputmethod.latin` and re-run.
-- Icon-only controls carry `testID`s (`wear-button`, `picker-fab`, `picker-close`, `picker-lever`, `picker-wear-button`) — RN exposes `testID` as the Android resource-id, matched with Maestro's `id:` selector (`Card.ActionButton` forwards a `testID` prop). Give any new icon-only control a `testID` instead of tapping by coordinates. The picker lever is pulled with `swipe: { from: { id: picker-lever }, direction: DOWN }`; Maestro's implicit settle-wait absorbs the whole spin animation, so assert on the post-spin state, not on mid-spin UI.
-- Failure artifacts (screenshot + hierarchy + logs) land in `~/.maestro/tests/<timestamp>/` — read the screenshot first when a flow fails.
-- Wear/undo actions mutate real Supabase data and the one-wear-per-calendar-day rule makes stray wears costly — a flow that taps a wear button must always undo it in the same flow, and prefer read-only assertions everywhere else.
-
-### Required local env vars (gitignored, not in repo)
-
-Copy `.env.example` to `.env` and fill in real values — the app compiles with placeholders but auth/data won't work without them. (On this machine the real values live in `.env.local` instead — Expo loads both, `.env.local` winning — so don't be alarmed that `.env` itself is absent.)
-- `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Supabase dashboard → Settings → API (same project as `fragrance-db`). The anon key is safe to embed; RLS does the real access control.
-- `EXPO_PUBLIC_GOOGLE_{IOS,ANDROID,WEB}_CLIENT_ID` — Google Cloud Console OAuth client IDs (Credentials page), registered with Supabase Auth's Google provider. The Android client's SHA-1 must match the keystore that signs the build: local `expo run:android` builds are signed with `android/app/debug.keystore` (the stable Expo template keystore, regenerated by prebuild — `keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android`), while EAS cloud builds use the EAS-managed keystore (`eas credentials`) and need their own separate Android OAuth client. The Android client also needs "Enable Custom URI Scheme" checked (Advanced Settings), and the package name must be in `app.json`'s `scheme` array because `expo-auth-session`'s Google provider redirects to `<applicationId>:/oauthredirect`.
-- `EXPO_PUBLIC_SENTRY_DSN` (optional) — sentry.io project → Client Keys. Crash reporting (`src/app/_layout.tsx`) is a no-op if this is unset, so it's safe to leave blank in dev.
-
-Sign in with Apple (`expo-apple-authentication`, `ios.usesAppleSignIn` in `app.json`) needs no client-side env var, but does need one-time setup in the Apple Developer portal (enable "Sign In with Apple" capability for the app ID) and in Supabase Auth (Providers → Apple → Services ID / Team ID / Key ID / private key) before it will work on a real device — it's iOS-only and simulator support is limited, so test on a physical device signed into iCloud.
-
-**Local iOS builds need a paid Apple Developer Program membership** (not just any Apple ID signed into Xcode). Sign in with Apple (`com.apple.developer.applesignin`) and push notifications (`aps-environment`) are both entitlements, and Apple's free "Personal Team" signing categorically cannot sign either one — `expo run:ios`/`yarn ios` fails at the code-signing step ("do not support the Sign In with Apple and Push Notifications capabilities") until a real paid team is selected in Xcode's Signing & Capabilities pane. There's no code-level fix. If you need a local iOS build without paying (e.g. to smoke-test everything *except* those two features), the entitlements can be stripped from the gitignored, regenerable `ios/*/*.entitlements` file after a `expo prebuild --platform ios --clean` — that's a throwaway local patch, not something to commit or carry into `app.json`.
-
-`db/schema.sql` holds the app's tables (`user_fragrances`, `wear_events`, `user_push_tokens`, the `increment_wear`/`undo_wear`/`top_worn_fragrances` RPCs, RLS policies) — run it once in the Supabase SQL editor when setting up a new project. The catalog table (`fragrances`) and the search/facet RPCs (`search_fragrances`, `list_brands`, `discover_fragrances`) live in the `fragrance-db` repo's `db/schema.sql`.
-
-### OTA updates (EAS Update)
-
-`expo-updates` ships JS/asset-only fixes without a store review cycle. `app.json`'s `updates.url` points at this project's EAS Update host and `runtimeVersion.policy: "appVersion"` means an update is only offered to installs whose native app version matches exactly — bump `version` (and rebuild) for any change that touches native code. `eas.json`'s `build.production`/`build.preview` profiles each declare a `channel` (`production`/`preview`) that maps builds to the branch `eas update --branch <channel>` publishes to; `development` has no channel since dev-client builds run against the local Metro server, not a hosted update. `src/lib/utils/use-app-updates.ts` (wired into `RootNavigator` in `src/app/_layout.tsx`, ahead of the `authLoading` gate so it isn't tied to sign-in state) checks for an update on launch and on every foreground, then offers a restart through the shared toast — it no-ops under `__DEV__`/Expo Go where `expo-updates` isn't backed by a real published launch. Publish with `eas update --branch production --message "..."`.
+- **maestro-e2e** (`.claude/skills/maestro-e2e/SKILL.md`) — running/writing Maestro E2E flows: emulator + Metro + signed-in-session prerequisites, launch subflow, flow conventions and testIDs.
+- **local-env-setup** (`.claude/skills/local-env-setup/SKILL.md`) — `.env` values, Google/Apple OAuth setup, Apple entitlements/paid-team signing, `db/schema.sql` bootstrap.
+- **eas-ota-updates** (`.claude/skills/eas-ota-updates/SKILL.md`) — publishing OTA JS updates, runtimeVersion/channel mapping, `use-app-updates.ts`.
 
 ## Architecture
 
