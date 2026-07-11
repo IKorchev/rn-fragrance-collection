@@ -1,6 +1,15 @@
 import React, { useEffect, useRef, useState } from "react"
 import * as Haptics from "expo-haptics"
-import { View, Text, Image, StyleSheet, Animated, Easing, PanResponder } from "react-native"
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Animated,
+  Easing,
+  InteractionManager,
+  PanResponder,
+} from "react-native"
 import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useAuth, { type UserFragrance } from "@/contexts/auth-context"
@@ -25,6 +34,15 @@ const Picker = ({ fragrance, index }: PickerProps) => {
   const [spinPhase, setSpinPhase] = useState<"idle" | "spinning" | "settling">("idle")
   const isSpinning = spinPhase !== "idle"
   const [spinIndex, setSpinIndex] = useState(index ?? 0)
+  // The full reel is 12 × collection size cards — mounting all of them makes
+  // the modal slow to open, so card content is gated to the visible card
+  // during the open animation, then mounted while the screen sits idle so the
+  // images are loaded before the first pull
+  const [reelReady, setReelReady] = useState(false)
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => setReelReady(true))
+    return () => task.cancel()
+  }, [])
   const currentItem = userCollection[spinIndex]
   const reelItems = userCollection.length
     ? Array.from({ length: userCollection.length * 12 }, (_, offset) => {
@@ -74,6 +92,7 @@ const Picker = ({ fragrance, index }: PickerProps) => {
       animationLoopRef.current.stop()
     }
 
+    setReelReady(true)
     const count = userCollection.length
     const startIndex = spinIndex % count
     const targetIndex = pickWeightedIndex(userCollection)
@@ -178,6 +197,15 @@ const Picker = ({ fragrance, index }: PickerProps) => {
                 style={{ transform: [{ translateY: animatedOffset }] }}
               >
                 {reelItems.map((item, itemIndex) => {
+                  if (!reelReady && itemIndex !== spinIndex) {
+                    return (
+                      <View
+                        key={`${item?.id ?? "slot"}-${itemIndex}`}
+                        style={{ height: containerHeight }}
+                        className='w-full'
+                      />
+                    )
+                  }
                   const imageSource = getImageSource(item?.image_url)
                   // "Brand - Title" convention; names without it show as title only
                   const nameParts = (item?.name ?? "").split(" - ")

@@ -11,7 +11,7 @@ import * as AppleAuthentication from "expo-apple-authentication"
 import * as Haptics from "expo-haptics"
 import * as Notifications from "expo-notifications"
 import * as WebBrowser from "expo-web-browser"
-import { router } from "expo-router"
+import { router, usePathname } from "expo-router"
 import { Alert, Platform } from "react-native"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { User } from "@supabase/supabase-js"
@@ -58,7 +58,12 @@ interface AuthContextValue {
   cancelDelete: (id: string) => void
   updateFragrance: (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
+    updates: Partial<
+      Pick<
+        UserFragrance,
+        "name" | "image_url" | "rating" | "notes" | "bottle_price" | "bottle_size_ml"
+      >
+    >
   ) => Promise<void>
   // Community rating for a catalog-linked fragrance (fragrance_ratings table,
   // separate from the manual-add-only rating column on updateFragrance above).
@@ -275,7 +280,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateFragrance = async (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
+    updates: Partial<
+      Pick<
+        UserFragrance,
+        "name" | "image_url" | "rating" | "notes" | "bottle_price" | "bottle_size_ml"
+      >
+    >
   ) => {
     try {
       const { error } = await supabase.from("user_fragrances").update(updates).eq("id", object.id)
@@ -378,6 +388,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // re-handling the same response when deps change.
   const reminderResponse = Notifications.useLastNotificationResponse()
   const handledReminderKey = useRef<string | null>(null)
+  const pathname = usePathname()
+  const pathnameRef = useRef(pathname)
+  pathnameRef.current = pathname
+  // A router.push issued while the activity is still resuming from the
+  // notification tap is dropped silently — push immediately (instant in the
+  // common case) and retry until the route actually changes
+  const openPickerFromReminder = () => {
+    let attempts = 0
+    const tryPush = () => {
+      if (pathnameRef.current === "/picker" || attempts >= 8) return
+      attempts++
+      router.push("/picker")
+      setTimeout(tryPush, 350)
+    }
+    tryPush()
+  }
   useEffect(() => {
     if (!reminderResponse || !user?.id || collectionPending) return
     const { actionIdentifier, notification } = reminderResponse
@@ -391,10 +417,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const suggestedId = (content.data as Record<string, unknown> | null)?.userFragranceId
       if (typeof suggestedId === "string") incrementWear({ id: suggestedId })
     } else {
-      // Body taps and "Open picker" both land on the picker. Deferred: a push
-      // issued while the activity is still resuming from the notification tap
-      // is dropped silently (still dropped at 300ms; 1200ms is reliable)
-      setTimeout(() => router.push("/picker"), 1200)
+      // Body taps and "Open picker" both land on the picker
+      openPickerFromReminder()
     }
   }, [reminderResponse, user?.id, collectionPending])
 
