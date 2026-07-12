@@ -26,6 +26,9 @@ GoogleService-Info.plist
 /ios
 /android
 
+# Supabase CLI local state (project link cache)
+/supabase/.temp/
+
 # Metro
 .metro-health-check*
 

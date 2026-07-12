@@ -78,6 +78,30 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          entitlement: string | null
+          expires_at: string | null
+          is_pro: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          entitlement?: string | null
+          expires_at?: string | null
+          is_pro?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          entitlement?: string | null
+          expires_at?: string | null
+          is_pro?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_fragrances: {
         Row: {
           created_at: string

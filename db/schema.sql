@@ -285,3 +285,29 @@ SELECT cron.schedule(
 -- NOTE: the scraped read-only top_fragrances table (Firestore lift-and-shift)
 -- was dropped by migration drop_scraped_metadata_add_wear_leaderboard — the
 -- Add tab's leaderboard is now the community top_worn_fragrances() above.
+
+-- Pro-tier entitlement state, synced from RevenueCat via a webhook
+-- (supabase/functions/revenuecat-webhook). RevenueCat's SDK is the
+-- client-side source of truth for UI gating (CustomerInfo cache); this
+-- table exists for server-side enforcement (e.g. a free-tier collection
+-- cap) and admin visibility from SQL. Only the service role writes to it —
+-- there's no INSERT/UPDATE policy for `authenticated`, read-only.
+CREATE TABLE IF NOT EXISTS subscriptions (
+  user_id      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_pro       BOOLEAN NOT NULL DEFAULT false,
+  entitlement  TEXT,
+  expires_at   TIMESTAMPTZ,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own subscription" ON subscriptions FOR SELECT
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
+
+-- Set once via the Supabase CLI (dashboard secrets aren't in this file):
+--   supabase secrets set REVENUECAT_WEBHOOK_SECRET=<random value>
+-- then paste the same value as "Authorization: Bearer <value>" in
+-- RevenueCat's dashboard (Project settings -> Integrations -> Webhooks),
+-- pointed at this project's revenuecat-webhook function URL.

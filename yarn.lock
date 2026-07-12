@@ -1545,6 +1545,23 @@
   dependencies:
     nanoid "^3.3.11"
 
+"@revenuecat/purchases-js-hybrid-mappings@18.19.0":
+  version "18.19.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js-hybrid-mappings/-/purchases-js-hybrid-mappings-18.19.0.tgz#1922d6a8dd56742ce7829572ade11693ae703576"
+  integrity sha512-Oa9wKcOeax/ZDpF7l5mGZ9OWO0mVru+64lyg3bL45mL/cPqvam33CEY/JU7EDYKzj6xmVlNv5Xbe+hwtVLOO5Q==
+  dependencies:
+    "@revenuecat/purchases-js" "1.47.0"
+
+"@revenuecat/purchases-js@1.47.0":
+  version "1.47.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js/-/purchases-js-1.47.0.tgz#816c1391d7b58930a3b1fe01267785a947e64999"
+  integrity sha512-bytRHMnz4LKSeZLNE4crLo6FjbS2f80iJO+P4ZJ6U+qMJNMtWTkURVufCM3tHszVizhLtW8JYe8TdbLNADhiEQ==
+
+"@revenuecat/purchases-typescript-internal@18.19.0":
+  version "18.19.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal/-/purchases-typescript-internal-18.19.0.tgz#93ef1a156dcbd5231fe21c0e4603fa5dc286e8a3"
+  integrity sha512-XKOJ2CS+hYXnv0EUoQ7hV3AvHBcx0HqkLpnqYVMaAQyZ/BT/+CmUexVbXSfRAXGPBw0LTqR2gBQ4JrZEsYPxpw==
+
 "@rneui/base@^5":
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/@rneui/base/-/base-5.0.0.tgz#48b544cf89036f096874c6e450ed794fa22389f0"
@@ -4522,6 +4539,21 @@ react-native-pager-view@8.0.2:
   version "8.0.2"
   resolved "https://registry.yarnpkg.com/react-native-pager-view/-/react-native-pager-view-8.0.2.tgz#333f05ecf887c7cfa970fdee8128f115478ce5db"
   integrity sha512-Y8All2BbjidI4ZIF9kBOIIoldkqrY/2FXapHZMdjwD+ByXhiOWTFenPs5rq9KRN5uAH/gOXtQCqHLxQDNBQRiQ==
+
+react-native-purchases-ui@^10.4.2:
+  version "10.4.2"
+  resolved "https://registry.yarnpkg.com/react-native-purchases-ui/-/react-native-purchases-ui-10.4.2.tgz#9f518c996c701fa92e02b6097304205c09435e6e"
+  integrity sha512-lZ4DaC/auUS6Tw7Xvy0d1o7hAYh1ykne5D+6uw+NtPIHnXs0vzRl56plGDKqpMEqR6CZEkVXJh5n87kNfCb5Qg==
+  dependencies:
+    "@revenuecat/purchases-typescript-internal" "18.19.0"
+
+react-native-purchases@^10.4.2:
+  version "10.4.2"
+  resolved "https://registry.yarnpkg.com/react-native-purchases/-/react-native-purchases-10.4.2.tgz#c2e56c4f6ce878ecb7b056dac35b8b6b44fae5e8"
+  integrity sha512-v/V3hGyBuGY6LvVRlBd5RmmQXMKK61CerRfMEIeYwz8VvtEQmy0qTYA3IImPf4qeEdykBTDv6+dqlz+QngkSiw==
+  dependencies:
+    "@revenuecat/purchases-js-hybrid-mappings" "18.19.0"
+    "@revenuecat/purchases-typescript-internal" "18.19.0"
 
 react-native-reanimated@4.5.0:
   version "4.5.0"

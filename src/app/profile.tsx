@@ -7,15 +7,18 @@ import { Avatar } from "@rneui/themed"
 import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
 import { useRemindersEnabled, useWearHistory } from "@/lib/queries"
+import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
 import useTheme from "@/contexts/theme-context"
+import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
 
 const ProfileScreen = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { modalColors, baseTextClass, mutedTextClass, accentTextClass, baseBorderClass, theme } =
+  const { modalColors, baseTextClass, mutedTextClass, accentTextClass, accentColors, baseBorderClass, theme } =
     useTheme()
-  const { user, logOut, deleteAccount, userCollection } = useAuth()
+  const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
+  const { showToast } = useToast()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const [deleting, setDeleting] = useState(false)
@@ -59,6 +62,18 @@ const ProfileScreen = () => {
   const handleSignOut = () => {
     router.back()
     logOut()
+  }
+
+  // Presents the native paywall configured in the RevenueCat dashboard.
+  // isPro flips reactively (see AuthContext's CustomerInfo listener) once a
+  // purchase/restore lands, so this just handles the toast feedback.
+  const handleUpgrade = async () => {
+    const result = await presentPaywall()
+    if (result === PAYWALL_RESULT.PURCHASED) {
+      showToast({ message: "Welcome to Pro!" })
+    } else if (result === PAYWALL_RESULT.RESTORED) {
+      showToast({ message: "Purchases restored" })
+    }
   }
 
   // Optimistic — the switch flips immediately, reverts if the write fails
@@ -122,7 +137,16 @@ const ProfileScreen = () => {
         containerStyle={{ backgroundColor: getColor(theme === "dark" ? "zinc-800" : "zinc-200") }}
       />
 
-      <Text className={`${baseTextClass} text-2xl font-bold pt-4`}>{displayName}</Text>
+      <View className='flex-row items-center pt-4' style={{ gap: 6 }}>
+        <Text className={`${baseTextClass} text-2xl font-bold`}>{displayName}</Text>
+        {isPro && (
+          <View
+            className='px-2 py-0.5 rounded-full'
+            style={{ backgroundColor: theme === "dark" ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50") }}>
+            <Text className={`${accentTextClass} text-xs font-bold`}>PRO</Text>
+          </View>
+        )}
+      </View>
       {user?.email && <Text className={`${mutedTextClass} text-base pt-1`}>{user.email}</Text>}
       {memberSince && (
         <Text className={`${mutedTextClass} text-sm pt-1`}>Member since {memberSince}</Text>
@@ -164,9 +188,22 @@ const ProfileScreen = () => {
         </Text>
       )}
 
+      {purchasesEnabled && (!isPro || __DEV__) && (
+        <TouchableOpacity
+          onPress={handleUpgrade}
+          className='flex-row items-center w-full mt-6 px-4 py-3 rounded-2xl'
+          style={{ backgroundColor: theme === "dark" ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50") }}>
+          <MaterialCommunityIcons name='star-four-points' size={20} color={getColor(accentColors)} />
+          <Text className={`${accentTextClass} text-base font-semibold pl-3 flex-1`}>
+            {isPro ? "View paywall (dev)" : "Upgrade to Pro"}
+          </Text>
+          <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(accentColors)} />
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity
         onPress={() => router.push("/wear-history")}
-        className={`flex-row items-center w-full mt-6 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
+        className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
         <MaterialCommunityIcons name='history' size={20} color={mutedIconColor} />
         <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>Wear history</Text>
         <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
