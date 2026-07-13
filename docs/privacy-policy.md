@@ -12,13 +12,15 @@ Fragrance Collection ("the app") is a personal fragrance collection tracker. Thi
 
 **Push notification token.** If you grant notification permission, a device push token is stored so the app can send you the daily wear reminder. You can turn reminders off at any time in your profile.
 
-We do **not** collect your location, contacts, photos, advertising identifiers, or any analytics beyond crash reports.
+**Advertising.** The free tier shows ads served by Google AdMob after you use the picker. AdMob may use your device's advertising identifier to serve and measure ads — see [Google's privacy policy](https://policies.google.com/privacy) for details. Upgrading to Pro removes ads.
+
+We do **not** collect your location, contacts, or photos, and we run no analytics beyond crash reports.
 
 ## How your data is used
 
 - Your collection, ratings, and notes are private to your account and protected by row-level security — no other user can read them.
 - Wear events feed the community **Most Worn** leaderboard. Only anonymous, aggregated counts per fragrance are ever shown to other users; your identity is never attached to a leaderboard entry.
-- We do not sell your data, share it with advertisers, or use it for any purpose other than operating the app.
+- We do not sell your data or use it for any purpose other than operating the app. Your collection and account data are never shared with advertisers — ads are served by Google AdMob independently of your app data.
 
 ## Where your data lives
 

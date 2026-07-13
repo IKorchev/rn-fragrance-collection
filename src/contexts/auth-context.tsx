@@ -66,12 +66,7 @@ interface AuthContextValue {
   cancelDelete: (id: string) => void
   updateFragrance: (
     object: { id: string },
-    updates: Partial<
-      Pick<
-        UserFragrance,
-        "name" | "image_url" | "rating" | "notes" | "bottle_price" | "bottle_size_ml"
-      >
-    >
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
   ) => Promise<void>
   // Community rating for a catalog-linked fragrance (fragrance_ratings table,
   // separate from the manual-add-only rating column on updateFragrance above).
@@ -320,12 +315,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateFragrance = async (
     object: { id: string },
-    updates: Partial<
-      Pick<
-        UserFragrance,
-        "name" | "image_url" | "rating" | "notes" | "bottle_price" | "bottle_size_ml"
-      >
-    >
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
   ) => {
     try {
       const { error } = await supabase.from("user_fragrances").update(updates).eq("id", object.id)

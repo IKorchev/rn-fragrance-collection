@@ -3,6 +3,7 @@ import "../global.css"
 import { LogBox, TouchableWithoutFeedback, Keyboard } from "react-native"
 LogBox.ignoreAllLogs()
 import * as Sentry from "@sentry/react-native"
+import { initializeAds } from "@/lib/ads"
 import { Stack } from "expo-router"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
@@ -19,6 +20,10 @@ const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN
 if (sentryDsn) {
   Sentry.init({ dsn: sentryDsn, sendDefaultPii: false })
 }
+
+// Starts the AdMob SDK and preloads the post-picker interstitial (no-ops
+// when ads are disabled — see src/lib/ads.ts)
+initializeAds()
 
 function RootLayout() {
   return (

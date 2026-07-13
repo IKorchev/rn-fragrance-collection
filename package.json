@@ -43,6 +43,7 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-google-mobile-ads": "16.3.4",
     "react-native-pager-view": "8.0.2",
     "react-native-purchases": "^10.4.2",
     "react-native-purchases-ui": "^10.4.2",

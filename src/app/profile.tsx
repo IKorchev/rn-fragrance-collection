@@ -119,6 +119,7 @@ const ProfileScreen = () => {
     )
   }
 
+  const accentTintBg = theme === "dark" ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50")
   const mutedIconColor = getColor(theme === "dark" ? "zinc-400" : "zinc-500")
   const dangerColor = getColor(theme === "dark" ? "rose-400" : "rose-600")
   const dangerTextClass = theme === "dark" ? "text-rose-400" : "text-rose-600"
@@ -140,9 +141,7 @@ const ProfileScreen = () => {
       <View className='flex-row items-center pt-4' style={{ gap: 6 }}>
         <Text className={`${baseTextClass} text-2xl font-bold`}>{displayName}</Text>
         {isPro && (
-          <View
-            className='px-2 py-0.5 rounded-full'
-            style={{ backgroundColor: theme === "dark" ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50") }}>
+          <View className='px-2 py-0.5 rounded-full' style={{ backgroundColor: accentTintBg }}>
             <Text className={`${accentTextClass} text-xs font-bold`}>PRO</Text>
           </View>
         )}
@@ -192,7 +191,7 @@ const ProfileScreen = () => {
         <TouchableOpacity
           onPress={handleUpgrade}
           className='flex-row items-center w-full mt-6 px-4 py-3 rounded-2xl'
-          style={{ backgroundColor: theme === "dark" ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50") }}>
+          style={{ backgroundColor: accentTintBg }}>
           <MaterialCommunityIcons name='star-four-points' size={20} color={getColor(accentColors)} />
           <Text className={`${accentTextClass} text-base font-semibold pl-3 flex-1`}>
             {isPro ? "View paywall (dev)" : "Upgrade to Pro"}

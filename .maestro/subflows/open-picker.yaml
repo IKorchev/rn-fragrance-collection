@@ -1,0 +1,13 @@
+# Shared step: from anywhere in the tabs, open the slot-machine picker modal.
+# The FAB only renders when the collection is non-empty.
+appId: com.korchev.fragrancecollection
+---
+- tapOn: "Collection"
+- extendedWaitUntil:
+    visible: "Search your collection"
+    timeout: 15000
+- tapOn:
+    id: "picker-fab"
+- extendedWaitUntil:
+    visible: "Pull"
+    timeout: 10000

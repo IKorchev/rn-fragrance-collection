@@ -1,0 +1,21 @@
+# Dismiss the post-picker interstitial if it showed. The ad appears ~400ms
+# after the picker closes (see picker.tsx). Its close control is a native
+# button with accessibility label "Close" (top-right) that unlocks only after
+# the creative's countdown — the video test variant runs a ~30s progress bar
+# before showing it, hence the long wait. Ad loads can fail on slow emulator
+# networks, so a missing ad must not fail the host flow — the strict "ad
+# actually shows" assertion lives in flows/ads.yaml.
+# Deliberately NO blind back-press fallback: if the app is stuck on something
+# that isn't the ad, the host flow's next assertion should fail loudly rather
+# than have a back-press mask the regression.
+appId: com.korchev.fragrancecollection
+---
+- extendedWaitUntil:
+    visible: "Close"
+    timeout: 45000
+    optional: true
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn: "Close"

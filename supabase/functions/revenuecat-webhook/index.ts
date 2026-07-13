@@ -19,6 +19,10 @@
 // EXPIRATION) keeps those from being misread as "still entitled".
 import { createClient } from "npm:@supabase/supabase-js@2"
 
+// TRANSFER is deliberately absent: it carries no expiration_at_ms and its
+// app_user_id doesn't distinguish the transferred-from user (who must LOSE
+// pro) from the transferred-to user — processing it granted permanent pro to
+// whichever id it named. The receiving user syncs on their next renewal.
 const SUBSCRIPTION_EVENT_TYPES = new Set([
   "INITIAL_PURCHASE",
   "RENEWAL",
@@ -29,7 +33,6 @@ const SUBSCRIPTION_EVENT_TYPES = new Set([
   "SUBSCRIPTION_PAUSED",
   "EXPIRATION",
   "BILLING_ISSUE",
-  "TRANSFER",
 ])
 
 // These leave the subscription inactive regardless of expiration_at_ms (a
@@ -60,10 +63,15 @@ Deno.serve(async (req) => {
 
   // Comparing expiration to now (rather than branching on every remaining
   // event type) handles renewals, billing-issue grace periods, and product
-  // changes the same way.
+  // changes the same way. A missing expiration only means "active" for
+  // one-time purchases (lifetime); subscription events always carry one, so
+  // null there must not read as forever-pro.
   const expiresAtMs = event.expiration_at_ms as number | null
-  const isPro =
-    !INACTIVE_EVENT_TYPES.has(event.type) && (expiresAtMs == null || expiresAtMs > Date.now())
+  const activeByExpiration =
+    event.type === "NON_RENEWING_PURCHASE"
+      ? true
+      : expiresAtMs != null && expiresAtMs > Date.now()
+  const isPro = !INACTIVE_EVENT_TYPES.has(event.type) && activeByExpiration
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,

@@ -1,0 +1,25 @@
+# Post-picker interstitial: closing the picker modal shows an AdMob
+# interstitial (Google's test ad in dev builds — see src/lib/ads.ts), which
+# is dismissed via its native "Close" button back to the Collection tab.
+# Read-only apart from the ad itself.
+appId: com.korchev.fragrancecollection
+tags:
+  - ads
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+- runFlow: ../subflows/open-picker.yaml
+
+- tapOn:
+    id: "picker-close"
+
+# The interstitial appears shortly after close — Google test creatives all
+# carry a "Test Ad" badge that Maestro can see
+- extendedWaitUntil:
+    visible: "Test Ad"
+    timeout: 15000
+
+# Dismissing it lands back on the Collection tab
+- runFlow: ../subflows/dismiss-interstitial.yaml
+- extendedWaitUntil:
+    visible: "Search your collection"
+    timeout: 10000

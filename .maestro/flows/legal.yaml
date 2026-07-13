@@ -13,6 +13,12 @@ tags:
     visible: "Wear history"
     timeout: 10000
 
+# The Upgrade to Pro row (shown when RevenueCat keys are configured) pushes
+# Privacy Policy below the sheet's 0.65 detent fold
+- scrollUntilVisible:
+    element:
+      text: "Privacy Policy"
+    direction: DOWN
 - tapOn: "Privacy Policy"
 - extendedWaitUntil:
     visible: "What we collect"
@@ -33,7 +39,9 @@ tags:
 - extendedWaitUntil:
     visible: "Acceptable use"
     timeout: 10000
+# Long sheet — the default 20s scroll budget falls one swipe short
 - scrollUntilVisible:
     element:
       text: "Limitation of liability"
     direction: DOWN
+    timeout: 45000

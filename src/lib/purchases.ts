@@ -14,11 +14,9 @@ export const purchasesEnabled = !!apiKey
 
 // Entitlement identifier configured in the RevenueCat dashboard for the Pro
 // tier — must match what's attached to the App Store Connect / Play Console
-// subscription products there. The dashboard field silently autocorrected
-// the periods to U+2024 (ONE DOT LEADER) instead of "." when it was typed
-// in, and it can't be renamed there — ․ escapes are used (rather than
-// the literal character) so a future edit can't silently mangle it again.
-export const PRO_ENTITLEMENT_ID = "com\u2024korchev\u2024fragrancecollection Pro"
+// subscription products there, character for character (an exact-key lookup
+// against CustomerInfo.entitlements.active).
+export const PRO_ENTITLEMENT_ID = "com.korchev.fragrancecollection Pro"
 
 let configured = false
 

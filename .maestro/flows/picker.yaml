@@ -6,18 +6,7 @@ tags:
   - picker
 ---
 - runFlow: ../subflows/launch-dev-client.yaml
-
-- tapOn: "Collection"
-- extendedWaitUntil:
-    visible: "Search your collection"
-    timeout: 15000
-
-# FAB only renders when the collection is non-empty
-- tapOn:
-    id: "picker-fab"
-- extendedWaitUntil:
-    visible: "Pull"
-    timeout: 10000
+- runFlow: ../subflows/open-picker.yaml
 - assertVisible:
     id: "picker-wear-button"
 
@@ -34,9 +23,11 @@ tags:
     timeout: 15000
 - assertVisible: "Times worn: .*"
 
-# X is the only way out of the fullScreenModal
+# X is the only way out of the fullScreenModal — closing it triggers the
+# post-picker interstitial, which must be dismissed to reach the tab again
 - tapOn:
     id: "picker-close"
+- runFlow: ../subflows/dismiss-interstitial.yaml
 - extendedWaitUntil:
     visible: "Search your collection"
     timeout: 10000

@@ -1,0 +1,31 @@
+# Paywall entry point: the profile sheet's "Upgrade to Pro" row renders only
+# when RevenueCat is configured (EXPO_PUBLIC_REVENUECAT_*_API_KEY set in .env),
+# so that assertion is opt-in via `maestro test -e REVENUECAT_ENABLED=true`.
+# Without the flag the flow still verifies the profile sheet renders around
+# the paywall integration. Read-only on purpose: tapping the row presents the
+# native RevenueCat paywall, which needs dashboard config and a dev client
+# built with react-native-purchases — never tap it here.
+appId: com.korchev.fragrancecollection
+tags:
+  - paywall
+env:
+  REVENUECAT_ENABLED: "false"
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+
+# Profile opens from the header avatar
+- tapOn:
+    id: "profile-avatar"
+- extendedWaitUntil:
+    visible: "Wear history"
+    timeout: 10000
+
+# Profile sheet still renders its stats around the new paywall code
+- assertVisible: "Total wears"
+- assertVisible: "Daily wear reminder"
+
+- runFlow:
+    when:
+      true: ${REVENUECAT_ENABLED}
+    commands:
+      - assertVisible: "Upgrade to Pro"

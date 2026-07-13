@@ -29,7 +29,8 @@ export const PRIVACY_POLICY: LegalDoc = {
         "Account information. When you sign in with Google or Apple, we receive your name, email address, and profile picture from the identity provider. We use this only to create and identify your account. We never see your Google or Apple password.",
         "Collection and usage data. The fragrances you add, personal ratings and notes you write, and a log of the days you wear each fragrance (“wear events”). This is the app's core functionality.",
         "Push notification token. If you grant notification permission, a device push token is stored so the app can send you the daily wear reminder. You can turn reminders off at any time in your profile.",
-        "We do not collect your location, contacts, photos, advertising identifiers, or any analytics beyond crash reports.",
+        "Advertising. The free tier shows ads served by Google AdMob after you use the picker. AdMob may use your device's advertising identifier to serve and measure ads — see Google's privacy policy (policies.google.com) for details. Upgrading to Pro removes ads.",
+        "We do not collect your location, contacts, or photos, and we run no analytics beyond crash reports.",
       ],
     },
     {
@@ -37,7 +38,7 @@ export const PRIVACY_POLICY: LegalDoc = {
       bullets: [
         "Your collection, ratings, and notes are private to your account and protected by row-level security — no other user can read them.",
         "Wear events feed the community Most Worn leaderboard. Only anonymous, aggregated counts per fragrance are ever shown to other users; your identity is never attached to a leaderboard entry.",
-        "We do not sell your data, share it with advertisers, or use it for any purpose other than operating the app.",
+        "We do not sell your data or use it for any purpose other than operating the app. Your collection and account data are never shared with advertisers — ads are served by Google AdMob independently of your app data.",
       ],
     },
     {

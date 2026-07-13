@@ -1,9 +1,10 @@
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import { View, TouchableOpacity } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import { AntDesign } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
+import { showInterstitial } from "@/lib/ads"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import Picker from "@/components/picker"
@@ -11,8 +12,21 @@ import Picker from "@/components/picker"
 const PickerScreen = () => {
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const { frag, index } = useAuth()
+  const { frag, index, isPro } = useAuth()
   const { viewColors, mutedColors } = useTheme()
+
+  // Interstitial on close (X button or Android hardware back — unmount
+  // catches both). Pro removes ads. Ref so upgrading mid-picker is honored.
+  // Deferred: launching the ad activity while the modal-dismiss transition
+  // is still running intermittently aborts the presentation.
+  const isProRef = useRef(isPro)
+  isProRef.current = isPro
+  useEffect(
+    () => () => {
+      if (!isProRef.current) setTimeout(showInterstitial, 400)
+    },
+    []
+  )
 
   return (
     <View className={`${viewColors.background} flex-1`}>
