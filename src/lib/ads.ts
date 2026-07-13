@@ -1,4 +1,9 @@
-import mobileAds, { AdEventType, InterstitialAd, TestIds } from "react-native-google-mobile-ads"
+import mobileAds, {
+  AdEventType,
+  AdsConsent,
+  InterstitialAd,
+  TestIds,
+} from "react-native-google-mobile-ads"
 
 // Dev builds always use Google's sample interstitial unit (guaranteed test
 // fill, safe to click — clicking real ads on a dev device violates AdMob
@@ -33,14 +38,33 @@ const preload = () => {
   interstitial.load()
 }
 
-export const initializeAds = () => {
+// Must be called after the root view mounts (not at module scope): the UMP
+// consent form needs the host Activity to present into.
+export const initializeAds = async () => {
   if (!adsEnabled || initStarted) return
   initStarted = true
+
+  // UMP consent gate (GDPR): gatherConsent() shows Google's consent form
+  // when the user's region requires one and resolves immediately with
+  // NOT_REQUIRED elsewhere. No SDK start and no ad request until it allows.
+  let canRequestAds = false
+  try {
+    canRequestAds = (await AdsConsent.gatherConsent()).canRequestAds
+  } catch {
+    // Offline/UMP outage — fall back to the verdict cached from a previous
+    // session (false on a first run where consent is required)
+    try {
+      canRequestAds = (await AdsConsent.getConsentInfo()).canRequestAds
+    } catch {
+      return
+    }
+  }
+  if (!canRequestAds) return
+
   // Don't request the first ad until the SDK is actually up — loading during
   // initialization surfaces as spurious network errors
-  mobileAds()
-    .initialize()
-    .then(preload)
+  await mobileAds().initialize()
+  preload()
 }
 
 // Show the interstitial if one is ready — silently does nothing when ads are

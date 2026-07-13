@@ -1,5 +1,6 @@
 import "react-native-gesture-handler"
 import "../global.css"
+import { useEffect } from "react"
 import { LogBox, TouchableWithoutFeedback, Keyboard } from "react-native"
 LogBox.ignoreAllLogs()
 import * as Sentry from "@sentry/react-native"
@@ -21,10 +22,6 @@ if (sentryDsn) {
   Sentry.init({ dsn: sentryDsn, sendDefaultPii: false })
 }
 
-// Starts the AdMob SDK and preloads the post-picker interstitial (no-ops
-// when ads are disabled — see src/lib/ads.ts)
-initializeAds()
-
 function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -45,6 +42,13 @@ function RootNavigator() {
   const { user, authLoading } = useAuth()
   // Runs regardless of auth state — an OTA fix shouldn't wait on sign-in
   useAppUpdates()
+  // Gathers UMP consent (form shown only where required), then starts the
+  // AdMob SDK and preloads the post-picker interstitial. After mount on
+  // purpose: the consent form needs the Activity, and ads shouldn't compete
+  // with first render anyway. No-ops when ads are disabled (src/lib/ads.ts).
+  useEffect(() => {
+    initializeAds()
+  }, [])
   if (authLoading) return null
 
   return (

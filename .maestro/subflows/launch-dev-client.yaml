@@ -15,6 +15,25 @@ env:
 - extendedWaitUntil:
     visible: "Discover"
     timeout: 90000
+    optional: true
+# The UMP consent form (always required under the dev build's test AdMob App
+# ID — see src/lib/ads.ts) opens a few seconds AFTER the app is already
+# interactive, in its own window that hides the app from the accessibility
+# tree — so wait briefly for it even when Discover was just visible. Accept
+# it; the choice persists per device, so later launches skip this. Maestro
+# fully matches text, so "Consent" cannot hit the "Do not consent" button.
+- extendedWaitUntil:
+    visible: "Do not consent"
+    timeout: 6000
+    optional: true
+- runFlow:
+    when:
+      visible: "Do not consent"
+    commands:
+      - tapOn: "Consent"
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 30000
 # The app restores the last-viewed tab — normalize to Discover as the start
 # state. The restore can land AFTER our first tap and bounce the app back to
 # the restored tab, so retry when Discover's sub-tabs didn't appear.
