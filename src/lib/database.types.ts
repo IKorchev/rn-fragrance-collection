@@ -51,6 +51,73 @@ export type Database = {
           },
         ]
       }
+      fragrance_submissions: {
+        Row: {
+          brand: string
+          created_at: string
+          decided_fragrance_id: string | null
+          id: string
+          moderator_note: string | null
+          reviewed_at: string | null
+          similar_fragrance_id: string | null
+          similarity: number | null
+          status: string
+          title: string
+          user_fragrance_id: string | null
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          decided_fragrance_id?: string | null
+          id?: string
+          moderator_note?: string | null
+          reviewed_at?: string | null
+          similar_fragrance_id?: string | null
+          similarity?: number | null
+          status?: string
+          title: string
+          user_fragrance_id?: string | null
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          decided_fragrance_id?: string | null
+          id?: string
+          moderator_note?: string | null
+          reviewed_at?: string | null
+          similar_fragrance_id?: string | null
+          similarity?: number | null
+          status?: string
+          title?: string
+          user_fragrance_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fragrance_submissions_decided_fragrance_id_fkey"
+            columns: ["decided_fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "fragrances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fragrance_submissions_similar_fragrance_id_fkey"
+            columns: ["similar_fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "fragrances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fragrance_submissions_user_fragrance_id_fkey"
+            columns: ["user_fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "user_fragrances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fragrances: {
         Row: {
           brand: string
@@ -75,6 +142,21 @@ export type Database = {
           image_url?: string | null
           name?: string
           source_url?: string | null
+        }
+        Relationships: []
+      }
+      moderators: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -104,6 +186,8 @@ export type Database = {
       }
       user_fragrances: {
         Row: {
+          bottle_price: number | null
+          bottle_size_ml: number | null
           created_at: string
           fragrance_id: string | null
           id: string
@@ -116,6 +200,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bottle_price?: number | null
+          bottle_size_ml?: number | null
           created_at?: string
           fragrance_id?: string | null
           id?: string
@@ -128,6 +214,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bottle_price?: number | null
+          bottle_size_ml?: number | null
           created_at?: string
           fragrance_id?: string | null
           id?: string
@@ -226,6 +314,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_manual_fragrance: {
+        Args: { p_brand: string; p_title: string }
+        Returns: string
+      }
       discover_fragrances: {
         Args: { max_results?: number }
         Returns: {
@@ -254,6 +346,29 @@ export type Database = {
           fragrance_count: number
         }[]
       }
+      list_pending_submissions: {
+        Args: { p_max_results?: number }
+        Returns: {
+          brand: string
+          created_at: string
+          id: string
+          similar_brand: string
+          similar_fragrance_id: string
+          similar_image_url: string
+          similar_name: string
+          similarity: number
+          title: string
+        }[]
+      }
+      review_submission: {
+        Args: {
+          p_action: string
+          p_merge_target?: string
+          p_note?: string
+          p_submission_id: string
+        }
+        Returns: string
+      }
       search_fragrances: {
         Args: {
           filter_brand?: string
@@ -269,6 +384,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submit_fragrance_suggestion: {
+        Args: { p_brand: string; p_title: string; p_user_fragrance_id?: string }
+        Returns: string
+      }
       top_worn_fragrances: {
         Args: { max_results?: number; period?: string }
         Returns: {

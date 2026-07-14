@@ -73,6 +73,21 @@ interface AuthContextValue {
   // null clears the caller's rating (tap-to-clear on the detail sheet).
   rateFragrance: (fragranceId: string, rating: number | null) => Promise<void>
   addFragranceToCollection: (object: FragranceInput) => Promise<void>
+  // Manual (non-catalog) add: one RPC inserts the collection row and queues
+  // the catalog suggestion in the same transaction (fragrance_submissions —
+  // pending until a moderator approves; see add_manual_fragrance /
+  // review_submission in db/schema.sql). The suggestion half is best-effort
+  // server-side and can never fail the add.
+  addManualFragrance: (input: { brand: string; title: string }) => Promise<void>
+  // Moderator decision on a pending suggestion (src/app/moderation.tsx).
+  // review_submission itself re-checks moderators-table membership — this is
+  // just the client wrapper, not the authorization boundary.
+  reviewSubmission: (input: {
+    id: string
+    action: "approve" | "merge" | "reject"
+    mergeTarget?: string
+    note?: string
+  }) => Promise<void>
   // Pro-tier entitlement — sourced from RevenueCat's local CustomerInfo cache
   // (instant, no network round-trip); always false when purchases aren't
   // configured (see src/lib/purchases.ts).
@@ -278,6 +293,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       Alert.alert("Item added successfully", `${object.name}`)
     } catch (error) {
       Alert.alert("Item was not added", "Something went wrong, please try again later.")
+      console.log(error)
+    }
+  }
+
+  const addManualFragrance = async (input: { brand: string; title: string }) => {
+    const name = `${input.brand} - ${input.title}`
+    if (userCollection.find((el) => el.name === name)) {
+      Alert.alert("Ooops", `You already have ${name} in your collection`)
+      return
+    }
+    try {
+      const { error } = await supabase.rpc("add_manual_fragrance", {
+        p_brand: input.brand,
+        p_title: input.title,
+      })
+      if (error) throw error
+      await invalidateCollection()
+      Alert.alert("Item added successfully", name)
+    } catch (error) {
+      Alert.alert("Item was not added", "Something went wrong, please try again later.")
+      console.log(error)
+    }
+  }
+
+  const reviewSubmission = async (input: {
+    id: string
+    action: "approve" | "merge" | "reject"
+    mergeTarget?: string
+    note?: string
+  }) => {
+    try {
+      const { error } = await supabase.rpc("review_submission", {
+        p_submission_id: input.id,
+        p_action: input.action,
+        p_merge_target: input.mergeTarget,
+        p_note: input.note,
+      })
+      if (error) throw error
+      queryClient.invalidateQueries({ queryKey: ["pending-submissions"] })
+    } catch (error) {
+      Alert.alert("Review failed", "Something went wrong, please try again later.")
       console.log(error)
     }
   }
@@ -514,6 +570,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateFragrance,
         rateFragrance,
         addFragranceToCollection,
+        addManualFragrance,
+        reviewSubmission,
         isPro,
         userCollection,
         sortedCollection,

@@ -80,15 +80,35 @@ const Rank = ({ place }: { place: number }) => {
   )
 }
 
-const Thumbnail = ({ imageUrl }: { imageUrl?: string | null }) => {
+// compact: a small rounded chip for inline rows (did-you-mean strip, closest-
+// match preview) instead of the fixed-height card slot.
+const Thumbnail = ({ imageUrl, compact }: { imageUrl?: string | null; compact?: boolean }) => {
   const { mutedColors } = useTheme()
   const imageSource = getImageSource(imageUrl)
+  const size = compact ? 36 : 64
 
   if (!imageSource) {
     return (
-      <View className='h-[84px] w-20 items-center justify-center'>
-        <MaterialCommunityIcons name='image-off' size={24} color={getColor(mutedColors)} />
+      <View
+        className={
+          compact
+            ? "h-9 w-9 rounded-lg items-center justify-center mr-3"
+            : "h-[84px] w-20 items-center justify-center"
+        }>
+        <MaterialCommunityIcons name='image-off' size={compact ? 16 : 24} color={getColor(mutedColors)} />
       </View>
+    )
+  }
+
+  if (compact) {
+    // expo-image: disk-cached CDN thumbnails + a soft fade-in
+    return (
+      <Image
+        source={imageSource}
+        style={{ width: size, height: size, borderRadius: 8, marginRight: 12 }}
+        contentFit='cover'
+        transition={150}
+      />
     )
   }
 
@@ -96,7 +116,7 @@ const Thumbnail = ({ imageUrl }: { imageUrl?: string | null }) => {
     // White backing keeps product shots (white backgrounds) from clashing in dark mode
     <View className='h-[84px] w-20 items-center justify-center bg-white'>
       {/* expo-image: disk-cached CDN thumbnails + a soft fade-in */}
-      <Image style={{ height: 64, width: 64 }} contentFit='contain' transition={150} source={imageSource} />
+      <Image style={{ height: size, width: size }} contentFit='contain' transition={150} source={imageSource} />
     </View>
   )
 }

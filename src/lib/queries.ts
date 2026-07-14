@@ -15,6 +15,9 @@ export type TopWornFragrance =
 
 export type WearEvent = Tables<"wear_events">
 
+export type PendingSubmission =
+  Database["public"]["Functions"]["list_pending_submissions"]["Returns"][number]
+
 // Community rating aggregate for one catalog fragrance, keyed for lookup
 export interface RatingSummary {
   avg: number
@@ -156,6 +159,39 @@ export const useFragranceSearch = (term: string, filters: SearchFilters) => {
     },
   })
 }
+
+// Membership check for the in-app moderation screen's entry point (profile.tsx)
+// — reads the moderators table directly (RLS: "own membership" SELECT
+// policy). Enforcement for the actual review actions lives in the RPCs, not
+// this check — a non-moderator hitting the screen just gets an RPC error.
+export const useIsModerator = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["is-moderator", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase
+        .from("moderators")
+        .select("user_id")
+        .eq("user_id", userId!)
+        .maybeSingle()
+      if (error) throw error
+      return !!data
+    },
+  })
+
+// Pending catalog-suggestion queue (moderation screen). RLS only exposes a
+// user's own fragrance_submissions rows, so this goes through the
+// moderator-gated list_pending_submissions RPC instead of a direct select.
+export const usePendingSubmissions = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["pending-submissions"],
+    enabled,
+    queryFn: async (): Promise<PendingSubmission[]> => {
+      const { data, error } = await supabase.rpc("list_pending_submissions")
+      if (error) throw error
+      return data ?? []
+    },
+  })
 
 // All 704 brands with counts — fetched once, filtered client-side
 export const useBrands = () =>

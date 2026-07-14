@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { Avatar } from "@rneui/themed"
 import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
-import { useRemindersEnabled, useWearHistory } from "@/lib/queries"
+import { useIsModerator, useRemindersEnabled, useWearHistory } from "@/lib/queries"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
 import useTheme from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
@@ -20,6 +20,7 @@ const ProfileScreen = () => {
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
+  const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const [deleting, setDeleting] = useState(false)
 
@@ -207,6 +208,18 @@ const ProfileScreen = () => {
         <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>Wear history</Text>
         <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
       </TouchableOpacity>
+
+      {isModerator && (
+        <TouchableOpacity
+          onPress={() => router.push("/moderation")}
+          className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
+          <MaterialCommunityIcons name='shield-check-outline' size={20} color={mutedIconColor} />
+          <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>
+            Moderation queue
+          </Text>
+          <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
+        </TouchableOpacity>
+      )}
 
       <View
         className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>

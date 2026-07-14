@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS user_fragrances (
   -- also powers the cross-user community average.
   rating        SMALLINT CONSTRAINT user_fragrances_rating_range CHECK (rating BETWEEN 1 AND 5),
   notes         TEXT CONSTRAINT user_fragrances_notes_length CHECK (char_length(notes) <= 2000),
+  -- Bottle metadata — in the live DB (and generated database.types.ts) but
+  -- not surfaced anywhere in the app yet
+  bottle_price   NUMERIC,
+  bottle_size_ml INT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -311,3 +315,312 @@ CREATE POLICY "own subscription" ON subscriptions FOR SELECT
 -- then paste the same value as "Authorization: Bearer <value>" in
 -- RevenueCat's dashboard (Project settings -> Integrations -> Webhooks),
 -- pointed at this project's revenuecat-webhook function URL.
+
+-- User-suggested catalog additions (migration
+-- add_fragrance_submissions_moderation). A manual add stays instant and
+-- personal (user_fragrances, fragrance_id NULL); this table only queues the
+-- suggestion for promotion into the shared fragrances catalog. Nothing here
+-- is visible in search until a moderator approves — approval is what inserts
+-- the catalog row.
+CREATE TABLE IF NOT EXISTS fragrance_submissions (
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id              UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- Submitter's collection row, for FK backfill on approval. SET NULL keeps
+  -- the submission reviewable if they delete the row meanwhile.
+  user_fragrance_id    UUID REFERENCES user_fragrances(id) ON DELETE SET NULL,
+  brand                TEXT NOT NULL CONSTRAINT fragrance_submissions_brand_length
+                         CHECK (char_length(btrim(brand)) BETWEEN 1 AND 100),
+  title                TEXT NOT NULL CONSTRAINT fragrance_submissions_title_length
+                         CHECK (char_length(btrim(title)) BETWEEN 1 AND 200),
+  status               TEXT NOT NULL DEFAULT 'pending' CONSTRAINT fragrance_submissions_status_valid
+                         CHECK (status IN ('pending', 'approved', 'merged', 'rejected')),
+  -- Outcome: the catalog row created (approve) or linked (merge)
+  decided_fragrance_id UUID REFERENCES fragrances(id),
+  -- Triage: closest catalog match at submit time (pg_trgm), so the review
+  -- query can surface likely duplicates first
+  similar_fragrance_id UUID REFERENCES fragrances(id),
+  similarity           REAL,
+  moderator_note       TEXT,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reviewed_at          TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS fragrance_submissions_user_id_idx ON fragrance_submissions (user_id);
+CREATE INDEX IF NOT EXISTS fragrance_submissions_pending_idx
+  ON fragrance_submissions (created_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS fragrance_submissions_user_fragrance_id_idx
+  ON fragrance_submissions (user_fragrance_id) WHERE user_fragrance_id IS NOT NULL;
+-- One pending suggestion per user per fragrance
+CREATE UNIQUE INDEX IF NOT EXISTS fragrance_submissions_pending_unique
+  ON fragrance_submissions (user_id, lower(btrim(brand)), lower(btrim(title)))
+  WHERE status = 'pending';
+
+ALTER TABLE fragrance_submissions ENABLE ROW LEVEL SECURITY;
+
+-- Users can see their own submissions (e.g. a future "pending review" badge).
+-- No INSERT/UPDATE/DELETE policies: writes go through the RPCs below so the
+-- rate cap and triage scoring can't be bypassed.
+CREATE POLICY "own submissions" ON fragrance_submissions FOR SELECT
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
+
+-- Who may review submissions. Membership is managed manually (SQL editor):
+--   INSERT INTO moderators (user_id) SELECT id FROM auth.users WHERE email = '...';
+CREATE TABLE IF NOT EXISTS moderators (
+  user_id    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE moderators ENABLE ROW LEVEL SECURITY;
+
+-- A user may check their own membership (drives showing a future in-app
+-- moderation entry point). Enforcement lives in review_submission, not here.
+CREATE POLICY "own membership" ON moderators FOR SELECT
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
+
+-- KNN support for the closest-match triage lookup: ORDER BY <-> can use a
+-- GiST trgm index; fragrance-db's GIN trgm indexes only serve % / LIKE.
+CREATE INDEX IF NOT EXISTS fragrances_brand_name_trgm_gist_idx
+  ON fragrances USING gist ((brand || ' ' || name) gist_trgm_ops);
+
+-- Queue a catalog suggestion. SECURITY DEFINER because clients have no INSERT
+-- policy: this is the only write path, enforcing the pending cap, ownership of
+-- the linked collection row, and the trigram triage score.
+CREATE OR REPLACE FUNCTION submit_fragrance_suggestion(
+  p_brand text, p_title text, p_user_fragrance_id uuid DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_brand text := btrim(p_brand);
+  v_title text := btrim(p_title);
+  v_match record;
+  v_id uuid;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not signed in';
+  END IF;
+  -- coalesce: char_length(NULL) is NULL, which would slip past a bare < 1
+  IF coalesce(char_length(v_brand), 0) < 1 OR coalesce(char_length(v_title), 0) < 1 THEN
+    RAISE EXCEPTION 'brand and title are required';
+  END IF;
+  -- Serialize this user's submissions so concurrent calls can't race the
+  -- pending cap (count-then-insert is not atomic on its own)
+  PERFORM pg_advisory_xact_lock(hashtext('fragrance_submissions'), hashtext(v_uid::text));
+  IF (SELECT count(*) FROM fragrance_submissions
+      WHERE user_id = v_uid AND status = 'pending') >= 5 THEN
+    RAISE EXCEPTION 'too many pending suggestions';
+  END IF;
+  IF p_user_fragrance_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM user_fragrances WHERE id = p_user_fragrance_id AND user_id = v_uid
+  ) THEN
+    RAISE EXCEPTION 'collection row not found';
+  END IF;
+
+  -- Closest catalog match for triage. KNN over the GiST expression index —
+  -- similarity() is only evaluated for the single row the index returns.
+  SELECT f.id, similarity(f.brand || ' ' || f.name, v_brand || ' ' || v_title) AS sim
+  INTO v_match
+  FROM fragrances f
+  ORDER BY (f.brand || ' ' || f.name) <-> (v_brand || ' ' || v_title)
+  LIMIT 1;
+
+  -- Same fragrance already pending from this user: idempotent, return the
+  -- existing row. ON CONFLICT (arbitrated by fragrance_submissions_pending_unique)
+  -- keeps this race-free without a separate SELECT.
+  INSERT INTO fragrance_submissions
+    (user_id, user_fragrance_id, brand, title, similar_fragrance_id, similarity)
+  VALUES (v_uid, p_user_fragrance_id, v_brand, v_title, v_match.id, v_match.sim)
+  ON CONFLICT (user_id, lower(btrim(brand)), lower(btrim(title))) WHERE status = 'pending'
+  DO UPDATE SET user_fragrance_id =
+    coalesce(fragrance_submissions.user_fragrance_id, EXCLUDED.user_fragrance_id)
+  RETURNING id INTO v_id;
+  RETURN v_id;
+END;
+$$;
+
+-- Moderator decision, all effects in one transaction:
+--   approve -> new fragrances row ('user:<submission-id>' as the source_url
+--              dedup key), backfill the submitter's collection row + wear
+--              events with the new FK
+--   merge   -> same backfill, but onto an existing catalog row (duplicates)
+--   reject  -> stamp status/note only; the submitter's personal row is
+--              untouched and keeps working
+-- Callable from the dashboard SQL editor or a future in-app moderation screen;
+-- authorization is the moderators-table check, not UI visibility. Example:
+--   SELECT review_submission('<submission-id>', 'approve');
+--   SELECT review_submission('<submission-id>', 'merge', '<fragrance-id>');
+--   SELECT review_submission('<submission-id>', 'reject', NULL, 'not a real fragrance');
+CREATE OR REPLACE FUNCTION review_submission(
+  p_submission_id uuid, p_action text,
+  p_merge_target uuid DEFAULT NULL, p_note text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  s record;
+  v_frag uuid;
+  v_catalog_image text;
+BEGIN
+  -- auth.uid() is NULL when there is no JWT — i.e. the dashboard SQL editor
+  -- (session_user postgres), which is trusted. PostgREST callers always carry
+  -- a JWT and must be in moderators.
+  IF NOT (
+    (auth.uid() IS NULL AND session_user = 'postgres')
+    OR EXISTS (SELECT 1 FROM moderators WHERE user_id = auth.uid())
+  ) THEN
+    RAISE EXCEPTION 'not a moderator';
+  END IF;
+
+  SELECT * INTO s FROM fragrance_submissions WHERE id = p_submission_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'submission not found';
+  END IF;
+  IF s.status <> 'pending' THEN
+    RAISE EXCEPTION 'submission already reviewed (%)', s.status;
+  END IF;
+
+  IF p_action = 'approve' THEN
+    INSERT INTO fragrances (brand, name, source_url)
+    VALUES (btrim(s.brand), btrim(s.title), 'user:' || s.id)
+    RETURNING id INTO v_frag;
+  ELSIF p_action = 'merge' THEN
+    IF p_merge_target IS NULL THEN
+      RAISE EXCEPTION 'merge requires a target fragrance id';
+    END IF;
+    SELECT id INTO v_frag FROM fragrances WHERE id = p_merge_target;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'merge target not found';
+    END IF;
+  ELSIF p_action = 'reject' THEN
+    v_frag := NULL;
+  ELSE
+    RAISE EXCEPTION 'unknown action % (use approve / merge / reject)', p_action;
+  END IF;
+
+  IF v_frag IS NOT NULL AND s.user_fragrance_id IS NOT NULL THEN
+    SELECT image_url INTO v_catalog_image FROM fragrances WHERE id = v_frag;
+    -- Link the submitter's row; on merge, adopt the catalog image if the
+    -- manual add had none. Guard on fragrance_id IS NULL so a row the user
+    -- re-linked meanwhile isn't clobbered.
+    UPDATE user_fragrances
+    SET fragrance_id = v_frag, image_url = COALESCE(image_url, v_catalog_image)
+    WHERE id = s.user_fragrance_id AND fragrance_id IS NULL;
+    UPDATE wear_events
+    SET fragrance_id = v_frag
+    WHERE user_fragrance_id = s.user_fragrance_id AND fragrance_id IS NULL;
+  END IF;
+
+  UPDATE fragrance_submissions
+  SET status = CASE p_action WHEN 'approve' THEN 'approved'
+                             WHEN 'merge' THEN 'merged'
+                             ELSE 'rejected' END,
+      decided_fragrance_id = v_frag,
+      moderator_note = p_note,
+      reviewed_at = now()
+  WHERE id = p_submission_id;
+
+  -- Best-effort push to the submitter via the notify-submission-decision edge
+  -- function (same pg_net + Vault pattern as the wear-reminder cron job).
+  -- Never fails the moderator's decision — Vault secrets missing, pg_net
+  -- down, or the push itself failing are all swallowed here.
+  BEGIN
+    PERFORM net.http_post(
+      url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_url')
+             || '/functions/v1/notify-submission-decision',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key')
+      ),
+      body := jsonb_build_object('submission_id', p_submission_id)
+    );
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+
+  RETURN v_frag;
+END;
+$$;
+
+-- The manual-add path: one transaction inserts the personal collection row
+-- and queues the catalog suggestion, so the pairing can't be half-lost
+-- between two client calls (kill/offline after the first). The suggestion is
+-- best-effort (subtransaction): a full pending queue never fails the add.
+CREATE OR REPLACE FUNCTION add_manual_fragrance(p_brand text, p_title text)
+RETURNS uuid
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_brand text := btrim(p_brand);
+  v_title text := btrim(p_title);
+  v_row_id uuid;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'not signed in';
+  END IF;
+  IF coalesce(char_length(v_brand), 0) < 1 OR coalesce(char_length(v_title), 0) < 1 THEN
+    RAISE EXCEPTION 'brand and title are required';
+  END IF;
+  -- SECURITY INVOKER: the insert runs under the caller's own-rows RLS policy
+  INSERT INTO user_fragrances (user_id, name, image_url, fragrance_id, times_worn)
+  VALUES (auth.uid(), v_brand || ' - ' || v_title, NULL, NULL, 0)
+  RETURNING id INTO v_row_id;
+  BEGIN
+    PERFORM submit_fragrance_suggestion(v_brand, v_title, v_row_id);
+  EXCEPTION WHEN OTHERS THEN
+    NULL; -- best-effort: never fail the personal add over the suggestion
+  END;
+  RETURN v_row_id;
+END;
+$$;
+
+-- Moderation queue read for the in-app moderation screen. RLS only lets a
+-- user see their own fragrance_submissions rows ("own submissions" policy),
+-- so a moderator needs a SECURITY DEFINER path to list everyone's pending
+-- rows — mirrors review_submission's moderator gate.
+CREATE OR REPLACE FUNCTION list_pending_submissions(p_max_results integer DEFAULT 200)
+RETURNS TABLE (
+  id uuid,
+  brand text,
+  title text,
+  created_at timestamptz,
+  similarity real,
+  similar_fragrance_id uuid,
+  similar_brand text,
+  similar_name text,
+  similar_image_url text
+)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM moderators WHERE user_id = auth.uid()) THEN
+    RAISE EXCEPTION 'not a moderator';
+  END IF;
+
+  RETURN QUERY
+  SELECT fs.id, fs.brand, fs.title, fs.created_at, fs.similarity, fs.similar_fragrance_id,
+         f.brand, f.name, f.image_url
+  FROM fragrance_submissions fs
+  LEFT JOIN fragrances f ON f.id = fs.similar_fragrance_id
+  WHERE fs.status = 'pending'
+  ORDER BY fs.created_at
+  LIMIT p_max_results;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION submit_fragrance_suggestion(text, text, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION submit_fragrance_suggestion(text, text, uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION review_submission(uuid, text, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION review_submission(uuid, text, uuid, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION add_manual_fragrance(text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION add_manual_fragrance(text, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION list_pending_submissions(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION list_pending_submissions(integer) TO authenticated;
