@@ -6,6 +6,7 @@ LogBox.ignoreAllLogs()
 import * as Sentry from "@sentry/react-native"
 import { initializeAds } from "@/lib/ads"
 import { Stack } from "expo-router"
+import { getHeaderTitle } from "expo-router/react-navigation"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
 import { AuthProvider } from "@/contexts/auth-context"
@@ -13,6 +14,7 @@ import useAuth from "@/contexts/auth-context"
 import { ThemeContextProvider } from "@/contexts/theme-context"
 import { ToastContextProvider } from "@/contexts/toast-context"
 import { useAppUpdates } from "@/lib/utils/use-app-updates"
+import Header from "@/components/header"
 
 // Crash reporting — inert until EXPO_PUBLIC_SENTRY_DSN is set in .env.
 // (Re-add the "@sentry/react-native/expo" config plugin with org/project once
@@ -74,23 +76,12 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
-            name="profile"
-            options={{
-              headerShown: false,
-              presentation: "formSheet",
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 24,
-              sheetAllowedDetents: [0.65, 1],
-            }}
-          />
-          <Stack.Screen
             name="wear-history"
             options={{
-              headerShown: false,
-              presentation: "formSheet",
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 24,
-              sheetAllowedDetents: [0.5, 1],
+              title: "Wear History",
+              header: ({ navigation, route, options, back }) => (
+                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
+              ),
             }}
           />
           <Stack.Screen
@@ -111,21 +102,19 @@ function RootNavigator() {
         <Stack.Screen
           name="privacy-policy"
           options={{
-            headerShown: false,
-            presentation: "formSheet",
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 24,
-            sheetAllowedDetents: [0.75, 1],
+            title: "Privacy Policy",
+            header: ({ navigation, route, options, back }) => (
+              <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
+            ),
           }}
         />
         <Stack.Screen
           name="terms"
           options={{
-            headerShown: false,
-            presentation: "formSheet",
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 24,
-            sheetAllowedDetents: [0.75, 1],
+            title: "Terms & Conditions",
+            header: ({ navigation, route, options, back }) => (
+              <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
+            ),
           }}
         />
       </Stack>

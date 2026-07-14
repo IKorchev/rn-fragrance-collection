@@ -3,17 +3,18 @@ import { ScrollView, Text, View } from "react-native"
 import useTheme from "@/contexts/theme-context"
 import type { LegalDoc } from "@/lib/legal-content"
 
-// Shared renderer for the formSheet legal screens (privacy policy / terms)
+// Shared renderer for the legal screens (privacy policy / terms) — the
+// pushed screen's nav header already shows doc.title, so this starts at
+// "Last updated"
 const LegalDocument = ({ doc }: { doc: LegalDoc }) => {
   const { modalColors, baseTextClass, mutedTextClass } = useTheme()
 
   return (
     <ScrollView
       className={`flex-1 ${modalColors.background}`}
-      contentContainerClassName='px-6 pt-8 pb-16'
+      contentContainerClassName='px-6 pt-6 pb-16'
       showsVerticalScrollIndicator={false}>
-      <Text className={`${baseTextClass} text-2xl font-bold`}>{doc.title}</Text>
-      <Text className={`${mutedTextClass} text-sm pt-1`}>Last updated: {doc.lastUpdated}</Text>
+      <Text className={`${mutedTextClass} text-sm`}>Last updated: {doc.lastUpdated}</Text>
       {doc.sections.map((section, sectionIndex) => (
         <View key={section.heading ?? sectionIndex} className='pt-6'>
           {section.heading && (

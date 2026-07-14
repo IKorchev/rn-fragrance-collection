@@ -1,23 +1,22 @@
 import React, { useEffect } from "react"
 import { Text, TouchableOpacity, View, StatusBar } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
-import { Avatar } from "@rneui/themed"
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
-import useAuth from "@/contexts/auth-context"
 
 interface HeaderProps {
   title: string
-  navigation?: unknown
+  navigation?: { goBack: () => void }
+  // Present when there's a previous screen to go back to (React Navigation's
+  // header render prop) — regular pushed screens (wear history, legal docs)
+  // get a back chevron; tab roots don't pass this.
+  back?: { title?: string }
 }
 
-export default function Header({ title }: HeaderProps) {
-  const router = useRouter()
+export default function Header({ title, navigation, back }: HeaderProps) {
   const { headerColors, cardBorderColors, theme, setTheme } = useTheme()
-  const { user } = useAuth()
   const offset = useSharedValue(theme === "light" ? 0 : 1)
 
   useEffect(() => {
@@ -40,17 +39,16 @@ export default function Header({ title }: HeaderProps) {
         borderBottomColor: getColor(cardBorderColors),
       }}>
       <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} />
-      <View className='flex-row w-full px-5 pb-3 pt-1 justify-between items-center'>
-        {/* @rneui Avatar's typings take no testID — the wrapper owns press + testID */}
-        <TouchableOpacity testID='profile-avatar' onPress={() => router.push("/profile")}>
-          <Avatar
-            size={32}
-            rounded
-            source={user?.photoURL ? { uri: user.photoURL } : undefined}
-          />
-        </TouchableOpacity>
+      <View className='flex-row w-full px-5 pb-3 pt-1 items-center'>
+        <View className='flex-1 items-start'>
+          {back && (
+            <TouchableOpacity testID='header-back' onPress={() => navigation?.goBack()} hitSlop={8}>
+              <Ionicons name='chevron-back' size={26} color={getColor(headerColors.font.replace("text-", ""))} />
+            </TouchableOpacity>
+          )}
+        </View>
         <Text className={`${headerColors.font} text-2xl text-center font-bold`}>{title}</Text>
-        <View className='flex-row items-center'>
+        <View className='flex-1 flex-row justify-end items-center'>
           <TouchableOpacity
             onPress={() => {
               setTheme(() => (theme === "dark" ? "light" : "dark"))

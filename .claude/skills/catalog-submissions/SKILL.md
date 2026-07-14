@@ -31,7 +31,7 @@ SELECT review_submission('<id>', 'approve'|'merge'|'reject', ...);
 
 ### In-app moderation screen
 
-`src/app/moderation.tsx` (formSheet) is the primary way to moderate — entry point in `profile.tsx`, shown only when `useIsModerator(user?.id)` (a direct `moderators` table read, RLS-scoped to your own membership row) returns true. The screen itself:
+`src/app/moderation.tsx` (formSheet) is the primary way to moderate — entry point in the Profile tab (`src/app/(tabs)/(profile)/index.tsx`), shown only when `useIsModerator(user?.id)` (a direct `moderators` table read, RLS-scoped to your own membership row) returns true. The screen itself:
 
 - Lists pending submissions via `usePendingSubmissions` → the `list_pending_submissions` RPC (`src/lib/queries.ts`) — a moderator-gated SECURITY DEFINER read, since the `moderators`-only RLS policy on `fragrance_submissions` blocks a moderator from seeing anyone else's rows directly.
 - Each row shows the closest catalog match (if `similarity` found one) so you can tell approve from merge at a glance.

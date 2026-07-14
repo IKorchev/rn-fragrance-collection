@@ -1,20 +1,20 @@
-# Legal screens: profile sheet links to the Privacy Policy and Terms &
-# Conditions formSheets and both render their content.
+# Legal screens: the Profile tab links to the Privacy Policy and Terms &
+# Conditions screens (regular pushed screens, not sheets) and both render
+# their content.
 appId: com.korchev.fragrancecollection
 tags:
   - legal
 ---
 - runFlow: ../subflows/launch-dev-client.yaml
 
-# Profile opens from the header avatar
-- tapOn:
-    id: "profile-avatar"
+# Profile is a regular tab now
+- tapOn: "Profile"
 - extendedWaitUntil:
     visible: "Wear history"
     timeout: 10000
 
 # The Upgrade to Pro row (shown when RevenueCat keys are configured) pushes
-# Privacy Policy below the sheet's 0.65 detent fold
+# Privacy Policy below the fold
 - scrollUntilVisible:
     element:
       text: "Privacy Policy"
@@ -23,14 +23,14 @@ tags:
 - extendedWaitUntil:
     visible: "What we collect"
     timeout: 10000
-# Later sections start below the sheet's fold — scroll to them
+# Later sections start below the fold — scroll to them
 - scrollUntilVisible:
     element:
       text: "Data retention and deletion"
     direction: DOWN
 - back
 
-# The Terms row starts below the profile sheet's 0.65 detent fold
+# The Terms row starts below the fold
 - scrollUntilVisible:
     element:
       text: "Terms & Conditions"
@@ -39,7 +39,7 @@ tags:
 - extendedWaitUntil:
     visible: "Acceptable use"
     timeout: 10000
-# Long sheet — the default 20s scroll budget falls one swipe short
+# Long document — the default 20s scroll budget falls one swipe short
 - scrollUntilVisible:
     element:
       text: "Limitation of liability"

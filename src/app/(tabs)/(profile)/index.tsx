@@ -63,11 +63,6 @@ const ProfileScreen = () => {
     return top && top.times_worn > 0 ? top : null
   }, [userCollection])
 
-  const handleSignOut = () => {
-    router.back()
-    logOut()
-  }
-
   // Presents the native paywall configured in the RevenueCat dashboard.
   // isPro flips reactively (see AuthContext's CustomerInfo listener) once a
   // purchase/restore lands, so this just handles the toast feedback.
@@ -220,7 +215,7 @@ const ProfileScreen = () => {
       />
 
       <TouchableOpacity
-        onPress={handleSignOut}
+        onPress={logOut}
         className={`${danger.bgClass} flex-row items-center justify-center w-full mt-8 py-3 rounded-2xl`}>
         <MaterialCommunityIcons name='logout' size={20} color={getColor(danger.color)} />
         <Text className={`${danger.textClass} text-base font-semibold pl-2`}>Sign out</Text>

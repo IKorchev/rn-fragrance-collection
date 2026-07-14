@@ -45,7 +45,7 @@ const groupByDay = (events: WearEvent[]): DaySection[] => {
 
 const WearHistoryScreen = () => {
   const router = useRouter()
-  const { modalColors, baseTextClass, mutedTextClass } = useTheme()
+  const { modalColors, mutedTextClass } = useTheme()
   const { user } = useAuth()
   const { data: events, isPending, error } = useWearHistory(user?.id)
 
@@ -59,13 +59,10 @@ const WearHistoryScreen = () => {
 
   return (
     <View className={`flex-1 ${modalColors.background}`}>
-      <Text className={`${baseTextClass} text-2xl font-bold text-center pt-6 pb-2`}>
-        Wear History
-      </Text>
       <SectionList
         sections={sections}
         keyExtractor={(event) => event.id}
-        contentContainerClassName='pb-12'
+        contentContainerClassName='pb-12 pt-2'
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}
         ListEmptyComponent={

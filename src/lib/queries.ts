@@ -70,6 +70,7 @@ export const useWearHistory = (userId: string | undefined) =>
     queryKey: ["wear-history", userId],
     enabled: !!userId,
     queryFn: async (): Promise<WearEvent[]> => {
+      console.log('topWorn');
       const { data, error } = await supabase
         .from("wear_events")
         .select("*")
@@ -160,7 +161,7 @@ export const useFragranceSearch = (term: string, filters: SearchFilters) => {
   })
 }
 
-// Membership check for the in-app moderation screen's entry point (profile.tsx)
+// Membership check for the in-app moderation screen's entry point (Profile tab)
 // — reads the moderators table directly (RLS: "own membership" SELECT
 // policy). Enforcement for the actual review actions lives in the RPCs, not
 // this check — a non-moderator hitting the screen just gets an RPC error.

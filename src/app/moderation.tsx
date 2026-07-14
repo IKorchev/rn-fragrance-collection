@@ -121,7 +121,7 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
   )
 }
 
-// Moderator-only queue (entry point gated in profile.tsx via useIsModerator).
+// Moderator-only queue (entry point gated in the Profile tab via useIsModerator).
 // Authorization for the actual decisions lives in the review_submission /
 // list_pending_submissions RPCs, not this screen's visibility.
 const ModerationScreen = () => {
