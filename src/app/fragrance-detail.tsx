@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Image } from "expo-image"
-import { ScrollView, View, Text, TextInput, TouchableOpacity } from "react-native"
+import { ScrollView, View, Text, TouchableOpacity } from "react-native"
 import { useLocalSearchParams } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
@@ -8,6 +8,7 @@ import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import { useFragranceRatings, useMyRating } from "@/lib/queries"
 import Card from "@/components/card"
+import TextField from "@/components/shared/ui/text-field"
 
 // Param-driven for display data: the catalog only holds name/brand/image (all
 // other scraped metadata was dropped as untrustworthy), so there's nothing to
@@ -23,8 +24,7 @@ const FragranceDetailScreen = () => {
     lastWorn?: string
     fragranceId?: string
   }>()
-  const { modalColors, mutedColors, baseColors, baseBorderClass, baseTextClass, mutedTextClass, theme } =
-    useTheme()
+  const { modalColors, mutedColors, baseBorderClass, baseTextClass, mutedTextClass } = useTheme()
   const { user, userCollection, updateFragrance, rateFragrance } = useAuth()
 
   const collectionItem = params.id
@@ -128,17 +128,15 @@ const FragranceDetailScreen = () => {
           </View>
 
           <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
-          <TextInput
+          <TextField
             value={notes}
             onChangeText={setNotes}
             onEndEditing={saveNotes}
             onBlur={saveNotes}
             multiline
             maxLength={2000}
+            minHeightClass='min-h-[96px]'
             placeholder='Your impressions — occasions, seasons, projection…'
-            placeholderTextColor={getColor(mutedColors)}
-            className={`rounded-2xl px-4 py-3 min-h-[96px] ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}
-            style={{ color: getColor(baseColors), textAlignVertical: "top" }}
           />
           <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
             Saved automatically

@@ -10,13 +10,14 @@ import {
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
-import { Chip } from "@rneui/themed"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import CollectionListItem from "@/components/collection-list-item"
-import EmptyState from "@/components/empty-state"
+import EmptyState from "@/components/shared/ui/empty-state"
+import FilterChip from "@/components/shared/ui/filter-chip"
+import IconButton from "@/components/shared/ui/icon-button"
 
 const SORT_OPTIONS = [
   { key: "least-worn", label: "Least worn" },
@@ -32,14 +33,7 @@ const CollectionScreen = () => {
   const insets = useSafeAreaInsets()
   const { visibleSortedCollection, collectionPending, collectionError, refetchCollection } =
     useAuth()
-  const {
-    theme,
-    viewColors,
-    accentColors,
-    mutedColors,
-    baseColors,
-    cardBorderColors,
-  } = useTheme()
+  const { theme, viewColors, accentColors, mutedColors, baseColors, primaryBg } = useTheme()
   const { refreshing, onRefresh } = usePullToRefresh(refetchCollection)
   const [filter, setFilter] = useState("")
   const [sort, setSort] = useState<SortKey>("least-worn")
@@ -120,33 +114,9 @@ const CollectionScreen = () => {
             )}
           </View>
           <View className='flex-row justify-evenly pt-2'>
-            {SORT_OPTIONS.map(({ key, label }) => {
-              const isSelected = key === sort
-              return (
-                <Chip
-                  key={key}
-                  type='outline'
-                  containerStyle={{
-                    borderRadius: 9999,
-                    borderWidth: 1,
-                    borderColor: isSelected ? getColor(accentColors) : getColor(cardBorderColors),
-                    backgroundColor: isSelected
-                      ? theme === "dark"
-                        ? "rgba(52, 211, 153, 0.15)"
-                        : getColor("emerald-50")
-                      : undefined,
-                  }}
-                  buttonStyle={{ paddingHorizontal: 12, borderRadius: 9999 }}
-                  titleStyle={{
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: isSelected ? getColor(accentColors) : getColor(mutedColors),
-                  }}
-                  title={label}
-                  onPress={() => setSort(key)}
-                />
-              )
-            })}
+            {SORT_OPTIONS.map(({ key, label }) => (
+              <FilterChip key={key} label={label} selected={key === sort} onPress={() => setSort(key)} />
+            ))}
           </View>
         </View>
       )}
@@ -195,10 +165,12 @@ const CollectionScreen = () => {
       />
       {/* FAB — opens the slot-machine picker modal (pointless with nothing to pick) */}
       {hasCollection && (
-        <TouchableOpacity
+        <IconButton
+          bgClassName={primaryBg}
+          size='xl'
           onPress={() => router.push("/picker")}
           testID='picker-fab'
-          className={`${theme === "dark" ? "bg-emerald-500" : "bg-emerald-600"} absolute right-5 h-14 w-14 items-center justify-center rounded-full`}
+          className='absolute right-5'
           style={{
             bottom: insets.bottom + 64,
             shadowColor: "#000",
@@ -208,7 +180,7 @@ const CollectionScreen = () => {
             elevation: 5,
           }}>
           <MaterialCommunityIcons name='slot-machine' size={28} color='white' />
-        </TouchableOpacity>
+        </IconButton>
       )}
     </View>
   )

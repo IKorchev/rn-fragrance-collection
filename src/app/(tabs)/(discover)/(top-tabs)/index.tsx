@@ -1,13 +1,13 @@
 import React, { useState } from "react"
 import { View, FlatList, ActivityIndicator, Text, RefreshControl } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Chip } from "@rneui/themed"
 import { useTopWorn, useFragranceRatings, WEAR_PERIODS, type WearPeriod } from "@/lib/queries"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import useTheme from "@/contexts/theme-context"
 import TopListItem from "@/components/top-list-item"
-import EmptyState from "@/components/empty-state"
+import EmptyState from "@/components/shared/ui/empty-state"
+import FilterChip from "@/components/shared/ui/filter-chip"
 
 const MostWornScreen = () => {
   const insets = useSafeAreaInsets()
@@ -15,39 +15,14 @@ const MostWornScreen = () => {
   const { data, isLoading, error, refetch } = useTopWorn(period)
   const { data: ratings } = useFragranceRatings((data ?? []).map((item) => item.fragrance_id))
   const { refreshing, onRefresh } = usePullToRefresh(refetch)
-  const { theme, viewColors, accentColors, mutedColors, cardBorderColors, mutedTextClass } =
-    useTheme()
+  const { viewColors, accentColors, mutedTextClass } = useTheme()
 
   return (
     <View className={`${viewColors.background} flex-1`}>
       <View className='py-3 flex-row justify-evenly w-full'>
-        {WEAR_PERIODS.map(({ key, label }) => {
-          const isSelected = key === period
-          return (
-            <Chip
-              key={key}
-              type='outline'
-              containerStyle={{
-                borderRadius: 9999,
-                borderWidth: 1,
-                borderColor: isSelected ? getColor(accentColors) : getColor(cardBorderColors),
-                backgroundColor: isSelected
-                  ? theme === "dark"
-                    ? "rgba(52, 211, 153, 0.15)"
-                    : getColor("emerald-50")
-                  : undefined,
-              }}
-              buttonStyle={{ paddingHorizontal: 12, borderRadius: 9999 }}
-              titleStyle={{
-                fontSize: 13,
-                fontWeight: "600",
-                color: isSelected ? getColor(accentColors) : getColor(mutedColors),
-              }}
-              title={label}
-              onPress={() => setPeriod(key)}
-            />
-          )
-        })}
+        {WEAR_PERIODS.map(({ key, label }) => (
+          <FilterChip key={key} label={label} selected={key === period} onPress={() => setPeriod(key)} />
+        ))}
       </View>
       {isLoading ? (
         <ActivityIndicator color={getColor(accentColors)} size='large' className='mt-24' />

@@ -1,21 +1,13 @@
 import React, { useEffect, useState } from "react"
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from "react-native"
-import { getColor } from "@/lib/utils/colors"
+import { Text, TouchableOpacity, View } from "react-native"
 import { useDebouncedValue } from "@/lib/utils/use-debounced-value"
 import { useFragranceSearch, MIN_SEARCH_LENGTH } from "@/lib/queries"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import Card from "@/components/card"
+import Dialog from "@/components/shared/ui/dialog"
+import TextField from "@/components/shared/ui/text-field"
+import Button from "@/components/shared/ui/button"
 
 interface ManualAddModalProps {
   visible: boolean
@@ -30,15 +22,7 @@ interface ManualAddModalProps {
 // add_manual_fragrance RPC also queues a catalog suggestion in the same
 // transaction (pending moderator review, best-effort — it can't fail the add).
 const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps) => {
-  const {
-    theme,
-    modalColors,
-    baseTextClass,
-    mutedTextClass,
-    accentTextClass,
-    baseColors,
-    mutedColors,
-  } = useTheme()
+  const { theme, baseTextClass, mutedTextClass, accentTextClass } = useTheme()
   const { addFragranceToCollection, addManualFragrance } = useAuth()
   const [brand, setBrand] = useState("")
   const [title, setTitle] = useState("")
@@ -87,104 +71,59 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
     }
   }
 
-  const inputClass = `rounded-2xl px-4 py-3 mt-2 ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`
-
-  // Tap-outside while typing means "dismiss the keyboard", not "throw away
-  // everything I typed" — only a second tap with the keyboard down closes.
-  const handleBackdropPress = () => {
-    if (Keyboard.isVisible()) {
-      Keyboard.dismiss()
-      return
-    }
-    onClose()
-  }
-
   return (
-    // Centered card dialog, not pageSheet: RN's pageSheet is fullscreen on
-    // Android and slides under the status bar (Cancel becomes untappable).
-    // No statusBarTranslucent — it disables adjustResize on Android, leaving
-    // the keyboard covering the card's lower half (KAV only handles iOS).
-    <Modal visible={visible} transparent animationType='fade' onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className='flex-1'>
-        <Pressable
-          className='flex-1 items-center justify-center bg-black/50 px-6'
-          onPress={handleBackdropPress}>
-          {/* Pressable (not View) so taps inside don't bubble to the backdrop's close */}
-          <Pressable
-            className={`${modalColors.background} w-full max-w-md rounded-3xl px-5 pb-5`}
-            onPress={() => {}}>
-            <View className='flex-row items-center justify-between pt-4 pb-2'>
-              <Text className={`${baseTextClass} text-lg font-bold`}>Add manually</Text>
-              <TouchableOpacity onPress={onClose} hitSlop={8}>
-                <Text className={`${accentTextClass} text-base font-semibold`}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-            <Text className={`${mutedTextClass} text-sm pt-1`}>
-              Can't find it in the catalog? Add it to your collection by hand.
-            </Text>
+    <Dialog visible={visible} title='Add manually' onClose={onClose}>
+      <Text className={`${mutedTextClass} text-sm pt-1`}>
+        Can't find it in the catalog? Add it to your collection by hand.
+      </Text>
 
-            <Text className={`${baseTextClass} text-sm font-semibold pt-5`}>Brand</Text>
-            <TextInput
-              value={brand}
-              onChangeText={setBrand}
-              placeholder='e.g. Dior'
-              placeholderTextColor={getColor(mutedColors)}
-              autoCorrect={false}
-              className={inputClass}
-              style={{ color: getColor(baseColors) }}
-            />
+      <Text className={`${baseTextClass} text-sm font-semibold pt-5`}>Brand</Text>
+      <TextField value={brand} onChangeText={setBrand} placeholder='e.g. Dior' autoCorrect={false} className='mt-2' />
 
-            <Text className={`${baseTextClass} text-sm font-semibold pt-4`}>Name</Text>
-            <TextInput
-              value={title}
-              onChangeText={setTitle}
-              placeholder='e.g. Sauvage Elixir'
-              placeholderTextColor={getColor(mutedColors)}
-              autoCorrect={false}
-              className={inputClass}
-              style={{ color: getColor(baseColors) }}
-            />
+      <Text className={`${baseTextClass} text-sm font-semibold pt-4`}>Name</Text>
+      <TextField
+        value={title}
+        onChangeText={setTitle}
+        placeholder='e.g. Sauvage Elixir'
+        autoCorrect={false}
+        className='mt-2'
+      />
 
-            {matches.length > 0 && (
-              <View className='pt-4'>
-                <Text className={`${mutedTextClass} text-sm font-semibold`}>
-                  Did you mean one of these?
-                </Text>
-                {matches.map((match) => (
-                  <TouchableOpacity
-                    key={match.id}
-                    disabled={saving}
-                    onPress={() => handleAddMatch(match)}
-                    className={`flex-row items-center rounded-2xl px-3 py-2 mt-2 ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}>
-                    <Card.Thumbnail imageUrl={match.image_url} compact />
-                    <View className='flex-1'>
-                      <Text className={`${baseTextClass} text-sm font-semibold`} numberOfLines={1}>
-                        {match.name}
-                      </Text>
-                      <Text className={`${mutedTextClass} text-xs`} numberOfLines={1}>
-                        {match.brand}
-                      </Text>
-                    </View>
-                    <Text className={`${accentTextClass} text-sm font-semibold pl-2`}>Add</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
+      {matches.length > 0 && (
+        <View className='pt-4'>
+          <Text className={`${mutedTextClass} text-sm font-semibold`}>
+            Did you mean one of these?
+          </Text>
+          {matches.map((match) => (
             <TouchableOpacity
-              onPress={handleAdd}
-              disabled={!canAdd}
-              className={`${theme === "dark" ? "bg-emerald-500" : "bg-emerald-600"} mt-6 py-3 rounded-full items-center ${canAdd ? "" : "opacity-40"}`}>
-              <Text className='text-white font-semibold'>
-                {saving ? "Adding…" : "Add to collection"}
-              </Text>
+              key={match.id}
+              disabled={saving}
+              onPress={() => handleAddMatch(match)}
+              className={`flex-row items-center rounded-2xl px-3 py-2 mt-2 ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}>
+              <Card.Thumbnail imageUrl={match.image_url} compact />
+              <View className='flex-1'>
+                <Text className={`${baseTextClass} text-sm font-semibold`} numberOfLines={1}>
+                  {match.name}
+                </Text>
+                <Text className={`${mutedTextClass} text-xs`} numberOfLines={1}>
+                  {match.brand}
+                </Text>
+              </View>
+              <Text className={`${accentTextClass} text-sm font-semibold pl-2`}>Add</Text>
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+          ))}
+        </View>
+      )}
+
+      <Button
+        label='Add to collection'
+        onPress={handleAdd}
+        disabled={!canAdd}
+        loading={saving}
+        loadingLabel='Adding…'
+        className='mt-6'
+      />
+    </Dialog>
   )
 }
 

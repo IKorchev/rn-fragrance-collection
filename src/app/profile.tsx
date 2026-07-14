@@ -11,12 +11,15 @@ import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchase
 import useTheme from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
+import Badge from "@/components/shared/ui/badge"
+import Row from "@/components/shared/ui/row"
+import StatTile from "@/components/shared/ui/stat-tile"
+import Button from "@/components/shared/ui/button"
 
 const ProfileScreen = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { modalColors, baseTextClass, mutedTextClass, accentTextClass, accentColors, baseBorderClass, theme } =
-    useTheme()
+  const { modalColors, baseTextClass, mutedTextClass, theme, danger } = useTheme()
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
@@ -120,12 +123,6 @@ const ProfileScreen = () => {
     )
   }
 
-  const accentTintBg = theme === "dark" ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50")
-  const mutedIconColor = getColor(theme === "dark" ? "zinc-400" : "zinc-500")
-  const dangerColor = getColor(theme === "dark" ? "rose-400" : "rose-600")
-  const dangerTextClass = theme === "dark" ? "text-rose-400" : "text-rose-600"
-  const dividerClass = theme === "dark" ? "bg-zinc-800" : "bg-zinc-200"
-
   return (
     <ScrollView
       className={`flex-1 ${modalColors.background}`}
@@ -141,42 +138,28 @@ const ProfileScreen = () => {
 
       <View className='flex-row items-center pt-4' style={{ gap: 6 }}>
         <Text className={`${baseTextClass} text-2xl font-bold`}>{displayName}</Text>
-        {isPro && (
-          <View className='px-2 py-0.5 rounded-full' style={{ backgroundColor: accentTintBg }}>
-            <Text className={`${accentTextClass} text-xs font-bold`}>PRO</Text>
-          </View>
-        )}
+        {isPro && <Badge label='PRO' />}
       </View>
       {user?.email && <Text className={`${mutedTextClass} text-base pt-1`}>{user.email}</Text>}
       {memberSince && (
         <Text className={`${mutedTextClass} text-sm pt-1`}>Member since {memberSince}</Text>
       )}
 
-      <View className={`flex-row w-full mt-8 rounded-2xl border ${baseBorderClass}`}>
-        <View className='flex-1 items-center py-4'>
-          <Text className={`${accentTextClass} text-2xl font-bold`}>{userCollection.length}</Text>
-          <Text className={`${mutedTextClass} text-sm pt-1`}>In collection</Text>
-        </View>
-        <View className={`w-px ${dividerClass}`} />
-        <View className='flex-1 items-center py-4'>
-          <Text className={`${accentTextClass} text-2xl font-bold`}>{totalWears}</Text>
-          <Text className={`${mutedTextClass} text-sm pt-1`}>Total wears</Text>
-        </View>
-      </View>
+      <StatTile
+        className='mt-8'
+        items={[
+          { value: userCollection.length, label: "In collection" },
+          { value: totalWears, label: "Total wears" },
+        ]}
+      />
 
-      <View className={`flex-row w-full mt-4 rounded-2xl border ${baseBorderClass}`}>
-        <View className='flex-1 items-center py-4'>
-          <Text className={`${accentTextClass} text-2xl font-bold`}>{monthWears}</Text>
-          <Text className={`${mutedTextClass} text-sm pt-1`}>This month</Text>
-        </View>
-        <View className={`w-px ${dividerClass}`} />
-        <View className='flex-1 items-center py-4'>
-          <Text className={`${accentTextClass} text-2xl font-bold`}>{streak}</Text>
-          <Text className={`${mutedTextClass} text-sm pt-1`}>
-            Day streak{streak === 1 ? "" : "s"}
-          </Text>
-        </View>
-      </View>
+      <StatTile
+        className='mt-4'
+        items={[
+          { value: monthWears, label: "This month" },
+          { value: streak, label: `Day streak${streak === 1 ? "" : "s"}` },
+        ]}
+      />
 
       {mostWorn && (
         <Text className={`${mutedTextClass} text-sm pt-3`}>
@@ -189,88 +172,71 @@ const ProfileScreen = () => {
       )}
 
       {purchasesEnabled && (!isPro || __DEV__) && (
-        <TouchableOpacity
+        <Row
+          icon='star-four-points'
+          tone='accent'
+          className='mt-6'
+          label={isPro ? "View paywall (dev)" : "Upgrade to Pro"}
           onPress={handleUpgrade}
-          className='flex-row items-center w-full mt-6 px-4 py-3 rounded-2xl'
-          style={{ backgroundColor: accentTintBg }}>
-          <MaterialCommunityIcons name='star-four-points' size={20} color={getColor(accentColors)} />
-          <Text className={`${accentTextClass} text-base font-semibold pl-3 flex-1`}>
-            {isPro ? "View paywall (dev)" : "Upgrade to Pro"}
-          </Text>
-          <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(accentColors)} />
-        </TouchableOpacity>
+        />
       )}
 
-      <TouchableOpacity
-        onPress={() => router.push("/wear-history")}
-        className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
-        <MaterialCommunityIcons name='history' size={20} color={mutedIconColor} />
-        <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>Wear history</Text>
-        <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
-      </TouchableOpacity>
+      <Row icon='history' className='mt-4' label='Wear history' onPress={() => router.push("/wear-history")} />
 
       {isModerator && (
-        <TouchableOpacity
+        <Row
+          icon='shield-check-outline'
+          className='mt-4'
+          label='Moderation queue'
           onPress={() => router.push("/moderation")}
-          className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
-          <MaterialCommunityIcons name='shield-check-outline' size={20} color={mutedIconColor} />
-          <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>
-            Moderation queue
-          </Text>
-          <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
-        </TouchableOpacity>
+        />
       )}
 
-      <View
-        className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
-        <MaterialCommunityIcons name='bell-outline' size={20} color={mutedIconColor} />
-        <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>
-          Daily wear reminder
-        </Text>
-        <Switch
-          value={remindersEnabled ?? true}
-          onValueChange={toggleReminders}
-          trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
-        />
-      </View>
+      <Row
+        icon='bell-outline'
+        className='mt-4'
+        label='Daily wear reminder'
+        trailing={
+          <Switch
+            value={remindersEnabled ?? true}
+            onValueChange={toggleReminders}
+            trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
+          />
+        }
+      />
 
-      <TouchableOpacity
+      <Row
+        icon='shield-lock-outline'
+        className='mt-4'
+        label='Privacy Policy'
         onPress={() => router.push("/privacy-policy")}
-        className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
-        <MaterialCommunityIcons name='shield-lock-outline' size={20} color={mutedIconColor} />
-        <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>
-          Privacy Policy
-        </Text>
-        <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
-      </TouchableOpacity>
+      />
 
-      <TouchableOpacity
+      <Row
+        icon='file-document-outline'
+        className='mt-4'
+        label='Terms & Conditions'
         onPress={() => router.push("/terms")}
-        className={`flex-row items-center w-full mt-4 px-4 py-3 rounded-2xl border ${baseBorderClass}`}>
-        <MaterialCommunityIcons name='file-document-outline' size={20} color={mutedIconColor} />
-        <Text className={`${baseTextClass} text-base font-semibold pl-3 flex-1`}>
-          Terms & Conditions
-        </Text>
-        <MaterialCommunityIcons name='chevron-right' size={22} color={mutedIconColor} />
-      </TouchableOpacity>
+      />
 
       <TouchableOpacity
         onPress={handleSignOut}
-        className={`flex-row items-center justify-center w-full mt-8 py-3 rounded-2xl ${
-          theme === "dark"
-            ? "bg-rose-500/25 border border-rose-400/50"
-            : "bg-rose-200/70 border border-rose-400/60"
-        }`}>
-        <MaterialCommunityIcons name='logout' size={20} color={dangerColor} />
-        <Text className={`${dangerTextClass} text-base font-semibold pl-2`}>Sign out</Text>
+        className={`${danger.bgClass} flex-row items-center justify-center w-full mt-8 py-3 rounded-2xl`}>
+        <MaterialCommunityIcons name='logout' size={20} color={getColor(danger.color)} />
+        <Text className={`${danger.textClass} text-base font-semibold pl-2`}>Sign out</Text>
       </TouchableOpacity>
 
       {/* App Store 5.1.1(v) / Play policy: account deletion must be in-app */}
-      <TouchableOpacity onPress={handleDeleteAccount} disabled={deleting} className='mt-6 py-2'>
-        <Text className={`${dangerTextClass} text-sm ${deleting ? "opacity-40" : ""}`}>
-          {deleting ? "Deleting account…" : "Delete account"}
-        </Text>
-      </TouchableOpacity>
+      <Button
+        variant='ghost'
+        tone='danger'
+        size='sm'
+        className='mt-6'
+        label='Delete account'
+        loading={deleting}
+        loadingLabel='Deleting account…'
+        onPress={handleDeleteAccount}
+      />
     </ScrollView>
   )
 }

@@ -1,11 +1,12 @@
 import React, { useState } from "react"
-import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native"
-import { getColor } from "@/lib/utils/colors"
+import { FlatList, Text, View } from "react-native"
 import { usePendingSubmissions, type PendingSubmission } from "@/lib/queries"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import Card from "@/components/card"
-import EmptyState from "@/components/empty-state"
+import EmptyState from "@/components/shared/ui/empty-state"
+import TextField from "@/components/shared/ui/text-field"
+import Button from "@/components/shared/ui/button"
 
 type Action = "approve" | "merge" | "reject"
 
@@ -16,16 +17,13 @@ interface SubmissionRowProps {
 }
 
 const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps) => {
-  const { theme, baseTextClass, mutedTextClass, accentTextClass, baseBorderClass, mutedColors } =
-    useTheme()
+  const { theme, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
   const [rejecting, setRejecting] = useState(false)
   const [note, setNote] = useState("")
   const busy = busyAction !== null
   const hasMatch = !!submission.similar_fragrance_id
   const similarityPct =
     submission.similarity != null ? Math.round(submission.similarity * 100) : null
-  const dangerTextClass = theme === "dark" ? "text-rose-400" : "text-rose-600"
-  const dangerBgClass = theme === "dark" ? "bg-rose-500/25" : "bg-rose-100"
 
   return (
     <View className={`mx-3 my-1.5 rounded-2xl border ${baseBorderClass} p-4`}>
@@ -52,61 +50,71 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
 
       {rejecting ? (
         <View className='mt-3'>
-          <TextInput
+          <TextField
             value={note}
             onChangeText={setNote}
             placeholder='Optional note for the submitter'
-            placeholderTextColor={getColor(mutedColors)}
             multiline
-            className={`rounded-xl px-3 py-2 text-sm ${baseTextClass} ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}
-            style={{ color: getColor(theme === "dark" ? "zinc-100" : "zinc-900") }}
+            rounded='xl'
           />
           <View className='flex-row mt-2' style={{ gap: 8 }}>
-            <TouchableOpacity
+            <Button
+              variant='secondary'
+              shape='rounded'
+              label='Cancel'
               disabled={busy}
+              className='flex-1'
               onPress={() => {
                 setRejecting(false)
                 setNote("")
               }}
-              className={`flex-1 py-2.5 rounded-xl items-center border ${baseBorderClass} ${busy ? "opacity-40" : ""}`}>
-              <Text className={`${baseTextClass} font-semibold`}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            />
+            <Button
+              variant='danger'
+              shape='rounded'
+              label='Confirm reject'
+              loadingLabel='Rejecting…'
+              loading={busyAction === "reject"}
               disabled={busy}
+              className='flex-1'
               onPress={() => onReview("reject", note.trim() || undefined)}
-              className={`flex-1 py-2.5 rounded-xl items-center ${dangerBgClass} ${busy ? "opacity-40" : ""}`}>
-              <Text className={`${dangerTextClass} font-semibold`}>
-                {busyAction === "reject" ? "Rejecting…" : "Confirm reject"}
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       ) : (
         <View className='flex-row mt-3' style={{ gap: 8 }}>
-          <TouchableOpacity
+          <Button
+            variant='primary'
+            shape='rounded'
+            label='Approve'
+            loadingLabel='Approving…'
+            loading={busyAction === "approve"}
             disabled={busy}
+            className='flex-1'
             onPress={() => onReview("approve")}
-            className={`flex-1 py-2.5 rounded-xl items-center ${theme === "dark" ? "bg-emerald-500" : "bg-emerald-600"} ${busy ? "opacity-40" : ""}`}>
-            <Text className='text-white font-semibold'>
-              {busyAction === "approve" ? "Approving…" : "Approve"}
-            </Text>
-          </TouchableOpacity>
+          />
           {hasMatch && (
-            <TouchableOpacity
+            <Button
+              variant='secondary'
+              tone='accent'
+              shape='rounded'
+              label='Merge'
+              loadingLabel='Merging…'
+              loading={busyAction === "merge"}
               disabled={busy}
+              className='flex-1'
               onPress={() => onReview("merge")}
-              className={`flex-1 py-2.5 rounded-xl items-center border ${baseBorderClass} ${busy ? "opacity-40" : ""}`}>
-              <Text className={`${accentTextClass} font-semibold`}>
-                {busyAction === "merge" ? "Merging…" : "Merge"}
-              </Text>
-            </TouchableOpacity>
+            />
           )}
-          <TouchableOpacity
+          <Button
+            variant='secondary'
+            tone='danger'
+            shape='rounded'
+            label='Reject'
             disabled={busy}
+            className='flex-1'
             onPress={() => setRejecting(true)}
-            className={`flex-1 py-2.5 rounded-xl items-center border ${baseBorderClass} ${busy ? "opacity-40" : ""}`}>
-            <Text className={`${dangerTextClass} font-semibold`}>Reject</Text>
-          </TouchableOpacity>
+          />
         </View>
       )}
     </View>

@@ -1,17 +1,12 @@
 import React, { type ReactNode } from "react"
 import { ListItem } from "@rneui/themed"
 import { Image } from "expo-image"
-import {
-  Text,
-  TouchableOpacity,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native"
+import { Text, View, type StyleProp, type ViewStyle } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import { getImageSource } from "@/lib/utils/image-source"
+import IconButton from "@/components/shared/ui/icon-button"
 
 interface RootProps {
   onPress?: () => void
@@ -234,13 +229,16 @@ const ActionButton = ({
   }
 
   return (
-    <TouchableOpacity
-      className={`${bgByVariant[variant]} ${size === "lg" ? "h-12 w-12" : "h-11 w-11"} justify-center rounded-full items-center ${dimmed ? "opacity-40" : ""} ${className ?? ""}`}
+    <IconButton
+      bgClassName={bgByVariant[variant]}
+      size={size}
+      dimmed={dimmed}
+      className={className}
       style={style}
       testID={testID}
       onPress={onPress}>
       {children(getColor(iconByVariant[variant]))}
-    </TouchableOpacity>
+    </IconButton>
   )
 }
 

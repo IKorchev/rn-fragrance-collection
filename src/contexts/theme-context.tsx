@@ -6,6 +6,7 @@ import React, {
   type ReactNode,
 } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { getColor } from "@/lib/utils/colors"
 
 export type Theme = "light" | "dark"
 
@@ -29,6 +30,15 @@ interface ButtonGroup {
   rerollIcon: string
 }
 
+// shared/ui's danger-toned components (Button variant="danger", Row, etc.) —
+// bgClass/color mirror buttons.deleteBg/deleteIcon (same rose tint) rather
+// than restating the literal a second time; textClass is the one new value.
+interface DangerGroup {
+  textClass: string
+  bgClass: string
+  color: string
+}
+
 interface ThemeContextValue {
   // Bare color tokens — for getColor() in RN style objects / icon color props
   baseColors: string
@@ -40,11 +50,18 @@ interface ThemeContextValue {
   mutedTextClass: string
   accentTextClass: string
   baseBorderClass: string
+  // Button's filled/primary background — complete literal
+  primaryBg: string
+  // Selected-chip / tinted-badge background — a bare rgba/hex string for
+  // style={{backgroundColor}}, not a className, so it's exempt from the
+  // literal-scanner constraint above
+  accentTintBg: string
   viewColors: ColorGroup
   headerColors: ColorGroup
   cardColors: ColorGroup
   modalColors: ColorGroup
   buttons: ButtonGroup
+  danger: DangerGroup
   theme: Theme
   setTheme: React.Dispatch<React.SetStateAction<Theme>>
 }
@@ -120,6 +137,14 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
         rerollIcon: "amber-600",
       }
 
+  const primaryBg = dark ? "bg-emerald-500" : "bg-emerald-600"
+  const accentTintBg = dark ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50")
+  const danger: DangerGroup = {
+    textClass: dark ? "text-rose-400" : "text-rose-600",
+    bgClass: buttons.deleteBg,
+    color: buttons.deleteIcon,
+  }
+
   return (
     <ThemeContext.Provider
       value={{
@@ -131,12 +156,15 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
         mutedTextClass,
         accentTextClass,
         baseBorderClass,
+        primaryBg,
+        accentTintBg,
         viewColors,
         headerColors,
         theme,
         cardColors,
         modalColors,
         buttons,
+        danger,
         setTheme,
       }}>
       {children}

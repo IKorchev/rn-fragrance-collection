@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react"
-import { Chip, SearchBar } from "@rneui/themed"
+import { SearchBar } from "@rneui/themed"
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -24,7 +24,8 @@ import useTheme from "@/contexts/theme-context"
 import TopListItem from "@/components/top-list-item"
 import FilterPickerModal from "@/components/filter-picker-modal"
 import ManualAddModal from "@/components/manual-add-modal"
-import EmptyState from "@/components/empty-state"
+import EmptyState from "@/components/shared/ui/empty-state"
+import FilterChip from "@/components/shared/ui/filter-chip"
 
 const SearchScreen = () => {
   const insets = useSafeAreaInsets()
@@ -34,16 +35,8 @@ const SearchScreen = () => {
   const [openPicker, setOpenPicker] = useState<"brand" | null>(null)
   const [brandSearch, setBrandSearch] = useState("")
   const [manualAddOpen, setManualAddOpen] = useState(false)
-  const {
-    viewColors,
-    theme,
-    baseColors,
-    mutedColors,
-    mutedTextClass,
-    accentColors,
-    cardBorderColors,
-    headerColors,
-  } = useTheme()
+  const { viewColors, theme, baseColors, mutedColors, mutedTextClass, accentColors, headerColors } =
+    useTheme()
 
   const filters: SearchFilters = { brand }
   const { data, isFetching, isLoading, error, refetch } = useFragranceSearch(
@@ -66,26 +59,6 @@ const SearchScreen = () => {
       .map((b) => ({ value: b.brand, count: b.fragrance_count }))
   }, [brands, brandSearch])
 
-  const filterChipStyle = (isSelected: boolean) =>
-    ({
-      containerStyle: {
-        borderRadius: 9999,
-        borderWidth: 1,
-        borderColor: isSelected ? getColor(accentColors) : getColor(cardBorderColors),
-        backgroundColor: isSelected
-          ? theme === "dark"
-            ? "rgba(52, 211, 153, 0.15)"
-            : getColor("emerald-50")
-          : undefined,
-      },
-      buttonStyle: { paddingHorizontal: 14, borderRadius: 9999 },
-      titleStyle: {
-        fontSize: 13,
-        fontWeight: "600" as const,
-        color: isSelected ? getColor(accentColors) : getColor(mutedColors),
-      },
-    }) as const
-
   return (
     <KeyboardAvoidingView className={`${viewColors.background} flex-1`}>
       <SearchBar
@@ -105,10 +78,10 @@ const SearchScreen = () => {
         value={searchTerm}
       />
       <View className='py-3 flex-row justify-center w-full'>
-        <Chip
-          type='outline'
-          {...filterChipStyle(brand !== null)}
-          title={brand ?? "Filter by brand"}
+        <FilterChip
+          label={brand ?? "Filter by brand"}
+          selected={brand !== null}
+          paddingHorizontal={14}
           onPress={() => setOpenPicker("brand")}
         />
       </View>
