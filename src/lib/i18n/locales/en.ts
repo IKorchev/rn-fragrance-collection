@@ -1,0 +1,90 @@
+import type { Dictionary } from "../types"
+
+const en: Dictionary = {
+  common: {
+    cancel: "Cancel",
+    close: "Close",
+    share: "Share",
+    done: "Done",
+    ok: "OK",
+    loading: "Loading…",
+  },
+
+  screens: {
+    wearHistory: "Wear History",
+    privacyPolicy: "Privacy Policy",
+    terms: "Terms & Conditions",
+  },
+
+  profile: {
+    title: "Profile",
+    anonymous: "Anonymous",
+    memberSince: "Member since {{date}}",
+    stats: {
+      inCollection: "In collection",
+      totalWears: "Total wears",
+      thisMonth: "This month",
+      dayStreak_one: "Day streak",
+      dayStreak_other: "Day streaks",
+    },
+    mostWornLabel: "Most worn:",
+    mostWornCount: "({{count}}x)",
+    upgradeToPro: "Upgrade to Pro",
+    viewPaywallDev: "View paywall (dev)",
+    toastWelcomePro: "Welcome to Pro!",
+    toastPurchasesRestored: "Purchases restored",
+    wearHistoryRow: "Wear history",
+    moderationQueue: "Moderation queue",
+    dailyReminder: "Daily wear reminder",
+    reminderUpdateFailedTitle: "Oops",
+    reminderUpdateFailedMessage: "Couldn't update your reminder setting, please try again.",
+    language: "Language",
+    shareRecap: "Share my recap",
+    shareToday: "Share today's scent",
+    signOut: "Sign out",
+    deleteAccount: "Delete account",
+    deletingAccount: "Deleting account…",
+    deleteConfirmTitle: "Delete account?",
+    deleteConfirmMessage:
+      "This permanently deletes your account, collection, and wear history. This cannot be undone.",
+    deleteConfirmConfirm: "Delete",
+    deleteFailedTitle: "Deletion failed",
+    deleteFailedMessage: "Something went wrong, please try again later.",
+  },
+
+  language: {
+    title: "Language",
+    system: "System default",
+    english: "English",
+    spanish: "Español",
+  },
+
+  share: {
+    sheetTitleFragrance: "Share this fragrance",
+    sheetTitleToday: "Share today's scent",
+    sheetTitlePicker: "Share the pick",
+    sheetTitleRecap: "Share your recap",
+    previewLabel: "Preview",
+    action: "Share",
+    includeTimesWorn: "Include times worn",
+    includeRating: "Include my rating",
+    fragranceMessage: "I'm wearing {{name}} 🌸",
+    todayMessage: "Today I'm wearing {{name}} 🌸",
+    todayEmptyTitle: "Nothing worn yet today",
+    todayEmptyMessage: "Log a wear, then come back to share it.",
+    pickerMessage: "The picker just chose {{name}} for me! 🎰",
+    recapIntro: "My Fragrance Collection recap 🌸",
+    wearsFragment_one: "{{count}} wear logged this month",
+    wearsFragment_other: "{{count}} wears logged this month",
+    streakFragment: "{{count}}-day streak",
+    collectionFragment_one: "{{count}} fragrance in my collection",
+    collectionFragment_other: "{{count}} fragrances in my collection",
+    timesWornFragment_one: "worn {{count}} time",
+    timesWornFragment_other: "worn {{count}} times",
+    ratingFragment: "rated {{stars}}/5",
+    appSignature: "— tracked with Fragrance Collection",
+    failedMessage: "Couldn't share — something went wrong.",
+  },
+}
+
+export default en

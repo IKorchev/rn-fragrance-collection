@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Image } from "expo-image"
 import { ScrollView, View, Text, TouchableOpacity } from "react-native"
 import { useLocalSearchParams } from "expo-router"
@@ -6,9 +6,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 import { useFragranceRatings, useMyRating } from "@/lib/queries"
+import { buildFragranceShareText } from "@/lib/share"
 import Card from "@/components/card"
 import TextField from "@/components/shared/ui/text-field"
+import ShareSheetModal from "@/components/share-sheet-modal"
 
 // Param-driven for display data: the catalog only holds name/brand/image (all
 // other scraped metadata was dropped as untrustworthy), so there's nothing to
@@ -26,6 +29,7 @@ const FragranceDetailScreen = () => {
   }>()
   const { modalColors, mutedColors, baseBorderClass, baseTextClass, mutedTextClass } = useTheme()
   const { user, userCollection, updateFragrance, rateFragrance } = useAuth()
+  const { t } = useLocale()
 
   const collectionItem = params.id
     ? userCollection.find((el) => el.id === params.id)
@@ -54,6 +58,36 @@ const FragranceDetailScreen = () => {
 
   const [notes, setNotes] = useState(collectionItem?.notes ?? "")
 
+  // Share sheet: privacy-safe by default (name only) — times-worn/rating are
+  // the user's own personal data and only ride along once they flip the
+  // toggle, never on by default. Notes/price/user id are never offered at all.
+  const [shareVisible, setShareVisible] = useState(false)
+  const [includeTimesWorn, setIncludeTimesWorn] = useState(false)
+  const [includeRating, setIncludeRating] = useState(false)
+  const shareMessage = useMemo(
+    () =>
+      buildFragranceShareText(
+        t,
+        { name, timesWorn, rating: currentRating },
+        { includeTimesWorn, includeRating: includeRating && currentRating != null }
+      ),
+    [t, name, timesWorn, currentRating, includeTimesWorn, includeRating]
+  )
+  const shareToggles = [
+    timesWorn > 0 && {
+      key: "timesWorn",
+      label: t("share.includeTimesWorn"),
+      value: includeTimesWorn,
+      onChange: setIncludeTimesWorn,
+    },
+    currentRating != null && {
+      key: "rating",
+      label: t("share.includeRating"),
+      value: includeRating,
+      onChange: setIncludeRating,
+    },
+  ].filter((toggle): toggle is Exclude<typeof toggle, false> => toggle !== false)
+
   const saveRating = (star: number) => {
     if (!collectionItem) return
     // Tapping the current rating clears it
@@ -78,72 +112,91 @@ const FragranceDetailScreen = () => {
   useEffect(() => () => saveNotesRef.current(), [])
 
   return (
-    <ScrollView
-      className={`flex-1 ${modalColors.background}`}
-      contentContainerClassName='px-5 pt-6 pb-12'
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps='handled'>
-      {imageUrl ? (
-        // White backing keeps product shots (white backgrounds) from clashing in dark mode
-        <View className='self-center h-48 w-48 items-center justify-center bg-white rounded-2xl'>
-          <Image
-            style={{ height: 160, width: 160 }}
-            contentFit='contain'
-            transition={150}
-            source={{ uri: imageUrl }}
-          />
-        </View>
-      ) : (
-        <View className={`self-center h-48 w-48 items-center justify-center rounded-2xl border ${baseBorderClass}`}>
-          <MaterialCommunityIcons name='image-off' size={40} color={getColor(mutedColors)} />
-        </View>
-      )}
-
-      <Card.Title centered>{title}</Card.Title>
-      <Card.Subtitle centered>{brand}</Card.Subtitle>
-      <Card.WearInfoText
-        timesWorn={timesWorn}
-        lastWorn={lastWorn}
-        centered
-        avgRating={community?.avg}
-        ratingCount={community?.count}
-      />
-
-      {collectionItem && (
-        <>
-          <View className='flex-row justify-center pt-5' style={{ gap: 6 }}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => saveRating(star)} hitSlop={6}>
-                <MaterialCommunityIcons
-                  name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
-                  size={30}
-                  color={
-                    (currentRating ?? 0) >= star
-                      ? getColor("amber-400")
-                      : getColor(mutedColors)
-                  }
-                />
-              </TouchableOpacity>
-            ))}
+    <View className={`flex-1 ${modalColors.background}`}>
+      <TouchableOpacity
+        accessibilityRole='button'
+        accessibilityLabel={t("share.action")}
+        hitSlop={8}
+        className='absolute right-4 top-3 z-10 h-9 w-9 items-center justify-center'
+        testID='fragrance-detail-share'
+        onPress={() => setShareVisible(true)}>
+        <MaterialCommunityIcons name='share-variant' size={22} color={getColor(mutedColors)} />
+      </TouchableOpacity>
+      <ScrollView
+        className='flex-1'
+        contentContainerClassName='px-5 pt-6 pb-12'
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps='handled'>
+        {imageUrl ? (
+          // White backing keeps product shots (white backgrounds) from clashing in dark mode
+          <View className='self-center h-48 w-48 items-center justify-center bg-white rounded-2xl'>
+            <Image
+              style={{ height: 160, width: 160 }}
+              contentFit='contain'
+              transition={150}
+              source={{ uri: imageUrl }}
+            />
           </View>
+        ) : (
+          <View className={`self-center h-48 w-48 items-center justify-center rounded-2xl border ${baseBorderClass}`}>
+            <MaterialCommunityIcons name='image-off' size={40} color={getColor(mutedColors)} />
+          </View>
+        )}
 
-          <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
-          <TextField
-            value={notes}
-            onChangeText={setNotes}
-            onEndEditing={saveNotes}
-            onBlur={saveNotes}
-            multiline
-            maxLength={2000}
-            minHeightClass='min-h-[96px]'
-            placeholder='Your impressions — occasions, seasons, projection…'
-          />
-          <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
-            Saved automatically
-          </Text>
-        </>
-      )}
-    </ScrollView>
+        <Card.Title centered>{title}</Card.Title>
+        <Card.Subtitle centered>{brand}</Card.Subtitle>
+        <Card.WearInfoText
+          timesWorn={timesWorn}
+          lastWorn={lastWorn}
+          centered
+          avgRating={community?.avg}
+          ratingCount={community?.count}
+        />
+
+        {collectionItem && (
+          <>
+            <View className='flex-row justify-center pt-5' style={{ gap: 6 }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => saveRating(star)} hitSlop={6}>
+                  <MaterialCommunityIcons
+                    name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
+                    size={30}
+                    color={
+                      (currentRating ?? 0) >= star
+                        ? getColor("amber-400")
+                        : getColor(mutedColors)
+                    }
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
+            <TextField
+              value={notes}
+              onChangeText={setNotes}
+              onEndEditing={saveNotes}
+              onBlur={saveNotes}
+              multiline
+              maxLength={2000}
+              minHeightClass='min-h-[96px]'
+              placeholder='Your impressions — occasions, seasons, projection…'
+            />
+            <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
+              Saved automatically
+            </Text>
+          </>
+        )}
+      </ScrollView>
+
+      <ShareSheetModal
+        visible={shareVisible}
+        title={t("share.sheetTitleFragrance")}
+        message={shareMessage}
+        toggles={shareToggles}
+        onClose={() => setShareVisible(false)}
+      />
+    </View>
   )
 }
 
