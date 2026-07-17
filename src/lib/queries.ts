@@ -70,7 +70,6 @@ export const useWearHistory = (userId: string | undefined) =>
     queryKey: ["wear-history", userId],
     enabled: !!userId,
     queryFn: async (): Promise<WearEvent[]> => {
-      console.log('topWorn');
       const { data, error } = await supabase
         .from("wear_events")
         .select("*")

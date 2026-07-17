@@ -8,24 +8,45 @@ import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
 import { useIsModerator, useRemindersEnabled, useWearHistory } from "@/lib/queries"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
-import useTheme from "@/contexts/theme-context"
+import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
+import { reportError } from "@/lib/sentry"
 import Badge from "@/components/shared/ui/badge"
+import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
 import StatTile from "@/components/shared/ui/stat-tile"
 import Button from "@/components/shared/ui/button"
+import WearHeatmap from "@/components/wear-heatmap"
+
+const APPEARANCE_OPTIONS: { key: ThemePreference; label: string }[] = [
+  { key: "system", label: "Match system" },
+  { key: "light", label: "Light" },
+  { key: "dark", label: "Dark" },
+]
 
 const ProfileScreen = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { modalColors, baseTextClass, mutedTextClass, theme, danger } = useTheme()
+  const {
+    modalColors,
+    baseTextClass,
+    mutedTextClass,
+    accentTextClass,
+    accentColors,
+    mutedColors,
+    theme,
+    themePreference,
+    setThemePreference,
+    danger,
+  } = useTheme()
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const [deleting, setDeleting] = useState(false)
+  const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
 
   const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? "Anonymous"
   const totalWears = userCollection.reduce((sum, el) => sum + el.times_worn, 0)
@@ -104,7 +125,7 @@ const ProfileScreen = () => {
               // Auth state flips to signed-out and the Protected stack swaps
               // to the sign-in screen — nothing left to dismiss here.
             } catch (error) {
-              console.log(error)
+              reportError(error, { flow: "delete-account" })
               Alert.alert(
                 "Deletion failed",
                 "Something went wrong, please try again later."
@@ -140,6 +161,16 @@ const ProfileScreen = () => {
         <Text className={`${mutedTextClass} text-sm pt-1`}>Member since {memberSince}</Text>
       )}
 
+      {purchasesEnabled && (!isPro || __DEV__) && (
+        <Row
+          icon='star-four-points'
+          tone='accent'
+          className='mt-6 w-full'
+          label={isPro ? "View paywall (dev)" : "Upgrade to Pro"}
+          onPress={handleUpgrade}
+        />
+      )}
+
       <StatTile
         className='mt-8'
         items={[
@@ -166,17 +197,9 @@ const ProfileScreen = () => {
         </Text>
       )}
 
-      {purchasesEnabled && (!isPro || __DEV__) && (
-        <Row
-          icon='star-four-points'
-          tone='accent'
-          className='mt-6'
-          label={isPro ? "View paywall (dev)" : "Upgrade to Pro"}
-          onPress={handleUpgrade}
-        />
-      )}
+      <WearHeatmap events={events ?? []} className='mt-6' />
 
-      <Row icon='history' className='mt-4' label='Wear history' onPress={() => router.push("/wear-history")} />
+      <Row icon='history' className='mt-6' label='Wear history' onPress={() => router.push("/wear-history")} />
 
       {isModerator && (
         <Row
@@ -186,6 +209,44 @@ const ProfileScreen = () => {
           onPress={() => router.push("/moderation")}
         />
       )}
+
+      {/* Theme moved here from the header — appearance is a settings concern */}
+      <Row
+        icon='theme-light-dark'
+        className='mt-4'
+        label='Appearance'
+        onPress={() => setAppearancePickerOpen(true)}
+        trailing={
+          <View className='flex-row items-center' style={{ gap: 4 }}>
+            <Text className={`${mutedTextClass} text-base`}>
+              {APPEARANCE_OPTIONS.find((o) => o.key === themePreference)?.label}
+            </Text>
+            <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
+          </View>
+        }
+      />
+
+      <Dialog
+        visible={appearancePickerOpen}
+        title='Appearance'
+        onClose={() => setAppearancePickerOpen(false)}>
+        {APPEARANCE_OPTIONS.map(({ key, label }) => (
+          <TouchableOpacity
+            key={key}
+            className='flex-row items-center justify-between py-3'
+            onPress={() => {
+              setThemePreference(key)
+              setAppearancePickerOpen(false)
+            }}>
+            <Text className={key === themePreference ? `${accentTextClass} font-semibold` : baseTextClass}>
+              {label}
+            </Text>
+            {key === themePreference && (
+              <MaterialCommunityIcons name='check' size={18} color={getColor(accentColors)} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </Dialog>
 
       <Row
         icon='bell-outline'
