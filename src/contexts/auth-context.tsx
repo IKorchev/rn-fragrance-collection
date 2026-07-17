@@ -32,6 +32,13 @@ import {
   resetPurchaser,
   isProFromCustomerInfo,
 } from "@/lib/purchases"
+import { FREE_COLLECTION_LIMIT, isFreeTierLimitError, promptProUpsell } from "@/lib/entitlements"
+import {
+  EMPTY_PICKER_FILTERS,
+  applyPickerFilters,
+  pickerFiltersActive,
+  type PickerFilters,
+} from "@/lib/utils/picker-filters"
 import useToast from "@/contexts/toast-context"
 import type { Tables } from "@/lib/database.types"
 
@@ -66,7 +73,7 @@ interface AuthContextValue {
   cancelDelete: (id: string) => void
   updateFragrance: (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags">>
   ) => Promise<void>
   // Community rating for a catalog-linked fragrance (fragrance_ratings table,
   // separate from the manual-add-only rating column on updateFragrance above).
@@ -104,6 +111,15 @@ interface AuthContextValue {
   setFrag: React.Dispatch<React.SetStateAction<UserFragrance | undefined>>
   getNewFrag: (targetIndex?: number) => void
   index: number | undefined
+  // Picker filtering (Pro — see src/lib/entitlements.ts). pickerPool is
+  // userCollection narrowed by the active filters (or unfiltered when not
+  // Pro) — same base collection getNewFrag always drew from, just optionally
+  // narrowed; getNewFrag/index/frag above operate over this pool, so
+  // weighting always runs over the filtered set.
+  pickerPool: UserFragrance[]
+  pickerFilters: PickerFilters
+  setPickerFilters: (filters: PickerFilters) => void
+  pickerHasActiveFilters: boolean
 }
 
 const AuthContext = createContext<AuthContextValue>({} as AuthContextValue)
@@ -126,9 +142,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
   const deleteTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
-  // The currently "picked" fragrance + its index in userCollection
+  // The currently "picked" fragrance + its index in pickerPool
   const [frag, setFrag] = useState<UserFragrance | undefined>()
   const [index, setIndex] = useState<number | undefined>()
+  const [pickerFiltersState, setPickerFiltersState] = useState<PickerFilters>(EMPTY_PICKER_FILTERS)
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
@@ -197,6 +214,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const userCollection = collectionData ?? []
   const sortedCollection = [...userCollection].sort((el1, el2) => el1.times_worn - el2.times_worn)
 
+  // Free users' filters are ignored even if some were set before a downgrade
+  // — the picker always sees the whole collection when not Pro.
+  const activePickerFilters = isPro ? pickerFiltersState : EMPTY_PICKER_FILTERS
+  const pickerPool = applyPickerFilters(userCollection, activePickerFilters)
+
   const invalidateCollection = () =>
     queryClient.invalidateQueries({ queryKey: ["collection", user?.id] })
 
@@ -238,23 +260,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     })
   }, [user?.id])
 
+  // Operates over pickerPool (userCollection narrowed by the active picker
+  // filters), not the raw collection — filtering only shrinks the candidate
+  // set, so pickWeightedIndex's weighting math is unchanged.
   const getNewFrag = (targetIndex?: number) => {
-    const max = userCollection.length - 1
+    const max = pickerPool.length - 1
     let nextIndex = targetIndex
 
     if (typeof nextIndex !== "number" || nextIndex < 0 || nextIndex > max) {
-      nextIndex = pickWeightedIndex(userCollection)
+      nextIndex = pickWeightedIndex(pickerPool)
     }
 
-    setFrag(userCollection[nextIndex])
-    setIndex(nextIndex)
+    setFrag(nextIndex >= 0 ? pickerPool[nextIndex] : undefined)
+    setIndex(nextIndex >= 0 ? nextIndex : undefined)
   }
 
   useEffect(() => {
-    if (userCollection.length >= 1) {
+    if (pickerPool.length >= 1) {
       getNewFrag()
+    } else {
+      setFrag(undefined)
+      setIndex(undefined)
     }
-  }, [userCollection.length])
+  }, [pickerPool.length])
+
+  // Updates the filters and immediately re-picks from the new pool — waiting
+  // for the mount effect above to notice would race pickerPool.length staying
+  // the same across a filter change (e.g. swapping one tag for another).
+  const setPickerFilters = (filters: PickerFilters) => {
+    setPickerFiltersState(filters)
+    const nextPool = applyPickerFilters(userCollection, isPro ? filters : EMPTY_PICKER_FILTERS)
+    const nextIndex = nextPool.length ? pickWeightedIndex(nextPool) : -1
+    setFrag(nextIndex >= 0 ? nextPool[nextIndex] : undefined)
+    setIndex(nextIndex >= 0 ? nextIndex : undefined)
+  }
 
   useEffect(() => {
     if (response?.type === "success") {
@@ -292,6 +331,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await invalidateCollection()
       Alert.alert("Item added successfully", `${object.name}`)
     } catch (error) {
+      if (isFreeTierLimitError(error)) {
+        promptProUpsell(
+          "Collection limit reached",
+          `Free accounts can track up to ${FREE_COLLECTION_LIMIT} fragrances. Upgrade to Pro for unlimited tracking.`
+        )
+        return
+      }
       Alert.alert("Item was not added", "Something went wrong, please try again later.")
       console.log(error)
     }
@@ -312,6 +358,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await invalidateCollection()
       Alert.alert("Item added successfully", name)
     } catch (error) {
+      if (isFreeTierLimitError(error)) {
+        promptProUpsell(
+          "Collection limit reached",
+          `Free accounts can track up to ${FREE_COLLECTION_LIMIT} fragrances. Upgrade to Pro for unlimited tracking.`
+        )
+        return
+      }
       Alert.alert("Item was not added", "Something went wrong, please try again later.")
       console.log(error)
     }
@@ -583,6 +636,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setFrag,
         getNewFrag,
         index,
+        pickerPool,
+        pickerFilters: activePickerFilters,
+        setPickerFilters,
+        pickerHasActiveFilters: pickerFiltersActive(pickerFiltersState),
       }}>
       {children}
     </AuthContext.Provider>

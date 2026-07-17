@@ -9,6 +9,7 @@ import useAuth from "@/contexts/auth-context"
 import { useFragranceRatings, useMyRating } from "@/lib/queries"
 import Card from "@/components/card"
 import TextField from "@/components/shared/ui/text-field"
+import TagInput from "@/components/tag-input"
 
 // Param-driven for display data: the catalog only holds name/brand/image (all
 // other scraped metadata was dropped as untrustworthy), so there's nothing to
@@ -126,6 +127,12 @@ const FragranceDetailScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
+
+          <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Tags</Text>
+          <TagInput
+            tags={collectionItem.tags}
+            onChange={(tags) => updateFragrance({ id: collectionItem.id }, { tags })}
+          />
 
           <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
           <TextField

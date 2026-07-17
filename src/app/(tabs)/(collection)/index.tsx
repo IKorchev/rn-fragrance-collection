@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react"
 import {
   View,
   FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   RefreshControl,
@@ -14,6 +15,7 @@ import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
+import { tagFacets } from "@/lib/utils/collection-facets"
 import CollectionListItem from "@/components/collection-list-item"
 import EmptyState from "@/components/shared/ui/empty-state"
 import FilterChip from "@/components/shared/ui/filter-chip"
@@ -37,16 +39,21 @@ const CollectionScreen = () => {
   const { refreshing, onRefresh } = usePullToRefresh(refetchCollection)
   const [filter, setFilter] = useState("")
   const [sort, setSort] = useState<SortKey>("least-worn")
+  const [tagFilter, setTagFilter] = useState<string[]>([])
 
   const hasCollection = visibleSortedCollection.length > 0
+  const tagOptions = useMemo(() => tagFacets(visibleSortedCollection), [visibleSortedCollection])
 
   // visibleSortedCollection arrives least-worn-first (the picker's order);
   // the other sorts are purely client-side re-orderings of it
   const shownCollection = useMemo(() => {
     const needle = filter.trim().toLowerCase()
-    const filtered = needle
+    let filtered = needle
       ? visibleSortedCollection.filter((el) => el.name.toLowerCase().includes(needle))
       : visibleSortedCollection
+    if (tagFilter.length) {
+      filtered = filtered.filter((el) => tagFilter.some((tag) => el.tags.includes(tag)))
+    }
     switch (sort) {
       case "most-worn":
         return [...filtered].reverse()
@@ -59,7 +66,7 @@ const CollectionScreen = () => {
       default:
         return filtered
     }
-  }, [visibleSortedCollection, filter, sort])
+  }, [visibleSortedCollection, filter, sort, tagFilter])
 
   const goToSearch = () => router.navigate("/(tabs)/(discover)/(top-tabs)/search")
 
@@ -118,6 +125,27 @@ const CollectionScreen = () => {
               <FilterChip key={key} label={label} selected={key === sort} onPress={() => setSort(key)} />
             ))}
           </View>
+          {tagOptions.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName='pt-2 gap-2'>
+              {tagOptions.map((facet) => (
+                <FilterChip
+                  key={facet.value}
+                  label={facet.value}
+                  selected={tagFilter.includes(facet.value)}
+                  onPress={() =>
+                    setTagFilter((prev) =>
+                      prev.includes(facet.value)
+                        ? prev.filter((t) => t !== facet.value)
+                        : [...prev, facet.value]
+                    )
+                  }
+                />
+              ))}
+            </ScrollView>
+          )}
         </View>
       )}
       <FlatList
