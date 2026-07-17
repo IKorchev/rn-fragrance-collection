@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { LogBox, TouchableWithoutFeedback, Keyboard } from "react-native"
 LogBox.ignoreAllLogs()
 import * as Sentry from "@sentry/react-native"
+import { useFonts, Fraunces_600SemiBold } from "@expo-google-fonts/fraunces"
 import { initializeAds } from "@/lib/ads"
 import { Stack } from "expo-router"
 import { getHeaderTitle } from "expo-router/react-navigation"
@@ -42,6 +43,9 @@ export default sentryDsn ? Sentry.wrap(RootLayout) : RootLayout
 
 function RootNavigator() {
   const { user, authLoading } = useAuth()
+  // Display font for screen titles (tailwind's font-display) — piggybacks on
+  // the existing authLoading render gate, so no separate splash handling
+  const [fontsLoaded] = useFonts({ Fraunces_600SemiBold })
   // Runs regardless of auth state — an OTA fix shouldn't wait on sign-in
   useAppUpdates()
   // Gathers UMP consent (form shown only where required), then starts the
@@ -51,7 +55,7 @@ function RootNavigator() {
   useEffect(() => {
     initializeAds()
   }, [])
-  if (authLoading) return null
+  if (authLoading || !fontsLoaded) return null
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>

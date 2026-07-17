@@ -5,6 +5,9 @@ import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import { useWearHistory, type WearEvent } from "@/lib/queries"
 import Card from "@/components/card"
+import EmptyState from "@/components/shared/ui/empty-state"
+import { EmptyCollectionIllustration } from "@/components/empty-illustrations"
+import SkeletonList from "@/components/shared/ui/skeleton-list"
 
 interface DaySection {
   title: string
@@ -47,15 +50,31 @@ const WearHistoryScreen = () => {
   const router = useRouter()
   const { modalColors, mutedTextClass } = useTheme()
   const { user } = useAuth()
-  const { data: events, isPending, error } = useWearHistory(user?.id)
+  const { data: events, isPending, error, refetch } = useWearHistory(user?.id)
 
   const sections = useMemo(() => groupByDay(events ?? []), [events])
 
-  const emptyMessage = error
-    ? "Couldn't load your wear history, please try again later."
-    : isPending
-      ? "Loading…"
-      : "No wears logged yet — tap the spray button on a fragrance to start your diary."
+  if (isPending) {
+    return (
+      <View className={`flex-1 ${modalColors.background}`}>
+        <SkeletonList />
+      </View>
+    )
+  }
+
+  if (error) {
+    return (
+      <View className={`flex-1 ${modalColors.background}`}>
+        <EmptyState
+          icon='cloud-alert'
+          title="Couldn't load your wear history"
+          message='Check your connection and try again.'
+          actionLabel='Try again'
+          onAction={() => refetch()}
+        />
+      </View>
+    )
+  }
 
   return (
     <View className={`flex-1 ${modalColors.background}`}>
@@ -66,9 +85,12 @@ const WearHistoryScreen = () => {
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}
         ListEmptyComponent={
-          <Text className={`${mutedTextClass} text-base text-center px-8 pt-10`}>
-            {emptyMessage}
-          </Text>
+          <EmptyState
+            icon='bottle-tonic-outline'
+            illustration={<EmptyCollectionIllustration />}
+            title='No wears logged yet'
+            message='Tap the spray button on a fragrance to start your diary.'
+          />
         }
         renderSectionHeader={({ section }) => (
           <Text className={`${mutedTextClass} text-sm font-semibold px-4 pt-5 pb-1`}>

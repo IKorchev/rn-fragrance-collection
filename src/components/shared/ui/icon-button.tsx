@@ -1,5 +1,6 @@
 import React, { type ReactNode } from "react"
-import { TouchableOpacity, type StyleProp, type ViewStyle } from "react-native"
+import { type StyleProp, type ViewStyle } from "react-native"
+import PressableScale from "./pressable-scale"
 
 interface IconButtonProps {
   // Caller-supplied complete literal (e.g. a theme.buttons.*Bg field, or
@@ -30,13 +31,13 @@ const IconButton = ({
   const sizeClass = size === "xl" ? "h-14 w-14" : size === "lg" ? "h-12 w-12" : "h-11 w-11"
 
   return (
-    <TouchableOpacity
+    <PressableScale
       className={`${bgClassName} ${sizeClass} justify-center rounded-full items-center ${dimmed ? "opacity-40" : ""} ${className ?? ""}`}
       style={style}
       testID={testID}
       onPress={onPress}>
       {children}
-    </TouchableOpacity>
+    </PressableScale>
   )
 }
 

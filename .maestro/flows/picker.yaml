@@ -21,7 +21,8 @@ tags:
     visible:
       id: "picker-wear-button"
     timeout: 15000
-- assertVisible: "Times worn: .*"
+# The landed card's meta line: "Worn 4× · yesterday" or "Not worn yet"
+- assertVisible: ".*[Ww]orn.*"
 
 # X is the only way out of the fullScreenModal — closing it triggers the
 # post-picker interstitial, which must be dismissed to reach the tab again

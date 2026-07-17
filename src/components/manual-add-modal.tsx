@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { Text, TouchableOpacity, View } from "react-native"
+import { Text, View } from "react-native"
 import { useDebouncedValue } from "@/lib/utils/use-debounced-value"
 import { useFragranceSearch, MIN_SEARCH_LENGTH } from "@/lib/queries"
 import useTheme from "@/contexts/theme-context"
@@ -22,7 +22,7 @@ interface ManualAddModalProps {
 // add_manual_fragrance RPC also queues a catalog suggestion in the same
 // transaction (pending moderator review, best-effort — it can't fail the add).
 const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps) => {
-  const { theme, baseTextClass, mutedTextClass, accentTextClass } = useTheme()
+  const { theme, baseTextClass, mutedTextClass } = useTheme()
   const { addFragranceToCollection, addManualFragrance } = useAuth()
   const [brand, setBrand] = useState("")
   const [title, setTitle] = useState("")
@@ -95,10 +95,8 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
             Did you mean one of these?
           </Text>
           {matches.map((match) => (
-            <TouchableOpacity
+            <View
               key={match.id}
-              disabled={saving}
-              onPress={() => handleAddMatch(match)}
               className={`flex-row items-center rounded-2xl px-3 py-2 mt-2 ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}>
               <Card.Thumbnail imageUrl={match.image_url} compact />
               <View className='flex-1'>
@@ -109,8 +107,13 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
                   {match.brand}
                 </Text>
               </View>
-              <Text className={`${accentTextClass} text-sm font-semibold pl-2`}>Add</Text>
-            </TouchableOpacity>
+              <Card.ActionPill
+                label='Add'
+                disabled={saving}
+                onPress={() => handleAddMatch(match)}
+                className='ml-2'
+              />
+            </View>
           ))}
         </View>
       )}

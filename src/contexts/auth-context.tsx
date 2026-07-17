@@ -272,11 +272,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const addFragranceToCollection = async (object: FragranceInput) => {
     if (object.name.length < 3) {
-      Alert.alert("Ooops", "The name must be 3 or more characters!")
+      showToast({ message: "The name must be 3 or more characters" })
       return
     }
     if (userCollection.find((el) => el.name === object.name)) {
-      Alert.alert("Ooops", `You already have ${object.name} in your collection`)
+      showToast({ message: `You already have ${object.name} in your collection` })
       return
     }
 
@@ -290,9 +290,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
       await invalidateCollection()
-      Alert.alert("Item added successfully", `${object.name}`)
+      showToast({ message: `${object.name} added to your collection` })
     } catch (error) {
-      Alert.alert("Item was not added", "Something went wrong, please try again later.")
+      showToast({ message: "Couldn't add that fragrance, please try again later" })
       console.log(error)
     }
   }
@@ -300,7 +300,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const addManualFragrance = async (input: { brand: string; title: string }) => {
     const name = `${input.brand} - ${input.title}`
     if (userCollection.find((el) => el.name === name)) {
-      Alert.alert("Ooops", `You already have ${name} in your collection`)
+      showToast({ message: `You already have ${name} in your collection` })
       return
     }
     try {
@@ -310,9 +310,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
       await invalidateCollection()
-      Alert.alert("Item added successfully", name)
+      showToast({ message: `${name} added to your collection` })
     } catch (error) {
-      Alert.alert("Item was not added", "Something went wrong, please try again later.")
+      showToast({ message: "Couldn't add that fragrance, please try again later" })
       console.log(error)
     }
   }
