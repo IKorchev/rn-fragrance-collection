@@ -2,7 +2,7 @@
   "expo": {
     "name": "Fragrance Collection",
     "slug": "fragrance-collection",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -69,7 +69,8 @@
           "iosAppId": "ca-app-pub-8044143116923244~7901054201"
         }
       ],
-      "@sentry/react-native/expo"
+      "@sentry/react-native/expo",
+      "expo-sharing"
     ],
     "extra": {
       "router": {},

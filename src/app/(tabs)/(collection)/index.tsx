@@ -9,6 +9,7 @@ import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import CollectionListItem from "@/components/collection-list-item"
+import OnboardingChecklist from "@/components/onboarding-checklist"
 import Dialog from "@/components/shared/ui/dialog"
 import EmptyState from "@/components/shared/ui/empty-state"
 import { EmptyCollectionIllustration, NoResultsIllustration } from "@/components/empty-illustrations"
@@ -139,6 +140,7 @@ const CollectionScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom }}
         keyboardShouldPersistTaps='handled'
+        ListHeaderComponent={<OnboardingChecklist />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

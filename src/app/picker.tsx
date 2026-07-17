@@ -7,13 +7,20 @@ import { getColor } from "@/lib/utils/colors"
 import { showInterstitial } from "@/lib/ads"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
+import { markPickerTried } from "@/lib/utils/use-onboarding"
 import Picker from "@/components/picker"
 
 const PickerScreen = () => {
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const { frag, index, isPro } = useAuth()
+  const { user, frag, index, isPro } = useAuth()
   const { viewColors, mutedColors } = useTheme()
+
+  // Marks the "Try the picker" onboarding step done regardless of whether the
+  // user actually pulls the lever — opening the modal is the tried part.
+  useEffect(() => {
+    markPickerTried(user?.id)
+  }, [user?.id])
 
   // Interstitial on close (X button or Android hardware back — unmount
   // catches both). Pro removes ads. Ref so upgrading mid-picker is honored.

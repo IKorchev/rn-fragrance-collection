@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Image } from "expo-image"
-import { ScrollView, View, Text, useWindowDimensions, StyleSheet } from "react-native"
+import { ScrollView, View, Text, TouchableOpacity, useWindowDimensions, StyleSheet } from "react-native"
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg"
-import { useLocalSearchParams } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
@@ -46,6 +46,7 @@ const HeroGlow = () => {
 // row from the collection query — that unlocks the editable personal
 // rating/notes below and keeps wear stats fresh after a wear.
 const FragranceDetailScreen = () => {
+  const router = useRouter()
   const params = useLocalSearchParams<{
     id?: string
     name: string
@@ -201,6 +202,29 @@ const FragranceDetailScreen = () => {
             Saved automatically
           </Text>
         </>
+      )}
+
+      {/* Only catalog-linked rows have a fragranceId to report against — a
+          manual add has nothing in the shared catalog to flag */}
+      {fragranceId && (
+        <TouchableOpacity
+          className='flex-row items-center justify-center pt-8'
+          hitSlop={8}
+          accessibilityRole='button'
+          accessibilityLabel='Report an issue with this listing'
+          onPress={() =>
+            router.push({
+              pathname: "/report-fragrance",
+              params: {
+                fragranceId,
+                name,
+                ...(imageUrl ? { imageUrl } : {}),
+              },
+            })
+          }>
+          <MaterialCommunityIcons name='flag-outline' size={15} color={getColor(mutedColors)} />
+          <Text className={`${mutedTextClass} text-xs pl-1.5`}>Report an issue with this listing</Text>
+        </TouchableOpacity>
       )}
     </ScrollView>
   )

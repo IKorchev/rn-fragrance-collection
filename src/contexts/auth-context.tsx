@@ -34,6 +34,7 @@ import {
   isProFromCustomerInfo,
 } from "@/lib/purchases"
 import useToast from "@/contexts/toast-context"
+import type { ReportReason } from "@/lib/queries"
 import { reportError } from "@/lib/sentry"
 import type { Tables } from "@/lib/database.types"
 
@@ -93,6 +94,25 @@ interface AuthContextValue {
     id: string
     action: "approve" | "merge" | "reject"
     mergeTarget?: string
+    note?: string
+  }) => Promise<void>
+  // Catalog feedback (wrong image / duplicate / incorrect name-brand /
+  // other) on an EXISTING catalog row — src/app/report-fragrance.tsx.
+  // Separate from addManualFragrance/submit_fragrance_suggestion, which
+  // propose NEW rows. Idempotent server-side (re-reporting the same reason
+  // just returns the existing pending report). Throws on failure — the
+  // caller owns the error UI (same convention as deleteAccount above).
+  reportFragrance: (input: {
+    fragranceId: string
+    reason: ReportReason
+    details?: string
+  }) => Promise<void>
+  // Moderator decision on a pending catalog-issue report
+  // (src/app/moderation.tsx's Reports tab). review_fragrance_report itself
+  // re-checks moderators-table membership — this is just the client wrapper.
+  reviewFragranceReport: (input: {
+    id: string
+    action: "resolve" | "dismiss"
     note?: string
   }) => Promise<void>
   // Pro-tier entitlement — sourced from RevenueCat's local CustomerInfo cache
@@ -372,6 +392,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const reportFragrance = async (input: {
+    fragranceId: string
+    reason: ReportReason
+    details?: string
+  }) => {
+    const { error } = await supabase.rpc("submit_fragrance_report", {
+      p_fragrance_id: input.fragranceId,
+      p_reason: input.reason,
+      p_details: input.details,
+    })
+    if (error) throw error
+  }
+
+  const reviewFragranceReport = async (input: {
+    id: string
+    action: "resolve" | "dismiss"
+    note?: string
+  }) => {
+    try {
+      const { error } = await supabase.rpc("review_fragrance_report", {
+        p_report_id: input.id,
+        p_action: input.action,
+        p_note: input.note,
+      })
+      if (error) throw error
+      queryClient.invalidateQueries({ queryKey: ["pending-reports"] })
+    } catch (error) {
+      Alert.alert("Review failed", "Something went wrong, please try again later.")
+      reportError(error, { flow: "review-fragrance-report" })
+    }
+  }
+
   const performDelete = async (object: { id: string }) => {
     try {
       const { error } = await supabase.from("user_fragrances").delete().eq("id", object.id)
@@ -611,6 +663,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         addFragranceToCollection,
         addManualFragrance,
         reviewSubmission,
+        reportFragrance,
+        reviewFragranceReport,
         isPro,
         userCollection,
         sortedCollection,

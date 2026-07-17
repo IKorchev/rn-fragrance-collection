@@ -7,6 +7,7 @@ import { Avatar } from "@rneui/themed"
 import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
 import { useIsModerator, useRemindersEnabled, useWearHistory } from "@/lib/queries"
+import { useOnboarding } from "@/lib/utils/use-onboarding"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
 import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
@@ -45,6 +46,7 @@ const ProfileScreen = () => {
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
+  const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
   const [deleting, setDeleting] = useState(false)
   const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
 
@@ -197,9 +199,29 @@ const ProfileScreen = () => {
         </Text>
       )}
 
+      {!onboardingDone && (
+        <Row
+          icon='rocket-launch-outline'
+          tone='accent'
+          className='mt-6'
+          label='Getting started guide'
+          onPress={() => {
+            resumeOnboarding()
+            router.navigate("/(tabs)/(collection)")
+          }}
+        />
+      )}
+
       <WearHeatmap events={events ?? []} className='mt-6' />
 
       <Row icon='history' className='mt-6' label='Wear history' onPress={() => router.push("/wear-history")} />
+
+      <Row
+        icon='export-variant'
+        className='mt-4'
+        label='Export your data'
+        onPress={() => router.push("/export-data")}
+      />
 
       {isModerator && (
         <Row
