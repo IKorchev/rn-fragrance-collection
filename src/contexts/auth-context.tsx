@@ -151,8 +151,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAuthError(null)
     supabase.auth
       .getSession()
-      .then(({ data: { session } }) => {
-        setUser(toAppUser(session?.user))
+      .then(({ data, error }) => {
+        // getSession() resolves (rather than rejects) with `error` set for
+        // things like a stale/invalid refresh token — thrown here so the
+        // shared .catch() below treats it the same as an outright rejection
+        // instead of silently falling through to a "signed-out" user: null.
+        if (error) throw error
+        setUser(toAppUser(data.session?.user))
         setAuthLoading(false)
       })
       .catch((error) => {

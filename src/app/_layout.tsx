@@ -57,9 +57,18 @@ function RootNavigator() {
   // system font instead of hanging on a blank screen.
   const [fontsLoaded, fontError] = useFonts({ Fraunces_600SemiBold })
   const fontsReady = fontsLoaded || !!fontError
-  const ready = !authLoading && fontsReady
+  // authError must gate readiness, not just authLoading — otherwise a
+  // resolved-with-error session load (authLoading false, authError set)
+  // reads as "ready" and falls straight through to the signed-out stack
+  // instead of the recovery screen.
+  const ready = !authLoading && fontsReady && !authError
   const [stalled, setStalled] = useState(false)
-  const [retrying, setRetrying] = useState(false)
+  // True only while a manual retry is in flight. Reset below whenever
+  // authLoading resolves (success or failure) or the retry itself stalls, so
+  // a failed/stuck retry always lands back on an actionable Retry button
+  // instead of a permanent spinner.
+  const [manualRetry, setManualRetry] = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
 
   // Runs regardless of auth state — an OTA fix shouldn't wait on sign-in
   useAppUpdates()
@@ -77,8 +86,9 @@ function RootNavigator() {
 
   // Genuine stall (e.g. the initial session check hanging on a bad network) —
   // give up waiting on the native splash and offer a manual retry instead of
-  // sitting blank/frozen indefinitely. Resets once ready so a later stall
-  // (there shouldn't be one — auth only loads once) would still be caught.
+  // sitting blank/frozen indefinitely. Keyed on retryToken too so each manual
+  // retry gets its own fresh stall window instead of reusing (or never
+  // re-arming) the original timer.
   useEffect(() => {
     if (ready) {
       setStalled(false)
@@ -86,13 +96,24 @@ function RootNavigator() {
     }
     const timer = setTimeout(() => setStalled(true), STARTUP_STALL_MS)
     return () => clearTimeout(timer)
-  }, [ready])
+  }, [ready, retryToken])
 
+  // A retry attempt "completes" (success or failure) once authLoading drops —
+  // always resolve the spinner back to a normal state at that point.
   useEffect(() => {
-    if (ready) setRetrying(false)
-  }, [ready])
+    if (!authLoading) setManualRetry(false)
+  }, [authLoading])
 
-  const needsRecovery = !!authError || stalled
+  // ...and if the retry itself stalls past the window, bail out of the
+  // spinner back to an actionable Retry button rather than spinning forever.
+  useEffect(() => {
+    if (stalled) setManualRetry(false)
+  }, [stalled])
+
+  // manualRetry keeps the recovery screen mounted (showing the spinner) for
+  // the duration of a retry attempt, even though authError was cleared
+  // synchronously when the retry kicked off.
+  const needsRecovery = !!authError || stalled || manualRetry
 
   useEffect(() => {
     if (ready || needsRecovery) SplashScreen.hideAsync().catch(() => {})
@@ -102,9 +123,11 @@ function RootNavigator() {
     if (needsRecovery) {
       return (
         <StartupRecovery
-          retrying={retrying}
+          retrying={manualRetry}
           onRetry={() => {
-            setRetrying(true)
+            setManualRetry(true)
+            setStalled(false)
+            setRetryToken((token) => token + 1)
             retryAuthInit()
           }}
         />
