@@ -1,4 +1,5 @@
 import React, {
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -33,6 +34,7 @@ import {
   isProFromCustomerInfo,
 } from "@/lib/purchases"
 import useToast from "@/contexts/toast-context"
+import { reportError } from "@/lib/sentry"
 import type { Tables } from "@/lib/database.types"
 
 WebBrowser.maybeCompleteAuthSession()
@@ -54,6 +56,11 @@ export interface FragranceInput {
 interface AuthContextValue {
   user: AppUser | null
   authLoading: boolean
+  // Set when the initial supabase.auth.getSession() check itself fails (e.g.
+  // corrupt AsyncStorage, not just "no session") — lets the root layout show
+  // a recovery screen instead of hanging or silently falling to sign-in.
+  authError: Error | null
+  retryAuthInit: () => void
   signInWithGoogle: () => void
   signInWithApple: () => Promise<void>
   logOut: () => void
@@ -122,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { showToast } = useToast()
   const [user, setUser] = useState<AppUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [authError, setAuthError] = useState<Error | null>(null)
   const [isPro, setIsPro] = useState(false)
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
   const deleteTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
@@ -136,19 +144,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   })
 
+  // Pulled out of the effect (and memoized) so the root layout can offer a
+  // manual retry if this genuinely fails or stalls (see StartupRecovery).
+  const loadSession = useCallback(() => {
+    setAuthLoading(true)
+    setAuthError(null)
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setUser(toAppUser(session?.user))
+        setAuthLoading(false)
+      })
+      .catch((error) => {
+        // Previously unhandled — a rejection here (e.g. corrupt AsyncStorage)
+        // left authLoading stuck true forever, hanging the app on a blank
+        // screen with no way to recover short of a reinstall.
+        reportError(error)
+        setAuthError(error instanceof Error ? error : new Error("Failed to restore session"))
+        setAuthLoading(false)
+      })
+  }, [])
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(toAppUser(session?.user))
-      setAuthLoading(false)
-    })
+    loadSession()
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(toAppUser(session?.user))
       setAuthLoading(false)
+      setAuthError(null)
     })
     return () => subscription.unsubscribe()
-  }, [])
+  }, [loadSession])
 
   // Configure once as early as possible (RevenueCat's own recommendation);
   // no-ops if EXPO_PUBLIC_REVENUECAT_*_API_KEY isn't set.
@@ -172,9 +199,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // can attribute purchases to the right row in `subscriptions`.
   useEffect(() => {
     if (!purchasesEnabled || !user?.id) return
-    identifyPurchaser(user.id).then((result) => {
-      if (result) setIsPro(isProFromCustomerInfo(result.customerInfo))
-    })
+    identifyPurchaser(user.id)
+      .then((result) => {
+        if (result) setIsPro(isProFromCustomerInfo(result.customerInfo))
+      })
+      .catch(reportError)
   }, [user?.id])
 
   const {
@@ -234,7 +263,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           },
           { onConflict: "token" }
         )
-      if (error) console.log("Failed to save push token", error)
+      if (error) reportError(error, { rpc: "save-push-token" })
     })
   }, [user?.id])
 
@@ -263,7 +292,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .signInWithIdToken({ provider: "google", token: id_token, access_token })
         .then(({ error }) => {
           if (error) {
-            console.log(error)
+            reportError(error, { flow: "google-sign-in" })
             Alert.alert("Sign in failed", "Something went wrong, please try again.")
           }
         })
@@ -293,7 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       showToast({ message: `${object.name} added to your collection` })
     } catch (error) {
       showToast({ message: "Couldn't add that fragrance, please try again later" })
-      console.log(error)
+      reportError(error, { flow: "add-to-collection" })
     }
   }
 
@@ -313,7 +342,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       showToast({ message: `${name} added to your collection` })
     } catch (error) {
       showToast({ message: "Couldn't add that fragrance, please try again later" })
-      console.log(error)
+      reportError(error, { flow: "add-manual-fragrance" })
     }
   }
 
@@ -334,7 +363,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ["pending-submissions"] })
     } catch (error) {
       Alert.alert("Review failed", "Something went wrong, please try again later.")
-      console.log(error)
+      reportError(error, { flow: "review-submission" })
     }
   }
 
@@ -345,7 +374,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await invalidateCollection()
     } catch (err) {
       Alert.alert("Delete failed", "Something went wrong, please try again later.")
-      console.log(err)
+      reportError(err, { flow: "delete-fragrance" })
     }
   }
 
@@ -379,7 +408,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await invalidateCollection()
     } catch (error) {
       Alert.alert("Update failed", "Something went wrong, please try again later.")
-      console.log(error)
+      // Only the error is reported — never `updates` itself, which can carry
+      // user-entered notes/rating (see CLAUDE.md on personal per-item content).
+      reportError(error, { flow: "update-fragrance" })
     }
   }
 
@@ -408,7 +439,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ["fragrance-ratings"] })
     } catch (error) {
       Alert.alert("Update failed", "Something went wrong, please try again later.")
-      console.log(error)
+      reportError(error, { flow: "rate-fragrance" })
     }
   }
 
@@ -431,7 +462,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (undone) await invalidateWearQueries()
     } catch (error) {
       Alert.alert("Oops", "Couldn't undo that wear.")
-      console.log(error)
+      reportError(error, { flow: "undo-wear" })
     }
   }
 
@@ -465,6 +496,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
     } catch (error) {
       Alert.alert("Oops", `Something went wrong!`)
+      reportError(error, { flow: "increment-wear" })
     }
   }
 
@@ -532,7 +564,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       // User dismissed the native sheet — not an error
       if ((error as { code?: string })?.code === "ERR_REQUEST_CANCELED") return
-      console.log(error)
+      reportError(error, { flow: "apple-sign-in" })
       Alert.alert("Sign in failed", "Something went wrong, please try again.")
     }
   }
@@ -560,6 +592,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         authLoading,
+        authError,
+        retryAuthInit: loadSession,
         signInWithGoogle,
         signInWithApple,
         logOut,

@@ -11,6 +11,7 @@ import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchase
 import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
+import { reportError } from "@/lib/sentry"
 import Badge from "@/components/shared/ui/badge"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
@@ -124,7 +125,7 @@ const ProfileScreen = () => {
               // Auth state flips to signed-out and the Protected stack swaps
               // to the sign-in screen — nothing left to dismiss here.
             } catch (error) {
-              console.log(error)
+              reportError(error, { flow: "delete-account" })
               Alert.alert(
                 "Deletion failed",
                 "Something went wrong, please try again later."
