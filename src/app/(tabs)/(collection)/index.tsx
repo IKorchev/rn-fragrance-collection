@@ -15,6 +15,7 @@ import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import CollectionListItem from "@/components/collection-list-item"
+import OnboardingChecklist from "@/components/onboarding-checklist"
 import EmptyState from "@/components/shared/ui/empty-state"
 import FilterChip from "@/components/shared/ui/filter-chip"
 import IconButton from "@/components/shared/ui/icon-button"
@@ -125,6 +126,7 @@ const CollectionScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom }}
         keyboardShouldPersistTaps='handled'
+        ListHeaderComponent={<OnboardingChecklist />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

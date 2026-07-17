@@ -94,6 +94,26 @@ function RootNavigator() {
               sheetAllowedDetents: [0.65, 1],
             }}
           />
+          <Stack.Screen
+            name="report-fragrance"
+            options={{
+              headerShown: false,
+              presentation: "formSheet",
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+              sheetAllowedDetents: [0.65, 1],
+            }}
+          />
+          <Stack.Screen
+            name="export-data"
+            options={{
+              headerShown: false,
+              presentation: "formSheet",
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+              sheetAllowedDetents: [0.75, 1],
+            }}
+          />
         </Stack.Protected>
         <Stack.Protected guard={!user}>
           <Stack.Screen name="sign-in" options={{ headerShown: false }} />

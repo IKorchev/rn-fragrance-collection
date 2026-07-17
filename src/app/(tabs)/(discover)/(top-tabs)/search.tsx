@@ -22,6 +22,7 @@ import { useDebouncedValue } from "@/lib/utils/use-debounced-value"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import TopListItem from "@/components/top-list-item"
+import OnboardingChecklist from "@/components/onboarding-checklist"
 import FilterPickerModal from "@/components/filter-picker-modal"
 import ManualAddModal from "@/components/manual-add-modal"
 import EmptyState from "@/components/shared/ui/empty-state"
@@ -85,6 +86,11 @@ const SearchScreen = () => {
           onPress={() => setOpenPicker("brand")}
         />
       </View>
+      {/* Search is the default landing sub-tab (see the top-tabs layout's
+          Screen order) — this is the first thing a brand-new user sees, so
+          the checklist lives here rather than only on the Collection tab.
+          Idle-state only: it steps out of the way once there's a query. */}
+      {!queryEnabled && <OnboardingChecklist />}
       {!queryEnabled && !tooShort && (
         <Text className={`${mutedTextClass} text-center mt-6 px-6`}>
           Type a name, or filter by brand.
