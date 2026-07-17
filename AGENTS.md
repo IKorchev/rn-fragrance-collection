@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Project overview
 
@@ -32,9 +32,9 @@ The project is on Expo SDK 57 (`react-native` 0.86, React 19.2). Google Sign-In 
 
 ### Deep-dive skills (load on demand — don't duplicate their content here)
 
-- **maestro-e2e** (`.claude/skills/maestro-e2e/SKILL.md`) — running/writing Maestro E2E flows: emulator + Metro + signed-in-session prerequisites, launch subflow, flow conventions and testIDs.
-- **local-env-setup** (`.claude/skills/local-env-setup/SKILL.md`) — `.env` values, Google/Apple OAuth setup, Apple entitlements/paid-team signing, `db/schema.sql` bootstrap.
-- **eas-ota-updates** (`.claude/skills/eas-ota-updates/SKILL.md`) — publishing OTA JS updates, runtimeVersion/channel mapping, `use-app-updates.ts`.
+- **maestro-e2e** (`.Codex/skills/maestro-e2e/SKILL.md`) — running/writing Maestro E2E flows: emulator + Metro + signed-in-session prerequisites, launch subflow, flow conventions and testIDs.
+- **local-env-setup** (`.Codex/skills/local-env-setup/SKILL.md`) — `.env` values, Google/Apple OAuth setup, Apple entitlements/paid-team signing, `db/schema.sql` bootstrap.
+- **eas-ota-updates** (`.Codex/skills/eas-ota-updates/SKILL.md`) — publishing OTA JS updates, runtimeVersion/channel mapping, `use-app-updates.ts`.
 
 ## Architecture
 

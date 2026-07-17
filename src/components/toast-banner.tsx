@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from "react"
 import { Animated, Text, TouchableOpacity } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { MaterialCommunityIcons } from "@expo/vector-icons"
+import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import type { Toast } from "@/contexts/toast-context"
 
@@ -31,8 +33,14 @@ const ToastBanner = ({ toast, onDismiss }: ToastBannerProps) => {
         style={{ transform: [{ translateY }] }}
         className={`${
           theme === "dark" ? "bg-zinc-100" : "bg-zinc-900"
-        } w-full flex-row items-center justify-between rounded-xl px-4 py-3 shadow-lg`}>
-        <Text className={`${theme === "dark" ? "text-black" : "text-white"} flex-1 text-base`}>
+        } w-full flex-row items-center rounded-2xl px-4 py-3 shadow-lg`}>
+        <MaterialCommunityIcons
+          name='check-circle'
+          size={20}
+          color={getColor(theme === "dark" ? "emerald-600" : "emerald-400")}
+        />
+        <Text
+          className={`${theme === "dark" ? "text-black" : "text-white"} flex-1 text-base pl-2.5 pr-2`}>
           {toast.message}
         </Text>
         {toast.actionLabel && (
