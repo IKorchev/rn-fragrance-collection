@@ -1,15 +1,52 @@
 import React, { useState } from "react"
-import { ActivityIndicator, Alert, ScrollView, Share, Text, View } from "react-native"
+import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native"
+import { Directory, File, Paths } from "expo-file-system"
+import * as Sharing from "expo-sharing"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
+import { reportError } from "@/lib/sentry"
 import { useWearHistoryExport, type WearEvent } from "@/lib/queries"
 import type { UserFragrance } from "@/contexts/auth-context"
 import Button from "@/components/shared/ui/button"
 import FilterChip from "@/components/shared/ui/filter-chip"
 
 type ExportFormat = "csv" | "json"
+
+const MIME_TYPES: Record<ExportFormat, string> = {
+  csv: "text/csv",
+  json: "application/json",
+}
+
+// iOS shareAsync wants a Uniform Type Identifier, not a MIME type — both are
+// real, registered system UTIs (conform to public.text/public.data).
+const UTIS: Record<ExportFormat, string> = {
+  csv: "public.comma-separated-values-text",
+  json: "public.json",
+}
+
+// Own subdirectory under the OS-reclaimable cache dir, so cleanup (below)
+// only ever touches files this screen created — never anything else the app
+// or its libraries cache there.
+const exportsDir = new Directory(Paths.cache, "data-exports")
+
+// Best-effort: clears out any file left over from a previous export before
+// writing the new one. Deliberately NOT called right after sharing the file
+// that was just created — on Android, Sharing.shareAsync's promise resolves
+// once the share intent is launched, not once the receiving app has finished
+// reading the file, so deleting immediately after can race a slow consumer
+// (e.g. Gmail attaching it). Running this before the *next* export instead
+// means the just-shared file always outlives its share, and stale files
+// still get reclaimed (worst case, by the OS itself — Paths.cache exists
+// precisely for this).
+const clearPreviousExport = () => {
+  try {
+    if (exportsDir.exists) exportsDir.delete()
+  } catch (error) {
+    reportError(error, { flow: "export-data-cleanup" })
+  }
+}
 
 const csvCell = (value: string | number | null | undefined): string => {
   const s = value == null ? "" : String(value)
@@ -65,9 +102,11 @@ const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[]) =>
 // Personal-data export (Profile tab entry point). Reads only come from
 // AuthContext.userCollection (already own-rows via RLS) and
 // useWearHistoryExport (same RLS), so there's no path to another user's
-// data. Uses RN's built-in Share sheet — no new native module, no upload:
-// the file never leaves the device except through whatever the user picks
-// in the share sheet (Files, Mail, a messaging app, etc).
+// data. Writes a real temporary .csv/.json file (expo-file-system) into the
+// cache dir and hands it to the OS share sheet (expo-sharing) with the
+// matching MIME type/UTI — the file never leaves the device except through
+// whatever the user picks in that sheet (Files, Mail, a messaging app, etc);
+// nothing is uploaded by this screen.
 const ExportDataScreen = () => {
   const { modalColors, baseTextClass, mutedTextClass, baseBorderClass, accentColors, mutedColors } = useTheme()
   const { user, userCollection } = useAuth()
@@ -86,14 +125,32 @@ const ExportDataScreen = () => {
     if (!ready) return
     setSharing(true)
     try {
+      const canShare = await Sharing.isAvailableAsync()
+      if (!canShare) {
+        Alert.alert(
+          "Sharing isn't available",
+          "This device can't open the share sheet right now, so the export can't be saved."
+        )
+        return
+      }
+
       const content = format === "csv" ? buildCsv(userCollection, wearEvents) : buildJson(userCollection, wearEvents)
       const dateStamp = new Date().toISOString().slice(0, 10)
-      await Share.share(
-        { title: `fragrance-collection-export-${dateStamp}.${format}`, message: content },
-        { dialogTitle: "Export your fragrance data" }
-      )
+      const filename = `fragrance-collection-export-${dateStamp}.${format}`
+
+      clearPreviousExport()
+      exportsDir.create({ idempotent: true })
+      const file = new File(exportsDir, filename)
+      file.create({ overwrite: true })
+      file.write(content)
+
+      await Sharing.shareAsync(file.uri, {
+        mimeType: MIME_TYPES[format],
+        UTI: UTIS[format],
+        dialogTitle: "Export your fragrance data",
+      })
     } catch (error) {
-      console.log(error)
+      reportError(error, { flow: "export-data" })
       Alert.alert("Export failed", "Something went wrong, please try again.")
     } finally {
       setSharing(false)
