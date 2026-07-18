@@ -1,19 +1,29 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Image } from "expo-image"
-import { ScrollView, View, Text, TouchableOpacity, useWindowDimensions, StyleSheet } from "react-native"
+import {
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  StyleSheet,
+} from "react-native"
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 import { useFragranceRatings, useMyRating } from "@/lib/queries"
 import { formatRelativeDay } from "@/lib/utils/relative-time"
+import { buildFragranceShareText } from "@/lib/share"
 import Card from "@/components/card"
 import PressableScale from "@/components/shared/ui/pressable-scale"
 import StatTile from "@/components/shared/ui/stat-tile"
 import TextField from "@/components/shared/ui/text-field"
 import TagInput from "@/components/tag-input"
+import ShareSheetModal from "@/components/share-sheet-modal"
 
 // Soft radial glow behind the hero image — same device as SignInBackdrop,
 // scaled down to sit just behind the bottle instead of filling the screen.
@@ -58,6 +68,7 @@ const FragranceDetailScreen = () => {
   }>()
   const { modalColors, mutedColors, baseBorderClass, baseTextClass, mutedTextClass } = useTheme()
   const { user, userCollection, updateFragrance, rateFragrance } = useAuth()
+  const { t } = useLocale()
 
   const collectionItem = params.id
     ? userCollection.find((el) => el.id === params.id)
@@ -86,6 +97,36 @@ const FragranceDetailScreen = () => {
 
   const [notes, setNotes] = useState(collectionItem?.notes ?? "")
 
+  // Share sheet: privacy-safe by default (name only) — times-worn/rating are
+  // the user's own personal data and only ride along once they flip the
+  // toggle, never on by default. Notes/price/user id are never offered at all.
+  const [shareVisible, setShareVisible] = useState(false)
+  const [includeTimesWorn, setIncludeTimesWorn] = useState(false)
+  const [includeRating, setIncludeRating] = useState(false)
+  const shareMessage = useMemo(
+    () =>
+      buildFragranceShareText(
+        t,
+        { name, timesWorn, rating: currentRating },
+        { includeTimesWorn, includeRating: includeRating && currentRating != null }
+      ),
+    [t, name, timesWorn, currentRating, includeTimesWorn, includeRating]
+  )
+  const shareToggles = [
+    timesWorn > 0 && {
+      key: "timesWorn",
+      label: t("share.includeTimesWorn"),
+      value: includeTimesWorn,
+      onChange: setIncludeTimesWorn,
+    },
+    currentRating != null && {
+      key: "rating",
+      label: t("share.includeRating"),
+      value: includeRating,
+      onChange: setIncludeRating,
+    },
+  ].filter((toggle): toggle is Exclude<typeof toggle, false> => toggle !== false)
+
   const saveRating = (star: number) => {
     if (!collectionItem) return
     // Tapping the current rating clears it
@@ -110,130 +151,149 @@ const FragranceDetailScreen = () => {
   useEffect(() => () => saveNotesRef.current(), [])
 
   return (
-    <ScrollView
-      className={`flex-1 ${modalColors.background}`}
-      contentContainerClassName='px-5 pt-6 pb-12'
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps='handled'>
-      <View className='items-center justify-center' style={{ minHeight: 224 }}>
-        <HeroGlow />
-        {imageUrl ? (
-          // White backing keeps product shots (white backgrounds) from clashing in dark mode
-          <View className='h-56 w-56 items-center justify-center bg-white rounded-3xl' style={heroShadow}>
-            <Image
-              style={{ height: 184, width: 184 }}
-              contentFit='contain'
-              transition={150}
-              source={{ uri: imageUrl }}
-            />
-          </View>
-        ) : (
-          <View
-            className={`h-56 w-56 items-center justify-center rounded-3xl border ${baseBorderClass} ${modalColors.background}`}
-            style={heroShadow}>
-            <MaterialCommunityIcons name='image-off' size={44} color={getColor(mutedColors)} />
-          </View>
-        )}
-      </View>
+    <View className={`flex-1 ${modalColors.background}`}>
+      <TouchableOpacity
+        accessibilityRole='button'
+        accessibilityLabel={t("share.action")}
+        hitSlop={8}
+        className='absolute right-4 top-3 z-10 h-9 w-9 items-center justify-center'
+        testID='fragrance-detail-share'
+        onPress={() => setShareVisible(true)}>
+        <MaterialCommunityIcons name='share-variant' size={22} color={getColor(mutedColors)} />
+      </TouchableOpacity>
+      <ScrollView
+        className='flex-1'
+        contentContainerClassName='px-5 pt-6 pb-12'
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps='handled'>
+        <View className='items-center justify-center' style={{ minHeight: 224 }}>
+          <HeroGlow />
+          {imageUrl ? (
+            // White backing keeps product shots (white backgrounds) from clashing in dark mode
+            <View className='h-56 w-56 items-center justify-center bg-white rounded-3xl' style={heroShadow}>
+              <Image
+                style={{ height: 184, width: 184 }}
+                contentFit='contain'
+                transition={150}
+                source={{ uri: imageUrl }}
+              />
+            </View>
+          ) : (
+            <View
+              className={`h-56 w-56 items-center justify-center rounded-3xl border ${baseBorderClass} ${modalColors.background}`}
+              style={heroShadow}>
+              <MaterialCommunityIcons name='image-off' size={44} color={getColor(mutedColors)} />
+            </View>
+          )}
+        </View>
 
-      <Card.Title centered>{title}</Card.Title>
-      <Card.Subtitle centered>{brand}</Card.Subtitle>
+        <Card.Title centered>{title}</Card.Title>
+        <Card.Subtitle centered>{brand}</Card.Subtitle>
 
-      {collectionItem ? (
-        <StatTile
-          className='mt-5'
-          items={[
-            { value: timesWorn, label: timesWorn === 1 ? "Wear" : "Wears" },
-            {
-              value: lastWorn
-                ? formatRelativeDay(lastWorn).replace(/^./, (c) => c.toUpperCase())
-                : "Never",
-              label: "Last worn",
-            },
-            ...(community?.avg != null && community.count
-              ? [
-                  {
-                    value: `★ ${community.avg.toFixed(1)}`,
-                    label: `${community.count} rating${community.count === 1 ? "" : "s"}`,
-                  },
-                ]
-              : []),
-          ]}
-        />
-      ) : (
-        <Card.WearInfoText
-          timesWorn={timesWorn}
-          lastWorn={lastWorn}
-          centered
-          avgRating={community?.avg}
-          ratingCount={community?.count}
-        />
-      )}
-
-      {collectionItem && (
-        <>
-          <View className='flex-row justify-center pt-5' style={{ gap: 6 }}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <PressableScale key={star} onPress={() => saveRating(star)} hitSlop={6}>
-                <MaterialCommunityIcons
-                  name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
-                  size={30}
-                  color={
-                    (currentRating ?? 0) >= star
-                      ? getColor("amber-400")
-                      : getColor(mutedColors)
-                  }
-                />
-              </PressableScale>
-            ))}
-          </View>
-
-          <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Tags</Text>
-          <TagInput
-            tags={collectionItem.tags}
-            onChange={(tags) => updateFragrance({ id: collectionItem.id }, { tags })}
-          />
-
-          <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
-          <TextField
-            value={notes}
-            onChangeText={setNotes}
-            onEndEditing={saveNotes}
-            onBlur={saveNotes}
-            multiline
-            maxLength={2000}
-            minHeightClass='min-h-[96px]'
-            placeholder='Your impressions — occasions, seasons, projection…'
-          />
-          <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
-            Saved automatically
-          </Text>
-        </>
-      )}
-
-      {/* Only catalog-linked rows have a fragranceId to report against — a
-          manual add has nothing in the shared catalog to flag */}
-      {fragranceId && (
-        <TouchableOpacity
-          className='flex-row items-center justify-center pt-8'
-          hitSlop={8}
-          accessibilityRole='button'
-          accessibilityLabel='Report an issue with this listing'
-          onPress={() =>
-            router.push({
-              pathname: "/report-fragrance",
-              params: {
-                fragranceId,
-                name,
-                ...(imageUrl ? { imageUrl } : {}),
+        {collectionItem ? (
+          <StatTile
+            className='mt-5'
+            items={[
+              { value: timesWorn, label: timesWorn === 1 ? "Wear" : "Wears" },
+              {
+                value: lastWorn
+                  ? formatRelativeDay(lastWorn).replace(/^./, (c) => c.toUpperCase())
+                  : "Never",
+                label: "Last worn",
               },
-            })
-          }>
-          <MaterialCommunityIcons name='flag-outline' size={15} color={getColor(mutedColors)} />
-          <Text className={`${mutedTextClass} text-xs pl-1.5`}>Report an issue with this listing</Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+              ...(community?.avg != null && community.count
+                ? [
+                    {
+                      value: `★ ${community.avg.toFixed(1)}`,
+                      label: `${community.count} rating${community.count === 1 ? "" : "s"}`,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        ) : (
+          <Card.WearInfoText
+            timesWorn={timesWorn}
+            lastWorn={lastWorn}
+            centered
+            avgRating={community?.avg}
+            ratingCount={community?.count}
+          />
+        )}
+
+        {collectionItem && (
+          <>
+            <View className='flex-row justify-center pt-5' style={{ gap: 6 }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <PressableScale key={star} onPress={() => saveRating(star)} hitSlop={6}>
+                  <MaterialCommunityIcons
+                    name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
+                    size={30}
+                    color={
+                      (currentRating ?? 0) >= star
+                        ? getColor("amber-400")
+                        : getColor(mutedColors)
+                    }
+                  />
+                </PressableScale>
+              ))}
+            </View>
+
+            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Tags</Text>
+            <TagInput
+              tags={collectionItem.tags}
+              onChange={(tags) => updateFragrance({ id: collectionItem.id }, { tags })}
+            />
+
+            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
+            <TextField
+              value={notes}
+              onChangeText={setNotes}
+              onEndEditing={saveNotes}
+              onBlur={saveNotes}
+              multiline
+              maxLength={2000}
+              minHeightClass='min-h-[96px]'
+              placeholder='Your impressions — occasions, seasons, projection…'
+            />
+            <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
+              Saved automatically
+            </Text>
+          </>
+        )}
+
+        {/* Only catalog-linked rows have a fragranceId to report against — a
+            manual add has nothing in the shared catalog to flag */}
+        {fragranceId && (
+          <TouchableOpacity
+            className='flex-row items-center justify-center pt-8'
+            hitSlop={8}
+            accessibilityRole='button'
+            accessibilityLabel='Report an issue with this listing'
+            onPress={() =>
+              router.push({
+                pathname: "/report-fragrance",
+                params: {
+                  fragranceId,
+                  name,
+                  ...(imageUrl ? { imageUrl } : {}),
+                },
+              })
+            }>
+            <MaterialCommunityIcons name='flag-outline' size={15} color={getColor(mutedColors)} />
+            <Text className={`${mutedTextClass} text-xs pl-1.5`}>Report an issue with this listing</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+
+      <ShareSheetModal
+        visible={shareVisible}
+        title={t("share.sheetTitleFragrance")}
+        message={shareMessage}
+        toggles={shareToggles}
+        onClose={() => setShareVisible(false)}
+      />
+    </View>
   )
 }
 

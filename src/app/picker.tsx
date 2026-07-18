@@ -9,9 +9,12 @@ import { promptProUpsell } from "@/lib/entitlements"
 import { tagFacets, brandFacets } from "@/lib/utils/collection-facets"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { markPickerTried } from "@/lib/utils/use-onboarding"
+import { buildPickerResultShareText } from "@/lib/share"
 import Picker from "@/components/picker"
 import PickerFilterSheet from "@/components/picker-filter-sheet"
+import ShareSheetModal from "@/components/share-sheet-modal"
 
 const PickerScreen = () => {
   const router = useRouter()
@@ -27,10 +30,16 @@ const PickerScreen = () => {
     pickerHasActiveFilters,
   } = useAuth()
   const { viewColors, mutedColors, accentColors, accentTintBg } = useTheme()
+  const { t } = useLocale()
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const [shareVisible, setShareVisible] = useState(false)
 
   const tagOptions = useMemo(() => tagFacets(userCollection), [userCollection])
   const brandOptions = useMemo(() => brandFacets(userCollection), [userCollection])
+  const shareMessage = useMemo(
+    () => (frag ? buildPickerResultShareText(t, { name: frag.name }) : ""),
+    [t, frag]
+  )
 
   // Marks the "Try the picker" onboarding step done regardless of whether the
   // user actually pulls the lever — opening the modal is the tried part.
@@ -73,28 +82,35 @@ const PickerScreen = () => {
         onPress={() => router.back()}>
         <AntDesign name='close' size={26} color={getColor(mutedColors)} />
       </TouchableOpacity>
-      <TouchableOpacity
-        className='absolute left-4 z-10 flex-row items-center rounded-full px-3 py-2'
-        style={{
-          top: insets.top + 8,
-          backgroundColor: pickerHasActiveFilters ? accentTintBg : undefined,
-        }}
-        testID='picker-filter-button'
-        accessibilityLabel={
-          isPro ? "Filter picker" : "Picker filters — Pro feature"
-        }
-        onPress={handleFilterPress}>
-        <MaterialCommunityIcons
-          name={isPro ? "tune-variant" : "lock-outline"}
-          size={18}
-          color={pickerHasActiveFilters ? getColor(accentColors) : getColor(mutedColors)}
-        />
-        {pickerHasActiveFilters && (
-          <Text className='text-xs font-semibold pl-1' style={{ color: getColor(accentColors) }}>
-            Filtered
-          </Text>
+      <View className='absolute left-4 z-10 flex-row items-center' style={{ top: insets.top + 8, gap: 8 }}>
+        <TouchableOpacity
+          className='flex-row items-center rounded-full px-3 py-2'
+          style={{ backgroundColor: pickerHasActiveFilters ? accentTintBg : undefined }}
+          testID='picker-filter-button'
+          accessibilityLabel={isPro ? "Filter picker" : "Picker filters — Pro feature"}
+          onPress={handleFilterPress}>
+          <MaterialCommunityIcons
+            name={isPro ? "tune-variant" : "lock-outline"}
+            size={18}
+            color={pickerHasActiveFilters ? getColor(accentColors) : getColor(mutedColors)}
+          />
+          {pickerHasActiveFilters && (
+            <Text className='text-xs font-semibold pl-1' style={{ color: getColor(accentColors) }}>
+              Filtered
+            </Text>
+          )}
+        </TouchableOpacity>
+        {frag && (
+          <TouchableOpacity
+            className='h-10 w-10 items-center justify-center'
+            accessibilityRole='button'
+            accessibilityLabel={t("share.action")}
+            testID='picker-share'
+            onPress={() => setShareVisible(true)}>
+            <MaterialCommunityIcons name='share-variant' size={24} color={getColor(mutedColors)} />
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </View>
       <View className='flex-1 justify-center'>
         <Picker fragrance={frag} index={index} />
       </View>
@@ -108,6 +124,13 @@ const PickerScreen = () => {
           onClose={() => setFilterSheetOpen(false)}
         />
       )}
+
+      <ShareSheetModal
+        visible={shareVisible}
+        title={t("share.sheetTitlePicker")}
+        message={shareMessage}
+        onClose={() => setShareVisible(false)}
+      />
     </View>
   )
 }

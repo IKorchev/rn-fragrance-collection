@@ -2,8 +2,11 @@ import React from "react"
 import { Stack } from "expo-router"
 import { getHeaderTitle } from "expo-router/react-navigation"
 import Header from "@/components/header"
+import useLocale from "@/contexts/locale-context"
 
 export default function ProfileLayout() {
+  const { t } = useLocale()
+
   return (
     <Stack
       screenOptions={{
@@ -11,7 +14,7 @@ export default function ProfileLayout() {
           <Header title={getHeaderTitle(options, route.name)} navigation={navigation} />
         ),
       }}>
-      <Stack.Screen name="index" options={{ title: "Profile" }} />
+      <Stack.Screen name="index" options={{ title: t("profile.title") }} />
     </Stack>
   )
 }

@@ -10,21 +10,25 @@ import { useIsModerator, useRemindersEnabled, useWearHistory } from "@/lib/queri
 import { useOnboarding } from "@/lib/utils/use-onboarding"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
 import { FREE_COLLECTION_LIMIT } from "@/lib/entitlements"
+import { isWornToday } from "@/lib/utils/worn-today"
+import { buildRecapShareText, buildTodaysScentShareText } from "@/lib/share"
 import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
+import useLocale, { type LocalePreference } from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
 import Badge from "@/components/shared/ui/badge"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
 import StatTile from "@/components/shared/ui/stat-tile"
 import Button from "@/components/shared/ui/button"
+import ShareSheetModal from "@/components/share-sheet-modal"
 import WearHeatmap from "@/components/wear-heatmap"
 
-const APPEARANCE_OPTIONS: { key: ThemePreference; label: string }[] = [
-  { key: "system", label: "Match system" },
-  { key: "light", label: "Light" },
-  { key: "dark", label: "Dark" },
+const APPEARANCE_OPTIONS: { key: ThemePreference; labelKey: string }[] = [
+  { key: "system", labelKey: "profile.appearanceSystem" },
+  { key: "light", labelKey: "profile.appearanceLight" },
+  { key: "dark", labelKey: "profile.appearanceDark" },
 ]
 
 const ProfileScreen = () => {
@@ -44,17 +48,21 @@ const ProfileScreen = () => {
   } = useTheme()
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
+  const { t, formatDate, localePreference, setLocalePreference, supportedLocales } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
   const [deleting, setDeleting] = useState(false)
   const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
+  const [languagePickerVisible, setLanguagePickerVisible] = useState(false)
+  const [recapShareVisible, setRecapShareVisible] = useState(false)
+  const [todayShareVisible, setTodayShareVisible] = useState(false)
 
-  const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? "Anonymous"
+  const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? t("profile.anonymous")
   const totalWears = userCollection.reduce((sum, el) => sum + el.times_worn, 0)
   const memberSince = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" })
+    ? formatDate(new Date(user.created_at), { month: "long", year: "numeric" })
     : null
 
   // Wears this calendar month + current daily streak, from the personal wear
@@ -87,15 +95,37 @@ const ProfileScreen = () => {
     return top && top.times_worn > 0 ? top : null
   }, [userCollection])
 
+  // Whatever's most recently logged today — the "share today's scent" entry
+  // point only appears once there's something to share (no dead-end row).
+  const todayFragrance = useMemo(() => {
+    const wornToday = userCollection.filter((el) => isWornToday(el.last_worn))
+    if (!wornToday.length) return null
+    return wornToday.reduce((latest, el) =>
+      new Date(el.last_worn!) > new Date(latest.last_worn!) ? el : latest
+    )
+  }, [userCollection])
+
+  const recapMessage = useMemo(
+    () => buildRecapShareText(t, { monthWears, streak, collectionSize: userCollection.length }),
+    [t, monthWears, streak, userCollection.length]
+  )
+  const todayMessage = useMemo(
+    () => (todayFragrance ? buildTodaysScentShareText(t, { name: todayFragrance.name }) : ""),
+    [t, todayFragrance]
+  )
+
+  const languageLabel = (pref: LocalePreference) =>
+    pref === "system" ? t("language.system") : pref === "es" ? t("language.spanish") : t("language.english")
+
   // Presents the native paywall configured in the RevenueCat dashboard.
   // isPro flips reactively (see AuthContext's CustomerInfo listener) once a
   // purchase/restore lands, so this just handles the toast feedback.
   const handleUpgrade = async () => {
     const result = await presentPaywall()
     if (result === PAYWALL_RESULT.PURCHASED) {
-      showToast({ message: "Welcome to Pro!" })
+      showToast({ message: t("profile.toastWelcomePro") })
     } else if (result === PAYWALL_RESULT.RESTORED) {
-      showToast({ message: "Purchases restored" })
+      showToast({ message: t("profile.toastPurchasesRestored") })
     }
   }
 
@@ -108,18 +138,18 @@ const ProfileScreen = () => {
       .eq("user_id", user!.id)
     if (error) {
       queryClient.setQueryData(["reminder-prefs", user?.id], !value)
-      Alert.alert("Oops", "Couldn't update your reminder setting, please try again.")
+      Alert.alert(t("profile.reminderUpdateFailedTitle"), t("profile.reminderUpdateFailedMessage"))
     }
   }
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      "Delete account?",
-      "This permanently deletes your account, collection, and wear history. This cannot be undone.",
+      t("profile.deleteConfirmTitle"),
+      t("profile.deleteConfirmMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("profile.deleteConfirmConfirm"),
           style: "destructive",
           onPress: async () => {
             setDeleting(true)
@@ -129,10 +159,7 @@ const ProfileScreen = () => {
               // to the sign-in screen — nothing left to dismiss here.
             } catch (error) {
               reportError(error, { flow: "delete-account" })
-              Alert.alert(
-                "Deletion failed",
-                "Something went wrong, please try again later."
-              )
+              Alert.alert(t("profile.deleteFailedTitle"), t("profile.deleteFailedMessage"))
             } finally {
               setDeleting(false)
             }
@@ -161,7 +188,9 @@ const ProfileScreen = () => {
       </View>
       {user?.email && <Text className={`${mutedTextClass} text-base pt-1`}>{user.email}</Text>}
       {memberSince && (
-        <Text className={`${mutedTextClass} text-sm pt-1`}>Member since {memberSince}</Text>
+        <Text className={`${mutedTextClass} text-sm pt-1`}>
+          {t("profile.memberSince", { date: memberSince })}
+        </Text>
       )}
 
       {purchasesEnabled && (!isPro || __DEV__) && (
@@ -169,7 +198,7 @@ const ProfileScreen = () => {
           icon='star-four-points'
           tone='accent'
           className='mt-6 w-full'
-          label={isPro ? "View paywall (dev)" : "Upgrade to Pro"}
+          label={isPro ? t("profile.viewPaywallDev") : t("profile.upgradeToPro")}
           onPress={handleUpgrade}
         />
       )}
@@ -177,31 +206,31 @@ const ProfileScreen = () => {
       <StatTile
         className='mt-8'
         items={[
-          { value: userCollection.length, label: "In collection" },
-          { value: totalWears, label: "Total wears" },
+          { value: userCollection.length, label: t("profile.stats.inCollection") },
+          { value: totalWears, label: t("profile.stats.totalWears") },
         ]}
       />
       {!isPro && (
         <Text className={`${mutedTextClass} text-xs pt-2`}>
-          {userCollection.length}/{FREE_COLLECTION_LIMIT} in your free collection
+          {t("profile.freeCollectionLimit", { count: userCollection.length, limit: FREE_COLLECTION_LIMIT })}
         </Text>
       )}
 
       <StatTile
         className='mt-4'
         items={[
-          { value: monthWears, label: "This month" },
-          { value: streak, label: `Day streak${streak === 1 ? "" : "s"}` },
+          { value: monthWears, label: t("profile.stats.thisMonth") },
+          { value: streak, label: t("profile.stats.dayStreak", { count: streak }) },
         ]}
       />
 
       {mostWorn && (
         <Text className={`${mutedTextClass} text-sm pt-3`}>
-          Most worn:{" "}
+          {t("profile.mostWornLabel")}{" "}
           <Text className={`${baseTextClass} font-semibold`}>
             {mostWorn.name.split(" - ").slice(1).join(" - ")}
           </Text>{" "}
-          ({mostWorn.times_worn}x)
+          {t("profile.mostWornCount", { count: mostWorn.times_worn })}
         </Text>
       )}
 
@@ -210,7 +239,7 @@ const ProfileScreen = () => {
           icon='rocket-launch-outline'
           tone='accent'
           className='mt-6'
-          label='Getting started guide'
+          label={t("profile.gettingStartedGuide")}
           onPress={() => {
             resumeOnboarding()
             router.navigate("/(tabs)/(collection)")
@@ -220,12 +249,17 @@ const ProfileScreen = () => {
 
       <WearHeatmap events={events ?? []} className='mt-6' />
 
-      <Row icon='history' className='mt-6' label='Wear history' onPress={() => router.push("/wear-history")} />
+      <Row
+        icon='history'
+        className='mt-6'
+        label={t("profile.wearHistoryRow")}
+        onPress={() => router.push("/wear-history")}
+      />
 
       <Row
         icon='export-variant'
         className='mt-4'
-        label='Export your data'
+        label={t("profile.exportData")}
         onPress={() => router.push("/export-data")}
       />
 
@@ -233,7 +267,7 @@ const ProfileScreen = () => {
         <Row
           icon='shield-check-outline'
           className='mt-4'
-          label='Moderation queue'
+          label={t("profile.moderationQueue")}
           onPress={() => router.push("/moderation")}
         />
       )}
@@ -242,12 +276,12 @@ const ProfileScreen = () => {
       <Row
         icon='theme-light-dark'
         className='mt-4'
-        label='Appearance'
+        label={t("profile.appearance")}
         onPress={() => setAppearancePickerOpen(true)}
         trailing={
           <View className='flex-row items-center' style={{ gap: 4 }}>
             <Text className={`${mutedTextClass} text-base`}>
-              {APPEARANCE_OPTIONS.find((o) => o.key === themePreference)?.label}
+              {t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey)}
             </Text>
             <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
           </View>
@@ -256,9 +290,9 @@ const ProfileScreen = () => {
 
       <Dialog
         visible={appearancePickerOpen}
-        title='Appearance'
+        title={t("profile.appearance")}
         onClose={() => setAppearancePickerOpen(false)}>
-        {APPEARANCE_OPTIONS.map(({ key, label }) => (
+        {APPEARANCE_OPTIONS.map(({ key, labelKey }) => (
           <TouchableOpacity
             key={key}
             className='flex-row items-center justify-between py-3'
@@ -267,7 +301,7 @@ const ProfileScreen = () => {
               setAppearancePickerOpen(false)
             }}>
             <Text className={key === themePreference ? `${accentTextClass} font-semibold` : baseTextClass}>
-              {label}
+              {t(labelKey)}
             </Text>
             {key === themePreference && (
               <MaterialCommunityIcons name='check' size={18} color={getColor(accentColors)} />
@@ -279,7 +313,7 @@ const ProfileScreen = () => {
       <Row
         icon='bell-outline'
         className='mt-4'
-        label='Daily wear reminder'
+        label={t("profile.dailyReminder")}
         trailing={
           <Switch
             value={remindersEnabled ?? true}
@@ -290,16 +324,48 @@ const ProfileScreen = () => {
       />
 
       <Row
+        icon='translate'
+        className='mt-4'
+        label={t("profile.language")}
+        testID='profile-language-row'
+        onPress={() => setLanguagePickerVisible(true)}
+        trailing={
+          <View className='flex-row items-center' style={{ gap: 4 }}>
+            <Text className={`${mutedTextClass} text-sm`}>{languageLabel(localePreference)}</Text>
+            <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(mutedColors)} />
+          </View>
+        }
+      />
+
+      <Row
+        icon='chart-timeline-variant'
+        className='mt-4'
+        label={t("profile.shareRecap")}
+        testID='profile-share-recap-row'
+        onPress={() => setRecapShareVisible(true)}
+      />
+
+      {todayFragrance && (
+        <Row
+          icon='flower-tulip-outline'
+          className='mt-4'
+          label={t("profile.shareToday")}
+          testID='profile-share-today-row'
+          onPress={() => setTodayShareVisible(true)}
+        />
+      )}
+
+      <Row
         icon='shield-lock-outline'
         className='mt-4'
-        label='Privacy Policy'
+        label={t("screens.privacyPolicy")}
         onPress={() => router.push("/privacy-policy")}
       />
 
       <Row
         icon='file-document-outline'
         className='mt-4'
-        label='Terms & Conditions'
+        label={t("screens.terms")}
         onPress={() => router.push("/terms")}
       />
 
@@ -307,7 +373,7 @@ const ProfileScreen = () => {
         onPress={logOut}
         className={`${danger.bgClass} flex-row items-center justify-center w-full mt-8 py-3 rounded-2xl`}>
         <MaterialCommunityIcons name='logout' size={20} color={getColor(danger.color)} />
-        <Text className={`${danger.textClass} text-base font-semibold pl-2`}>Sign out</Text>
+        <Text className={`${danger.textClass} text-base font-semibold pl-2`}>{t("profile.signOut")}</Text>
       </TouchableOpacity>
 
       {/* App Store 5.1.1(v) / Play policy: account deletion must be in-app */}
@@ -316,11 +382,52 @@ const ProfileScreen = () => {
         tone='danger'
         size='sm'
         className='mt-6'
-        label='Delete account'
+        label={t("profile.deleteAccount")}
         loading={deleting}
-        loadingLabel='Deleting account…'
+        loadingLabel={t("profile.deletingAccount")}
         onPress={handleDeleteAccount}
       />
+
+      <Dialog
+        visible={languagePickerVisible}
+        title={t("language.title")}
+        onClose={() => setLanguagePickerVisible(false)}
+        cancelLabel={t("common.close")}>
+        {(["system", ...supportedLocales] as LocalePreference[]).map((pref) => {
+          const selected = pref === localePreference
+          return (
+            <TouchableOpacity
+              key={pref}
+              accessibilityRole='button'
+              accessibilityState={{ selected }}
+              testID={`language-option-${pref}`}
+              className='flex-row items-center justify-between py-3'
+              onPress={() => {
+                setLocalePreference(pref)
+                setLanguagePickerVisible(false)
+              }}>
+              <Text className={`${baseTextClass} text-base`}>{languageLabel(pref)}</Text>
+              {selected && <MaterialCommunityIcons name='check' size={20} color={getColor(accentColors)} />}
+            </TouchableOpacity>
+          )
+        })}
+      </Dialog>
+
+      <ShareSheetModal
+        visible={recapShareVisible}
+        title={t("share.sheetTitleRecap")}
+        message={recapMessage}
+        onClose={() => setRecapShareVisible(false)}
+      />
+
+      {todayFragrance && (
+        <ShareSheetModal
+          visible={todayShareVisible}
+          title={t("share.sheetTitleToday")}
+          message={todayMessage}
+          onClose={() => setTodayShareVisible(false)}
+        />
+      )}
     </ScrollView>
   )
 }

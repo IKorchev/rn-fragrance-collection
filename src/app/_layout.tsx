@@ -14,6 +14,8 @@ import { AuthProvider } from "@/contexts/auth-context"
 import useAuth from "@/contexts/auth-context"
 import { ThemeContextProvider } from "@/contexts/theme-context"
 import { ToastContextProvider } from "@/contexts/toast-context"
+import { LocaleContextProvider } from "@/contexts/locale-context"
+import useLocale from "@/contexts/locale-context"
 import { useAppUpdates } from "@/lib/utils/use-app-updates"
 import { initSentry, sentryEnabled, reportError } from "@/lib/sentry"
 import Header from "@/components/header"
@@ -39,7 +41,9 @@ function RootLayout() {
         <ToastContextProvider>
           <AuthProvider>
             <ThemeContextProvider>
-              <RootNavigator />
+              <LocaleContextProvider>
+                <RootNavigator />
+              </LocaleContextProvider>
             </ThemeContextProvider>
           </AuthProvider>
         </ToastContextProvider>
@@ -52,6 +56,7 @@ export default sentryEnabled ? Sentry.wrap(RootLayout) : RootLayout
 
 function RootNavigator() {
   const { user, authLoading, authError, retryAuthInit } = useAuth()
+  const { t } = useLocale()
   // Display font for screen titles (tailwind's font-display). A load failure
   // (fontError) shouldn't block the whole app forever — fall through to the
   // system font instead of hanging on a blank screen.
@@ -162,7 +167,7 @@ function RootNavigator() {
           <Stack.Screen
             name="wear-history"
             options={{
-              title: "Wear History",
+              title: t("screens.wearHistory"),
               header: ({ navigation, route, options, back }) => (
                 <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
               ),
@@ -206,7 +211,7 @@ function RootNavigator() {
         <Stack.Screen
           name="privacy-policy"
           options={{
-            title: "Privacy Policy",
+            title: t("screens.privacyPolicy"),
             header: ({ navigation, route, options, back }) => (
               <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
             ),
@@ -215,7 +220,7 @@ function RootNavigator() {
         <Stack.Screen
           name="terms"
           options={{
-            title: "Terms & Conditions",
+            title: t("screens.terms"),
             header: ({ navigation, route, options, back }) => (
               <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
             ),
