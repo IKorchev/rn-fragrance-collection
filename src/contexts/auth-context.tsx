@@ -82,7 +82,7 @@ interface AuthContextValue {
   updateFragrance: (
     object: { id: string },
     updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags">>
-  ) => Promise<void>
+  ) => Promise<boolean>
   // Community rating for a catalog-linked fragrance (fragrance_ratings table,
   // separate from the manual-add-only rating column on updateFragrance above).
   // null clears the caller's rating (tap-to-clear on the detail sheet).
@@ -526,11 +526,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.from("user_fragrances").update(updates).eq("id", object.id)
       if (error) throw error
       await invalidateCollection()
+      return true
     } catch (error) {
       Alert.alert("Update failed", "Something went wrong, please try again later.")
       // Only the error is reported — never `updates` itself, which can carry
       // user-entered notes/rating (see CLAUDE.md on personal per-item content).
       reportError(error, { flow: "update-fragrance" })
+      return false
     }
   }
 
