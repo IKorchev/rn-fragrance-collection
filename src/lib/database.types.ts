@@ -1,5 +1,3 @@
-// Generated from the live Supabase schema (project: fragrance) via MCP
-// generate_typescript_types. Regenerate after schema changes.
 export type Json =
   | string
   | number
@@ -16,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      fragrance_community_stats: {
+        Row: {
+          fragrance_id: string
+          last_worn_at: string | null
+          rating_count: number
+          rating_sum: number
+          recent_wear_weight: number
+          updated_at: string
+          wear_count: number
+        }
+        Insert: {
+          fragrance_id: string
+          last_worn_at?: string | null
+          rating_count?: number
+          rating_sum?: number
+          recent_wear_weight?: number
+          updated_at?: string
+          wear_count?: number
+        }
+        Update: {
+          fragrance_id?: string
+          last_worn_at?: string | null
+          rating_count?: number
+          rating_sum?: number
+          recent_wear_weight?: number
+          updated_at?: string
+          wear_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fragrance_community_stats_fragrance_id_fkey"
+            columns: ["fragrance_id"]
+            isOneToOne: true
+            referencedRelation: "fragrances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fragrance_ratings: {
         Row: {
           created_at: string
@@ -419,6 +455,24 @@ export type Database = {
           similarity: number
           title: string
         }[]
+      }
+      recommend_fragrances: {
+        Args: { max_results?: number }
+        Returns: {
+          avg_rating: number
+          brand: string
+          fragrance_id: string
+          image_url: string
+          rating_count: number
+          reason: string
+          score: number
+          title: string
+          wear_count: number
+        }[]
+      }
+      recommendation_wear_weight: {
+        Args: { p_worn_at: string }
+        Returns: number
       }
       review_fragrance_report: {
         Args: { p_action: string; p_note?: string; p_report_id: string }

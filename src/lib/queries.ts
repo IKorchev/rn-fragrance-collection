@@ -13,6 +13,9 @@ export type BrandFacet = Database["public"]["Functions"]["list_brands"]["Returns
 export type TopWornFragrance =
   Database["public"]["Functions"]["top_worn_fragrances"]["Returns"][number]
 
+export type FragranceRecommendation =
+  Database["public"]["Functions"]["recommend_fragrances"]["Returns"][number]
+
 export type WearEvent = Tables<"wear_events">
 
 export type PendingSubmission =
@@ -72,6 +75,24 @@ export const useTopWorn = (period: WearPeriod) =>
       const { data, error } = await supabase.rpc("top_worn_fragrances", {
         period,
         max_results: 100,
+      })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// One authenticated server endpoint owns candidate generation, aggregate
+// lookup, scoring, exclusion, explanations, and diversification. Gating on
+// collectionReady prevents the empty-collection cold query from racing the
+// real personalized query during startup.
+export const useRecommendations = (userId: string | undefined, collectionReady: boolean) =>
+  useQuery({
+    queryKey: ["recommendations", userId],
+    enabled: !!userId && collectionReady,
+    staleTime: 6 * 60 * 60 * 1000,
+    queryFn: async (): Promise<FragranceRecommendation[]> => {
+      const { data, error } = await supabase.rpc("recommend_fragrances", {
+        max_results: 20,
       })
       if (error) throw error
       return data ?? []

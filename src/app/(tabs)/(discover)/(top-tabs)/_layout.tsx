@@ -29,6 +29,7 @@ export default function TopTabsLayout() {
             backgroundColor: theme === "dark" ? getColor("zinc-950") : "white",
           },
         }}>
+        <MaterialTopTabs.Screen name="recommendations" options={{ title: "For You" }} />
         <MaterialTopTabs.Screen name="index" options={{ title: "Leaderboard" }} />
         <MaterialTopTabs.Screen name="search" options={{ title: "Search" }} />
       </MaterialTopTabs>

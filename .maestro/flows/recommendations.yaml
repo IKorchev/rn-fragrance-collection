@@ -1,0 +1,10 @@
+appId: com.korchev.fragrancecollection
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+- assertVisible: "For You"
+- tapOn: "For You"
+- extendedWaitUntil:
+    visible: "Add"
+    timeout: 30000
+- assertNotVisible: "Couldn't load recommendations"
+- assertNotVisible: "Worn .*"

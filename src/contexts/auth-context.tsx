@@ -275,6 +275,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const invalidateCollection = () =>
     queryClient.invalidateQueries({ queryKey: ["collection", user?.id] })
+  const invalidateRecommendations = () =>
+    queryClient.invalidateQueries({ queryKey: ["recommendations", user?.id] })
+  const invalidateCollectionAndRecommendations = () =>
+    Promise.all([invalidateCollection(), invalidateRecommendations()])
 
   // Realtime keeps other devices in sync; local writes also invalidate directly
   // so the UI never depends on the channel being up.
@@ -285,7 +289,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_fragrances", filter: `user_id=eq.${user.id}` },
-        () => queryClient.invalidateQueries({ queryKey: ["collection", user.id] })
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["collection", user.id] })
+          queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] })
+        }
       )
       .subscribe()
     return () => {
@@ -382,7 +389,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         times_worn: 0,
       })
       if (error) throw error
-      await invalidateCollection()
+      await invalidateCollectionAndRecommendations()
       showToast({ message: `${object.name} added to your collection` })
     } catch (error) {
       if (isFreeTierLimitError(error)) {
@@ -414,7 +421,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         p_title: input.title,
       })
       if (error) throw error
-      await invalidateCollection()
+      await invalidateCollectionAndRecommendations()
       showToast({ message: `${name} added to your collection` })
     } catch (error) {
       if (isFreeTierLimitError(error)) {
@@ -491,7 +498,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.from("user_fragrances").delete().eq("id", object.id)
       if (error) throw error
-      await invalidateCollection()
+      await invalidateCollectionAndRecommendations()
     } catch (err) {
       Alert.alert("Delete failed", "Something went wrong, please try again later.")
       reportError(err, { flow: "delete-fragrance" })
@@ -526,6 +533,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.from("user_fragrances").update(updates).eq("id", object.id)
       if (error) throw error
       await invalidateCollection()
+      if ("name" in updates || "rating" in updates) await invalidateRecommendations()
       return true
     } catch (error) {
       Alert.alert("Update failed", "Something went wrong, please try again later.")
@@ -559,6 +567,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       queryClient.invalidateQueries({ queryKey: ["my-rating", user?.id, fragranceId] })
       queryClient.invalidateQueries({ queryKey: ["fragrance-ratings"] })
+      queryClient.invalidateQueries({ queryKey: ["recommendations", user?.id] })
     } catch (error) {
       Alert.alert("Update failed", "Something went wrong, please try again later.")
       reportError(error, { flow: "rate-fragrance" })
@@ -566,7 +575,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const invalidateWearQueries = async () => {
-    await invalidateCollection()
+    await invalidateCollectionAndRecommendations()
     // increment_wear/undo_wear also touch wear_events — refresh the
     // leaderboard and the personal wear-history diary
     queryClient.invalidateQueries({ queryKey: ["top-worn"] })
