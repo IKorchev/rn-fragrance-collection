@@ -63,7 +63,7 @@ const MostWornScreen = () => {
           )}
           ListEmptyComponent={
             <Text className={`${mutedTextClass} text-center mt-12 px-6`}>
-              No wears logged {period === "all" ? "yet" : "in this period yet"} — hit the spray
+              No scents logged {period === "all" ? "yet" : "in this period yet"} — hit the spray
               button on something in your collection!
             </Text>
           }

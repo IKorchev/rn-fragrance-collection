@@ -129,7 +129,7 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
       </View>
       {localTags.length === 0 && (
         <Text className={`${mutedTextClass} text-xs pt-2`}>
-          Tag it — "signature", "winter", "gift" — to filter the picker and your wear history later.
+          Tag it — "signature", "winter", "gift" — to filter the picker and your scent diary later.
         </Text>
       )}
       {atLimit && (

@@ -74,7 +74,7 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
   return (
     <View className={`w-full rounded-2xl border ${baseBorderClass} p-4 ${className ?? ""}`}>
       <Text className={`${mutedTextClass} text-xs font-semibold uppercase pb-4`}>
-        Wear activity
+        Scent activity
       </Text>
 
       <View className='items-center'>
@@ -142,8 +142,8 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
 
         <Text className={`${mutedTextClass} text-xs pt-3`}>
           {selected
-            ? `${selected.date.toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" })} — ${selected.count} ${selected.count === 1 ? "wear" : "wears"}`
-            : "Tap a day to see wears"}
+            ? `${selected.date.toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" })} — ${selected.count} ${selected.count === 1 ? "entry" : "entries"}`
+            : "Tap a day to see entries"}
         </Text>
       </View>
     </View>

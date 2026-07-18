@@ -50,7 +50,7 @@ export const PRIVACY_POLICY: LegalDoc = {
     {
       heading: "Data retention and deletion",
       paragraphs: [
-        "Your data is kept for as long as your account exists. You can delete your account at any time from Profile → Delete account — this permanently removes your account, collection, notes, wear history, and push tokens. Deletion is immediate and cannot be undone.",
+        "Your data is kept for as long as your account exists. You can delete your account at any time from Profile → Delete account — this permanently removes your account, collection, notes, scent diary, and push tokens. Deletion is immediate and cannot be undone.",
       ],
     },
     {

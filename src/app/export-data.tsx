@@ -74,7 +74,7 @@ const buildCsv = (collection: UserFragrance[], wearEvents: WearEvent[]) => {
       collectionRows
     ) +
     "\n\n" +
-    csvSection("Wear History", ["Fragrance", "Worn At"], wearRows) +
+    csvSection("Scent Diary", ["Fragrance", "Worn At"], wearRows) +
     "\n"
   )
 }
@@ -165,7 +165,7 @@ const ExportDataScreen = () => {
       <Text className={`${baseTextClass} text-xl font-bold text-center`}>Export your data</Text>
       <Text className={`${mutedTextClass} text-sm text-center pt-2`}>
         Exports your collection (brand, name, times worn, last worn, your rating and notes) and your
-        wear history (most recent 2,000 wears) as a file you control. Nothing is uploaded — you choose
+        scent diary (most recent 2,000 entries) as a file you control. Nothing is uploaded — you choose
         where it goes from the share sheet. Only your own data is included.
       </Text>
 
@@ -181,7 +181,7 @@ const ExportDataScreen = () => {
             <MaterialCommunityIcons name='wifi-off' size={28} color={getColor(mutedColors)} />
             <Text className={`${baseTextClass} text-sm font-semibold text-center pt-3`}>You're offline</Text>
             <Text className={`${mutedTextClass} text-xs text-center pt-1`}>
-              Connect to the internet to export your wear history — this will retry automatically.
+              Connect to the internet to export your scent diary — this will retry automatically.
             </Text>
           </View>
         ) : isPending ? (
@@ -193,7 +193,7 @@ const ExportDataScreen = () => {
           <View className='items-center py-4'>
             <MaterialCommunityIcons name='cloud-alert' size={28} color={getColor(mutedColors)} />
             <Text className={`${baseTextClass} text-sm font-semibold text-center pt-3`}>
-              Couldn't load your wear history
+              Couldn't load your scent diary
             </Text>
             <Button
               variant='secondary'
@@ -209,7 +209,7 @@ const ExportDataScreen = () => {
               {userCollection.length} fragrance{userCollection.length === 1 ? "" : "s"} in your collection
             </Text>
             <Text className={`${mutedTextClass} text-sm pt-1`}>
-              {wearEvents.length} wear{wearEvents.length === 1 ? "" : "s"} logged
+              {wearEvents.length} entr{wearEvents.length === 1 ? "y" : "ies"} logged
             </Text>
             {isEmpty && (
               <Text className={`${mutedTextClass} text-xs pt-2`}>

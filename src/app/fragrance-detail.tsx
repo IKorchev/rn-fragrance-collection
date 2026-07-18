@@ -194,7 +194,7 @@ const FragranceDetailScreen = () => {
           <StatTile
             className='mt-5'
             items={[
-              { value: timesWorn, label: timesWorn === 1 ? "Wear" : "Wears" },
+              { value: timesWorn, label: "Times worn" },
               {
                 value: lastWorn
                   ? formatRelativeDay(lastWorn).replace(/^./, (c) => c.toUpperCase())

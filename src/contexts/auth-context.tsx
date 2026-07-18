@@ -612,7 +612,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // A mistap would otherwise cost the whole day (one wear per calendar
       // day) and permanently skew stats — always offer a short undo window.
       showToast({
-        message: `Wear logged for ${title ?? "today"}`,
+        message: `Scent logged for ${title ?? "today"}`,
         actionLabel: "Undo",
         onAction: () => undoWear(object),
       })

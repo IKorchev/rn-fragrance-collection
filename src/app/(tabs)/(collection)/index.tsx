@@ -189,7 +189,7 @@ const CollectionScreen = () => {
               icon='bottle-tonic-outline'
               illustration={<EmptyCollectionIllustration />}
               title='Your collection is empty'
-              message='Find fragrances in the catalog and add them to start tracking your wears.'
+              message='Find fragrances in the catalog and add them to start building your collection.'
               actionLabel='Find fragrances'
               onAction={goToSearch}
             />

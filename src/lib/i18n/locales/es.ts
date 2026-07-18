@@ -14,7 +14,7 @@ const es: Dictionary = {
   },
 
   screens: {
-    wearHistory: "Historial de uso",
+    wearHistory: "Diario de aromas",
     privacyPolicy: "Política de privacidad",
     terms: "Términos y condiciones",
   },
@@ -36,8 +36,11 @@ const es: Dictionary = {
     viewPaywallDev: "Ver muro de pago (dev)",
     toastWelcomePro: "¡Bienvenido a Pro!",
     toastPurchasesRestored: "Compras restauradas",
-    wearHistoryRow: "Historial de uso",
+    wearHistoryRow: "Diario de aromas",
     moderationQueue: "Cola de moderación",
+    sectionActivity: "Actividad",
+    sectionPreferences: "Preferencias",
+    sectionAccount: "Cuenta",
     freeCollectionLimit: "{{count}}/{{limit}} en tu colección gratuita",
     gettingStartedGuide: "Guía de introducción",
     exportData: "Exportar tus datos",
@@ -56,7 +59,7 @@ const es: Dictionary = {
     deletingAccount: "Eliminando cuenta…",
     deleteConfirmTitle: "¿Eliminar cuenta?",
     deleteConfirmMessage:
-      "Esto elimina permanentemente tu cuenta, colección e historial de uso. Esta acción no se puede deshacer.",
+      "Esto elimina permanentemente tu cuenta, colección y diario de aromas. Esta acción no se puede deshacer.",
     deleteConfirmConfirm: "Eliminar",
     deleteFailedTitle: "No se pudo eliminar",
     deleteFailedMessage: "Algo salió mal, inténtalo de nuevo más tarde.",

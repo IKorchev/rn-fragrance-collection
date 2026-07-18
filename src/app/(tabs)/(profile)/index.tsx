@@ -20,6 +20,7 @@ import { reportError } from "@/lib/sentry"
 import Badge from "@/components/shared/ui/badge"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
+import RowGroup from "@/components/shared/ui/row-group"
 import StatTile from "@/components/shared/ui/stat-tile"
 import Button from "@/components/shared/ui/button"
 import ShareSheetModal from "@/components/share-sheet-modal"
@@ -44,7 +45,6 @@ const ProfileScreen = () => {
     theme,
     themePreference,
     setThemePreference,
-    danger,
   } = useTheme()
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
@@ -204,10 +204,13 @@ const ProfileScreen = () => {
       )}
 
       <StatTile
-        className='mt-8'
+        className='mt-6'
+        columns={2}
         items={[
           { value: userCollection.length, label: t("profile.stats.inCollection") },
           { value: totalWears, label: t("profile.stats.totalWears") },
+          { value: monthWears, label: t("profile.stats.thisMonth") },
+          { value: streak, label: t("profile.stats.dayStreak", { count: streak }) },
         ]}
       />
       {!isPro && (
@@ -215,14 +218,6 @@ const ProfileScreen = () => {
           {t("profile.freeCollectionLimit", { count: userCollection.length, limit: FREE_COLLECTION_LIMIT })}
         </Text>
       )}
-
-      <StatTile
-        className='mt-4'
-        items={[
-          { value: monthWears, label: t("profile.stats.thisMonth") },
-          { value: streak, label: t("profile.stats.dayStreak", { count: streak }) },
-        ]}
-      />
 
       {mostWorn && (
         <Text className={`${mutedTextClass} text-sm pt-3`}>
@@ -249,43 +244,104 @@ const ProfileScreen = () => {
 
       <WearHeatmap events={events ?? []} className='mt-6' />
 
-      <Row
-        icon='history'
-        className='mt-6'
-        label={t("profile.wearHistoryRow")}
-        onPress={() => router.push("/wear-history")}
-      />
-
-      <Row
-        icon='export-variant'
-        className='mt-4'
-        label={t("profile.exportData")}
-        onPress={() => router.push("/export-data")}
-      />
-
-      {isModerator && (
+      <RowGroup title={t("profile.sectionActivity")} className='mt-8'>
         <Row
-          icon='shield-check-outline'
-          className='mt-4'
-          label={t("profile.moderationQueue")}
-          onPress={() => router.push("/moderation")}
+          icon='history'
+          label={t("profile.wearHistoryRow")}
+          onPress={() => router.push("/wear-history")}
         />
-      )}
+        <Row
+          icon='chart-timeline-variant'
+          label={t("profile.shareRecap")}
+          testID='profile-share-recap-row'
+          onPress={() => setRecapShareVisible(true)}
+        />
+        {todayFragrance && (
+          <Row
+            icon='flower-tulip-outline'
+            label={t("profile.shareToday")}
+            testID='profile-share-today-row'
+            onPress={() => setTodayShareVisible(true)}
+          />
+        )}
+      </RowGroup>
 
-      {/* Theme moved here from the header — appearance is a settings concern */}
-      <Row
-        icon='theme-light-dark'
-        className='mt-4'
-        label={t("profile.appearance")}
-        onPress={() => setAppearancePickerOpen(true)}
-        trailing={
-          <View className='flex-row items-center' style={{ gap: 4 }}>
-            <Text className={`${mutedTextClass} text-base`}>
-              {t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey)}
-            </Text>
-            <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
-          </View>
-        }
+      <RowGroup title={t("profile.sectionPreferences")} className='mt-6'>
+        {/* Theme moved here from the header — appearance is a settings concern */}
+        <Row
+          icon='theme-light-dark'
+          label={t("profile.appearance")}
+          onPress={() => setAppearancePickerOpen(true)}
+          trailing={
+            <View className='flex-row items-center' style={{ gap: 4 }}>
+              <Text className={`${mutedTextClass} text-base`}>
+                {t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey)}
+              </Text>
+              <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
+            </View>
+          }
+        />
+        <Row
+          icon='translate'
+          label={t("profile.language")}
+          testID='profile-language-row'
+          onPress={() => setLanguagePickerVisible(true)}
+          trailing={
+            <View className='flex-row items-center' style={{ gap: 4 }}>
+              <Text className={`${mutedTextClass} text-sm`}>{languageLabel(localePreference)}</Text>
+              <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(mutedColors)} />
+            </View>
+          }
+        />
+        <Row
+          icon='bell-outline'
+          label={t("profile.dailyReminder")}
+          trailing={
+            <Switch
+              value={remindersEnabled ?? true}
+              onValueChange={toggleReminders}
+              trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
+            />
+          }
+        />
+      </RowGroup>
+
+      <RowGroup title={t("profile.sectionAccount")} className='mt-6'>
+        <Row
+          icon='export-variant'
+          label={t("profile.exportData")}
+          onPress={() => router.push("/export-data")}
+        />
+        {isModerator && (
+          <Row
+            icon='shield-check-outline'
+            label={t("profile.moderationQueue")}
+            onPress={() => router.push("/moderation")}
+          />
+        )}
+        <Row
+          icon='shield-lock-outline'
+          label={t("screens.privacyPolicy")}
+          onPress={() => router.push("/privacy-policy")}
+        />
+        <Row
+          icon='file-document-outline'
+          label={t("screens.terms")}
+          onPress={() => router.push("/terms")}
+        />
+        <Row icon='logout' tone='danger' label={t("profile.signOut")} onPress={logOut} />
+      </RowGroup>
+
+      {/* App Store 5.1.1(v) / Play policy: account deletion must be in-app */}
+      <Button
+        variant='ghost'
+        tone='danger'
+        size='sm'
+        className='mt-6'
+        label={t("profile.deleteAccount")}
+        loading={deleting}
+        loadingLabel={t("profile.deletingAccount")}
+        onPress={handleDeleteAccount}
       />
 
       <Dialog
@@ -309,84 +365,6 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         ))}
       </Dialog>
-
-      <Row
-        icon='bell-outline'
-        className='mt-4'
-        label={t("profile.dailyReminder")}
-        trailing={
-          <Switch
-            value={remindersEnabled ?? true}
-            onValueChange={toggleReminders}
-            trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
-          />
-        }
-      />
-
-      <Row
-        icon='translate'
-        className='mt-4'
-        label={t("profile.language")}
-        testID='profile-language-row'
-        onPress={() => setLanguagePickerVisible(true)}
-        trailing={
-          <View className='flex-row items-center' style={{ gap: 4 }}>
-            <Text className={`${mutedTextClass} text-sm`}>{languageLabel(localePreference)}</Text>
-            <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(mutedColors)} />
-          </View>
-        }
-      />
-
-      <Row
-        icon='chart-timeline-variant'
-        className='mt-4'
-        label={t("profile.shareRecap")}
-        testID='profile-share-recap-row'
-        onPress={() => setRecapShareVisible(true)}
-      />
-
-      {todayFragrance && (
-        <Row
-          icon='flower-tulip-outline'
-          className='mt-4'
-          label={t("profile.shareToday")}
-          testID='profile-share-today-row'
-          onPress={() => setTodayShareVisible(true)}
-        />
-      )}
-
-      <Row
-        icon='shield-lock-outline'
-        className='mt-4'
-        label={t("screens.privacyPolicy")}
-        onPress={() => router.push("/privacy-policy")}
-      />
-
-      <Row
-        icon='file-document-outline'
-        className='mt-4'
-        label={t("screens.terms")}
-        onPress={() => router.push("/terms")}
-      />
-
-      <TouchableOpacity
-        onPress={logOut}
-        className={`${danger.bgClass} flex-row items-center justify-center w-full mt-8 py-3 rounded-2xl`}>
-        <MaterialCommunityIcons name='logout' size={20} color={getColor(danger.color)} />
-        <Text className={`${danger.textClass} text-base font-semibold pl-2`}>{t("profile.signOut")}</Text>
-      </TouchableOpacity>
-
-      {/* App Store 5.1.1(v) / Play policy: account deletion must be in-app */}
-      <Button
-        variant='ghost'
-        tone='danger'
-        size='sm'
-        className='mt-6'
-        label={t("profile.deleteAccount")}
-        loading={deleting}
-        loadingLabel={t("profile.deletingAccount")}
-        onPress={handleDeleteAccount}
-      />
 
       <Dialog
         visible={languagePickerVisible}

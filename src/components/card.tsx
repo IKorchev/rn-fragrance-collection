@@ -177,31 +177,48 @@ const WearInfoText = ({
   centered?: boolean
   // Fixed white-on-scrim styling for use inside Card.Overlay
   overlay?: boolean
-  // Community rows (leaderboard/search): "1,234 wears" phrasing, and the wear
+  // Community rows (leaderboard/search): "Worn 1,234×" phrasing, and the wear
   // part is omitted entirely at 0 (catalog rows aren't "not worn yet")
   community?: boolean
   avgRating?: number | null
   ratingCount?: number | null
 }) => {
-  const { mutedTextClass } = useTheme()
+  const { theme, mutedTextClass } = useTheme()
 
-  const parts: string[] = []
-  if (community) {
-    if (timesWorn > 0) parts.push(`${timesWorn.toLocaleString()} ${timesWorn === 1 ? "wear" : "wears"}`)
-  } else {
-    parts.push(timesWorn > 0 ? `Worn ${timesWorn}×` : "Not worn yet")
-    if (lastWorn) parts.push(formatRelativeDay(lastWorn))
+  // Neutral (not accent) tint on purpose — the emerald ActionPill on the same
+  // row is the action, the badge is just info
+  const badgeBg = overlay ? "bg-white/15" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"
+  const badgeTextClass = overlay ? "text-white/90" : theme === "dark" ? "text-zinc-300" : "text-zinc-600"
+  const badgeIconColor = overlay
+    ? "rgba(255,255,255,0.9)"
+    : getColor(theme === "dark" ? "zinc-400" : "zinc-500")
+  const metaClass = overlay ? "text-white/80" : mutedTextClass
+
+  const badgeLabel = community ? `Worn ${timesWorn.toLocaleString()}×` : `${timesWorn}×`
+
+  const meta: string[] = []
+  if (!community) {
+    if (timesWorn === 0) meta.push("Not worn yet")
+    else if (lastWorn) meta.push(formatRelativeDay(lastWorn))
   }
-  if (avgRating != null && ratingCount) parts.push(`★ ${avgRating.toFixed(1)} (${ratingCount})`)
+  if (avgRating != null && ratingCount) meta.push(`★ ${avgRating.toFixed(1)} (${ratingCount})`)
 
-  if (parts.length === 0) return null
+  if (timesWorn === 0 && meta.length === 0) return null
 
   return (
-    <Text
-      numberOfLines={1}
-      className={`text-xs pt-0.5 ${overlay ? "text-white/80" : mutedTextClass} ${centered ? "text-center" : ""}`}>
-      {parts.join("  ·  ")}
-    </Text>
+    <View className={`flex-row items-center pt-1 ${centered ? "justify-center" : ""}`} style={{ gap: 6 }}>
+      {timesWorn > 0 && (
+        <View className={`${badgeBg} flex-row items-center rounded-full px-2 py-0.5`} style={{ gap: 3 }}>
+          <MaterialCommunityIcons name='spray' size={11} color={badgeIconColor} />
+          <Text className={`${badgeTextClass} text-[11px] font-semibold`}>{badgeLabel}</Text>
+        </View>
+      )}
+      {meta.length > 0 && (
+        <Text numberOfLines={1} className={`text-xs ${metaClass} shrink`}>
+          {meta.join("  ·  ")}
+        </Text>
+      )}
+    </View>
   )
 }
 

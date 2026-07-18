@@ -59,8 +59,8 @@ const topFacets = (facets: Facet[], limit: number) => facets.slice(0, limit)
 
 const promptWearHistoryUpsell = () =>
   promptProUpsell(
-    "Wear-history filters are a Pro feature",
-    "Upgrade to Pro to filter your diary by tag/brand and see wear insights."
+    "Diary filters are a Pro feature",
+    "Upgrade to Pro to filter your diary by tag/brand and see scent insights."
   )
 
 const InsightRow = ({ facet, maxCount }: { facet: Facet; maxCount: number }) => {
@@ -187,7 +187,7 @@ const WearHistoryScreen = () => {
       <View className={`flex-1 ${modalColors.background}`}>
         <EmptyState
           icon='cloud-alert'
-          title="Couldn't load your wear history"
+          title="Couldn't load your diary"
           message='Check your connection and try again.'
           actionLabel='Try again'
           onAction={() => refetch()}
@@ -216,9 +216,9 @@ const WearHistoryScreen = () => {
             <View className='px-4 pb-2'>
               <StatTile
                 items={[
-                  { value: totalWears, label: "Total wears" },
+                  { value: totalWears, label: "Times worn" },
                   { value: weekWears, label: "This week" },
-                  { value: uniqueWorn, label: "Unique worn" },
+                  { value: uniqueWorn, label: "Unique scents" },
                 ]}
               />
 
@@ -306,13 +306,13 @@ const WearHistoryScreen = () => {
             <EmptyState
               icon='bottle-tonic-outline'
               illustration={<EmptyCollectionIllustration />}
-              title='No wears logged yet'
+              title='Nothing logged yet'
               message='Tap the spray button on a fragrance to start your diary.'
             />
           ) : (
             <EmptyState
               icon='magnify-close'
-              title='No wears match'
+              title='No entries match'
               message='Try changing your search or filters.'
             />
           )
