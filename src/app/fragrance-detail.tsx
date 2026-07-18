@@ -13,6 +13,7 @@ import Card from "@/components/card"
 import PressableScale from "@/components/shared/ui/pressable-scale"
 import StatTile from "@/components/shared/ui/stat-tile"
 import TextField from "@/components/shared/ui/text-field"
+import TagInput from "@/components/tag-input"
 
 // Soft radial glow behind the hero image — same device as SignInBackdrop,
 // scaled down to sit just behind the bottle instead of filling the screen.
@@ -186,6 +187,12 @@ const FragranceDetailScreen = () => {
               </PressableScale>
             ))}
           </View>
+
+          <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Tags</Text>
+          <TagInput
+            tags={collectionItem.tags}
+            onChange={(tags) => updateFragrance({ id: collectionItem.id }, { tags })}
+          />
 
           <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
           <TextField

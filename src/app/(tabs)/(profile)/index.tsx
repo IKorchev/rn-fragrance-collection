@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase"
 import { useIsModerator, useRemindersEnabled, useWearHistory } from "@/lib/queries"
 import { useOnboarding } from "@/lib/utils/use-onboarding"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
+import { FREE_COLLECTION_LIMIT } from "@/lib/entitlements"
 import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
@@ -180,6 +181,11 @@ const ProfileScreen = () => {
           { value: totalWears, label: "Total wears" },
         ]}
       />
+      {!isPro && (
+        <Text className={`${mutedTextClass} text-xs pt-2`}>
+          {userCollection.length}/{FREE_COLLECTION_LIMIT} in your free collection
+        </Text>
+      )}
 
       <StatTile
         className='mt-4'

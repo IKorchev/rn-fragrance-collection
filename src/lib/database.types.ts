@@ -240,6 +240,7 @@ export type Database = {
           name: string
           notes: string | null
           rating: number | null
+          tags: string[]
           times_worn: number
           user_id: string
         }
@@ -254,6 +255,7 @@ export type Database = {
           name: string
           notes?: string | null
           rating?: number | null
+          tags?: string[]
           times_worn?: number
           user_id: string
         }
@@ -268,6 +270,7 @@ export type Database = {
           name?: string
           notes?: string | null
           rating?: number | null
+          tags?: string[]
           times_worn?: number
           user_id?: string
         }
@@ -464,6 +467,7 @@ export type Database = {
         }[]
       }
       undo_wear: { Args: { row_id: string; tz?: string }; Returns: boolean }
+      valid_tag_array: { Args: { tags: string[] }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
