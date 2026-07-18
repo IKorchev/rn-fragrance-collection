@@ -4,6 +4,7 @@ import useTheme from "@/contexts/theme-context"
 import useLocale from "@/contexts/locale-context"
 import useToast from "@/contexts/toast-context"
 import { getColor } from "@/lib/utils/colors"
+import { reportError } from "@/lib/sentry"
 import { shareText } from "@/lib/share"
 import Dialog from "@/components/shared/ui/dialog"
 import Button from "@/components/shared/ui/button"
@@ -43,7 +44,7 @@ const ShareSheetModal = ({ visible, title, message, toggles, onClose }: ShareShe
       await shareText(message)
       onClose()
     } catch (error) {
-      console.log(error)
+      reportError(error, { flow: "share" })
       showToast({ message: t("share.failedMessage") })
     } finally {
       setSharing(false)
