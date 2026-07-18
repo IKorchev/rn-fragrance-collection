@@ -15,6 +15,8 @@ import StatTile from "@/components/shared/ui/stat-tile"
 import Row from "@/components/shared/ui/row"
 import FilterChip from "@/components/shared/ui/filter-chip"
 import FilterPickerModal from "@/components/filter-picker-modal"
+import { EmptyCollectionIllustration } from "@/components/empty-illustrations"
+import SkeletonList from "@/components/shared/ui/skeleton-list"
 
 interface DaySection {
   title: string
@@ -157,14 +159,6 @@ const WearHistoryScreen = () => {
   const maxBrandCount = brandInsights[0]?.count ?? 0
   const maxTagCount = tagInsights[0]?.count ?? 0
 
-  const emptyMessage = error
-    ? "Couldn't load your wear history, please try again later."
-    : isPending
-      ? "Loading…"
-      : (events ?? []).length === 0
-        ? "No wears logged yet — tap the spray button on a fragrance to start your diary."
-        : "No wears match your search/filters."
-
   const openFacetPicker = (kind: "tag" | "brand") => {
     if (!isPro) {
       promptProUpsell(
@@ -175,6 +169,28 @@ const WearHistoryScreen = () => {
     }
     setFacetSearch("")
     setOpenPicker(kind)
+  }
+
+  if (isPending) {
+    return (
+      <View className={`flex-1 ${modalColors.background}`}>
+        <SkeletonList />
+      </View>
+    )
+  }
+
+  if (error) {
+    return (
+      <View className={`flex-1 ${modalColors.background}`}>
+        <EmptyState
+          icon='cloud-alert'
+          title="Couldn't load your wear history"
+          message='Check your connection and try again.'
+          actionLabel='Try again'
+          onAction={() => refetch()}
+        />
+      </View>
+    )
   }
 
   return (
@@ -288,13 +304,20 @@ const WearHistoryScreen = () => {
           ) : null
         }
         ListEmptyComponent={
-          <EmptyState
-            icon={error ? "cloud-alert" : "notebook-outline"}
-            title={error ? "Couldn't load your wear history" : "No wears yet"}
-            message={emptyMessage}
-            actionLabel={error ? "Try again" : undefined}
-            onAction={error ? () => refetch() : undefined}
-          />
+          (events ?? []).length === 0 ? (
+            <EmptyState
+              icon='bottle-tonic-outline'
+              illustration={<EmptyCollectionIllustration />}
+              title='No wears logged yet'
+              message='Tap the spray button on a fragrance to start your diary.'
+            />
+          ) : (
+            <EmptyState
+              icon='magnify-close'
+              title='No wears match'
+              message='Try changing your search or filters.'
+            />
+          )
         }
         renderSectionHeader={({ section }) => (
           <Text className={`${mutedTextClass} text-sm font-semibold px-4 pt-5 pb-1`}>

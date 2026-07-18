@@ -1,13 +1,6 @@
 import React, { useMemo, useState } from "react"
-import {
-  View,
-  FlatList,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from "react-native"
+import { View, Text, TouchableOpacity, RefreshControl, ScrollView } from "react-native"
+import Animated, { LinearTransition } from "react-native-reanimated"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
@@ -17,9 +10,14 @@ import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import { tagFacets } from "@/lib/utils/collection-facets"
 import CollectionListItem from "@/components/collection-list-item"
+import OnboardingChecklist from "@/components/onboarding-checklist"
+import Dialog from "@/components/shared/ui/dialog"
 import EmptyState from "@/components/shared/ui/empty-state"
+import { EmptyCollectionIllustration, NoResultsIllustration } from "@/components/empty-illustrations"
 import FilterChip from "@/components/shared/ui/filter-chip"
 import IconButton from "@/components/shared/ui/icon-button"
+import SearchField from "@/components/shared/ui/search-field"
+import SkeletonList from "@/components/shared/ui/skeleton-list"
 
 const SORT_OPTIONS = [
   { key: "least-worn", label: "Least worn" },
@@ -35,11 +33,20 @@ const CollectionScreen = () => {
   const insets = useSafeAreaInsets()
   const { visibleSortedCollection, collectionPending, collectionError, refetchCollection } =
     useAuth()
-  const { theme, viewColors, accentColors, mutedColors, baseColors, primaryBg } = useTheme()
+  const {
+    viewColors,
+    accentColors,
+    mutedColors,
+    baseTextClass,
+    accentTextClass,
+    mutedTextClass,
+    primaryBg,
+  } = useTheme()
   const { refreshing, onRefresh } = usePullToRefresh(refetchCollection)
   const [filter, setFilter] = useState("")
   const [sort, setSort] = useState<SortKey>("least-worn")
   const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [sortPickerOpen, setSortPickerOpen] = useState(false)
 
   const hasCollection = visibleSortedCollection.length > 0
   const tagOptions = useMemo(() => tagFacets(visibleSortedCollection), [visibleSortedCollection])
@@ -73,7 +80,7 @@ const CollectionScreen = () => {
   if (collectionPending) {
     return (
       <View className={`flex-1 ${viewColors.background}`}>
-        <ActivityIndicator size='large' color={getColor(accentColors)} className='mt-24' />
+        <SkeletonList />
       </View>
     )
   }
@@ -96,34 +103,20 @@ const CollectionScreen = () => {
     <View className={`flex-1 ${viewColors.background}`}>
       {hasCollection && (
         <View className='px-3 pt-3 pb-1'>
-          <View
-            className={`flex-row items-center rounded-full px-3 ${
-              theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"
-            }`}>
-            <MaterialCommunityIcons name='magnify' size={20} color={getColor(mutedColors)} />
-            <TextInput
-              value={filter}
-              onChangeText={setFilter}
-              placeholder='Search your collection'
-              placeholderTextColor={getColor(mutedColors)}
-              autoCorrect={false}
-              className='flex-1 px-2 py-2.5'
-              style={{ color: getColor(baseColors) }}
+          <SearchField
+            value={filter}
+            onChangeText={setFilter}
+            placeholder='Search your collection'
+          />
+          <View className='flex-row items-center justify-between pt-2.5 px-1'>
+            <Text className={`${mutedTextClass} text-sm`}>
+              {shownCollection.length} {shownCollection.length === 1 ? "fragrance" : "fragrances"}
+            </Text>
+            <FilterChip
+              label={SORT_OPTIONS.find(({ key }) => key === sort)!.label}
+              selected={sort !== "least-worn"}
+              onPress={() => setSortPickerOpen(true)}
             />
-            {filter.length > 0 && (
-              <TouchableOpacity onPress={() => setFilter("")}>
-                <MaterialCommunityIcons
-                  name='close-circle'
-                  size={18}
-                  color={getColor(mutedColors)}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-          <View className='flex-row justify-evenly pt-2'>
-            {SORT_OPTIONS.map(({ key, label }) => (
-              <FilterChip key={key} label={label} selected={key === sort} onPress={() => setSort(key)} />
-            ))}
           </View>
           {tagOptions.length > 0 && (
             <ScrollView
@@ -148,11 +141,33 @@ const CollectionScreen = () => {
           )}
         </View>
       )}
-      <FlatList
+      <Dialog visible={sortPickerOpen} title='Sort by' onClose={() => setSortPickerOpen(false)}>
+        {SORT_OPTIONS.map(({ key, label }) => (
+          <TouchableOpacity
+            key={key}
+            className='flex-row items-center justify-between py-3'
+            onPress={() => {
+              setSort(key)
+              setSortPickerOpen(false)
+            }}>
+            <Text className={key === sort ? `${accentTextClass} font-semibold` : baseTextClass}>
+              {label}
+            </Text>
+            {key === sort && (
+              <MaterialCommunityIcons name='check' size={18} color={getColor(accentColors)} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </Dialog>
+      {/* Animated.FlatList: deletes, undo re-inserts, and sort changes slide
+          rows into place instead of snapping */}
+      <Animated.FlatList
         data={shownCollection}
+        itemLayoutAnimation={LinearTransition}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom }}
         keyboardShouldPersistTaps='handled'
+        ListHeaderComponent={<OnboardingChecklist />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -165,12 +180,14 @@ const CollectionScreen = () => {
           hasCollection ? (
             <EmptyState
               icon='magnify-close'
+              illustration={<NoResultsIllustration />}
               title='No matches'
               message='Nothing in your collection matches that search.'
             />
           ) : (
             <EmptyState
               icon='bottle-tonic-outline'
+              illustration={<EmptyCollectionIllustration />}
               title='Your collection is empty'
               message='Find fragrances in the catalog and add them to start tracking your wears.'
               actionLabel='Find fragrances'

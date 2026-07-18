@@ -9,19 +9,34 @@ import { promptProUpsell } from "@/lib/entitlements"
 import { tagFacets, brandFacets } from "@/lib/utils/collection-facets"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
+import { markPickerTried } from "@/lib/utils/use-onboarding"
 import Picker from "@/components/picker"
 import PickerFilterSheet from "@/components/picker-filter-sheet"
 
 const PickerScreen = () => {
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const { frag, index, isPro, userCollection, pickerFilters, setPickerFilters, pickerHasActiveFilters } =
-    useAuth()
+  const {
+    user,
+    frag,
+    index,
+    isPro,
+    userCollection,
+    pickerFilters,
+    setPickerFilters,
+    pickerHasActiveFilters,
+  } = useAuth()
   const { viewColors, mutedColors, accentColors, accentTintBg } = useTheme()
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
 
   const tagOptions = useMemo(() => tagFacets(userCollection), [userCollection])
   const brandOptions = useMemo(() => brandFacets(userCollection), [userCollection])
+
+  // Marks the "Try the picker" onboarding step done regardless of whether the
+  // user actually pulls the lever — opening the modal is the tried part.
+  useEffect(() => {
+    markPickerTried(user?.id)
+  }, [user?.id])
 
   // Interstitial on close (X button or Android hardware back — unmount
   // catches both). Pro removes ads. Ref so upgrading mid-picker is honored.

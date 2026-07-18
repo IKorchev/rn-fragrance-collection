@@ -5,29 +5,40 @@ import React, {
   useState,
   type ReactNode,
 } from "react"
+import { useColorScheme } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { getColor } from "@/lib/utils/colors"
 
 export type Theme = "light" | "dark"
+// What's actually stored/selected — "system" resolves to the OS scheme at
+// render time and stays live if the OS scheme changes underneath it.
+export type ThemePreference = Theme | "system"
 
 interface ColorGroup {
   font: string
   background: string
 }
 
-// Tinted action buttons: *Bg is a complete literal className group (tint +
-// outline), *Icon is a bare token for getColor(). The colored outline is what
-// makes the button read as a button — the tint alone got lost on busy
-// backgrounds (especially the picker's dark scrim).
+// Tinted action buttons: *Bg is a complete literal className group, *Icon is
+// a bare token for getColor(). Only delete survives as an icon button (swipe
+// reveal) — wear/add are labeled pills (see PillGroup).
 interface ButtonGroup {
-  wearBg: string
-  wearIcon: string
-  editBg: string
-  editIcon: string
   deleteBg: string
   deleteIcon: string
-  rerollBg: string
-  rerollIcon: string
+}
+
+// Labeled action pills (Wear / Add on list rows, Wear on the picker scrim).
+// tint* sits on themed card rows; solid* sits on imagery (the picker's dark
+// scrim, where a tint alone gets lost); worn* is the done-for-today state.
+interface PillGroup {
+  tintBg: string
+  tintText: string
+  solidBg: string
+  solidText: string
+  wornBg: string
+  wornText: string
+  wornOverlayBg: string
+  wornOverlayText: string
 }
 
 // shared/ui's danger-toned components (Button variant="danger", Row, etc.) —
@@ -65,9 +76,13 @@ interface ThemeContextValue {
   cardColors: ColorGroup
   modalColors: ColorGroup
   buttons: ButtonGroup
+  pill: PillGroup
   danger: DangerGroup
+  // Resolved value — everything except the Profile appearance picker should
+  // read this, never themePreference (it's the source of truth for styling).
   theme: Theme
-  setTheme: React.Dispatch<React.SetStateAction<Theme>>
+  themePreference: ThemePreference
+  setThemePreference: React.Dispatch<React.SetStateAction<ThemePreference>>
 }
 
 const ThemeContext = createContext<ThemeContextValue>({} as ThemeContextValue)
@@ -78,18 +93,21 @@ const useTheme = () => {
 }
 
 export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>("light")
+  const systemScheme = useColorScheme()
+  const [themePreference, setThemePreference] = useState<ThemePreference>("light")
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_STORAGE_KEY).then((stored) => {
-      if (stored === "light" || stored === "dark") setTheme(stored)
+      if (stored === "light" || stored === "dark" || stored === "system") setThemePreference(stored)
     })
   }, [])
 
   useEffect(() => {
-    AsyncStorage.setItem(THEME_STORAGE_KEY, theme)
-  }, [theme])
+    AsyncStorage.setItem(THEME_STORAGE_KEY, themePreference)
+  }, [themePreference])
 
+  const theme: Theme =
+    themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference
   const dark = theme === "dark"
 
   const baseColors = dark ? "zinc-100" : "zinc-900"
@@ -121,24 +139,34 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
 
   const buttons = dark
     ? {
-        wearBg: "bg-emerald-500/25 border border-emerald-400/50",
-        wearIcon: "emerald-400",
-        editBg: "bg-sky-500/25 border border-sky-400/50",
-        editIcon: "sky-400",
-        deleteBg: "bg-rose-500/25 border border-rose-400/50",
+        deleteBg: "bg-rose-500/20",
         deleteIcon: "rose-400",
-        rerollBg: "bg-amber-500/25 border border-amber-400/50",
-        rerollIcon: "amber-400",
       }
     : {
-        wearBg: "bg-emerald-200/70 border border-emerald-400/60",
-        wearIcon: "emerald-700",
-        editBg: "bg-sky-200/70 border border-sky-400/60",
-        editIcon: "sky-700",
-        deleteBg: "bg-rose-200/70 border border-rose-400/60",
+        deleteBg: "bg-rose-500/10",
         deleteIcon: "rose-600",
-        rerollBg: "bg-amber-200/70 border border-amber-400/60",
-        rerollIcon: "amber-600",
+      }
+
+  const pill: PillGroup = dark
+    ? {
+        tintBg: "bg-emerald-400/15",
+        tintText: "text-emerald-400",
+        solidBg: "bg-emerald-500",
+        solidText: "text-white",
+        wornBg: "bg-zinc-800",
+        wornText: "text-zinc-400",
+        wornOverlayBg: "bg-white/15",
+        wornOverlayText: "text-white/70",
+      }
+    : {
+        tintBg: "bg-emerald-600/10",
+        tintText: "text-emerald-700",
+        solidBg: "bg-emerald-600",
+        solidText: "text-white",
+        wornBg: "bg-zinc-100",
+        wornText: "text-zinc-500",
+        wornOverlayBg: "bg-white/15",
+        wornOverlayText: "text-white/70",
       }
 
   const primaryBg = dark ? "bg-emerald-500" : "bg-emerald-600"
@@ -170,8 +198,10 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
         cardColors,
         modalColors,
         buttons,
+        pill,
         danger,
-        setTheme,
+        themePreference,
+        setThemePreference,
       }}>
       {children}
     </ThemeContext.Provider>

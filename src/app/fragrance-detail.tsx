@@ -1,15 +1,45 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Image } from "expo-image"
-import { ScrollView, View, Text, TouchableOpacity } from "react-native"
-import { useLocalSearchParams } from "expo-router"
+import { ScrollView, View, Text, TouchableOpacity, useWindowDimensions, StyleSheet } from "react-native"
+import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import { useFragranceRatings, useMyRating } from "@/lib/queries"
+import { formatRelativeDay } from "@/lib/utils/relative-time"
 import Card from "@/components/card"
+import PressableScale from "@/components/shared/ui/pressable-scale"
+import StatTile from "@/components/shared/ui/stat-tile"
 import TextField from "@/components/shared/ui/text-field"
 import TagInput from "@/components/tag-input"
+
+// Soft radial glow behind the hero image — same device as SignInBackdrop,
+// scaled down to sit just behind the bottle instead of filling the screen.
+const HeroGlow = () => {
+  const { theme } = useTheme()
+  const { width } = useWindowDimensions()
+  const dark = theme === "dark"
+  const size = width * 1.1
+  const glow = getColor(dark ? "emerald-500" : "emerald-400")
+
+  return (
+    <Svg
+      width={size}
+      height={size}
+      style={{ position: "absolute", top: -size * 0.32 }}
+      pointerEvents='none'>
+      <Defs>
+        <RadialGradient id='detail-glow'>
+          <Stop offset='0' stopColor={glow} stopOpacity={dark ? 0.25 : 0.35} />
+          <Stop offset='1' stopColor={glow} stopOpacity='0' />
+        </RadialGradient>
+      </Defs>
+      <Circle cx={size / 2} cy={size / 2} r={size / 2} fill='url(#detail-glow)' />
+    </Svg>
+  )
+}
 
 // Param-driven for display data: the catalog only holds name/brand/image (all
 // other scraped metadata was dropped as untrustworthy), so there's nothing to
@@ -17,6 +47,7 @@ import TagInput from "@/components/tag-input"
 // row from the collection query — that unlocks the editable personal
 // rating/notes below and keeps wear stats fresh after a wear.
 const FragranceDetailScreen = () => {
+  const router = useRouter()
   const params = useLocalSearchParams<{
     id?: string
     name: string
@@ -84,37 +115,66 @@ const FragranceDetailScreen = () => {
       contentContainerClassName='px-5 pt-6 pb-12'
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps='handled'>
-      {imageUrl ? (
-        // White backing keeps product shots (white backgrounds) from clashing in dark mode
-        <View className='self-center h-48 w-48 items-center justify-center bg-white rounded-2xl'>
-          <Image
-            style={{ height: 160, width: 160 }}
-            contentFit='contain'
-            transition={150}
-            source={{ uri: imageUrl }}
-          />
-        </View>
-      ) : (
-        <View className={`self-center h-48 w-48 items-center justify-center rounded-2xl border ${baseBorderClass}`}>
-          <MaterialCommunityIcons name='image-off' size={40} color={getColor(mutedColors)} />
-        </View>
-      )}
+      <View className='items-center justify-center' style={{ minHeight: 224 }}>
+        <HeroGlow />
+        {imageUrl ? (
+          // White backing keeps product shots (white backgrounds) from clashing in dark mode
+          <View className='h-56 w-56 items-center justify-center bg-white rounded-3xl' style={heroShadow}>
+            <Image
+              style={{ height: 184, width: 184 }}
+              contentFit='contain'
+              transition={150}
+              source={{ uri: imageUrl }}
+            />
+          </View>
+        ) : (
+          <View
+            className={`h-56 w-56 items-center justify-center rounded-3xl border ${baseBorderClass} ${modalColors.background}`}
+            style={heroShadow}>
+            <MaterialCommunityIcons name='image-off' size={44} color={getColor(mutedColors)} />
+          </View>
+        )}
+      </View>
 
       <Card.Title centered>{title}</Card.Title>
       <Card.Subtitle centered>{brand}</Card.Subtitle>
-      <Card.WearInfoText
-        timesWorn={timesWorn}
-        lastWorn={lastWorn}
-        centered
-        avgRating={community?.avg}
-        ratingCount={community?.count}
-      />
+
+      {collectionItem ? (
+        <StatTile
+          className='mt-5'
+          items={[
+            { value: timesWorn, label: timesWorn === 1 ? "Wear" : "Wears" },
+            {
+              value: lastWorn
+                ? formatRelativeDay(lastWorn).replace(/^./, (c) => c.toUpperCase())
+                : "Never",
+              label: "Last worn",
+            },
+            ...(community?.avg != null && community.count
+              ? [
+                  {
+                    value: `★ ${community.avg.toFixed(1)}`,
+                    label: `${community.count} rating${community.count === 1 ? "" : "s"}`,
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ) : (
+        <Card.WearInfoText
+          timesWorn={timesWorn}
+          lastWorn={lastWorn}
+          centered
+          avgRating={community?.avg}
+          ratingCount={community?.count}
+        />
+      )}
 
       {collectionItem && (
         <>
           <View className='flex-row justify-center pt-5' style={{ gap: 6 }}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => saveRating(star)} hitSlop={6}>
+              <PressableScale key={star} onPress={() => saveRating(star)} hitSlop={6}>
                 <MaterialCommunityIcons
                   name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
                   size={30}
@@ -124,7 +184,7 @@ const FragranceDetailScreen = () => {
                       : getColor(mutedColors)
                   }
                 />
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
@@ -150,8 +210,41 @@ const FragranceDetailScreen = () => {
           </Text>
         </>
       )}
+
+      {/* Only catalog-linked rows have a fragranceId to report against — a
+          manual add has nothing in the shared catalog to flag */}
+      {fragranceId && (
+        <TouchableOpacity
+          className='flex-row items-center justify-center pt-8'
+          hitSlop={8}
+          accessibilityRole='button'
+          accessibilityLabel='Report an issue with this listing'
+          onPress={() =>
+            router.push({
+              pathname: "/report-fragrance",
+              params: {
+                fragranceId,
+                name,
+                ...(imageUrl ? { imageUrl } : {}),
+              },
+            })
+          }>
+          <MaterialCommunityIcons name='flag-outline' size={15} color={getColor(mutedColors)} />
+          <Text className={`${mutedTextClass} text-xs pl-1.5`}>Report an issue with this listing</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   )
 }
+
+const heroShadow = StyleSheet.create({
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+}).shadow
 
 export default FragranceDetailScreen

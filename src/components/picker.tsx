@@ -10,7 +10,7 @@ import {
   InteractionManager,
   PanResponder,
 } from "react-native"
-import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons"
+import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useAuth, { type UserFragrance } from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
@@ -251,7 +251,7 @@ const Picker = ({ fragrance, index }: PickerProps) => {
                       <Card.Overlay>
                           <Card.Title color='white'>{title}</Card.Title>
                           <Card.Subtitle color='white'>{brand}</Card.Subtitle>
-                          <Card.WearInfoText color='white' timesWorn={item?.times_worn ?? 0} lastWorn={item?.last_worn} />
+                          <Card.WearInfoText overlay timesWorn={item?.times_worn ?? 0} lastWorn={item?.last_worn} />
                       </Card.Overlay>
                     </View>
                   )
@@ -263,16 +263,16 @@ const Picker = ({ fragrance, index }: PickerProps) => {
                   Dimmed once worn today (one wear per day) — still tappable,
                   the increment_wear round-trip shows the "already worn" toast */}
               {spinPhase !== "spinning" && (
-                <Card.ActionButton
-                  variant='wear'
+                <Card.ActionPill
+                  label='Wear'
+                  appearance='solid'
                   size='lg'
-                  className='absolute bottom-2.5 right-2.5'
+                  className='absolute bottom-3.5 right-3'
                   testID='picker-wear-button'
                   style={styles.knob}
-                  dimmed={isWornToday(currentItem.last_worn)}
-                  onPress={() => incrementWear({ id: currentItem.id })}>
-                  {(iconColor) => <FontAwesome5 name='spray-can' size={22} color={iconColor} />}
-                </Card.ActionButton>
+                  worn={isWornToday(currentItem.last_worn)}
+                  onPress={() => incrementWear({ id: currentItem.id })}
+                />
               )}
             </View>
           ) : (

@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { View, FlatList, ActivityIndicator, Text, RefreshControl } from "react-native"
+import { View, FlatList, Text, RefreshControl } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useTopWorn, useFragranceRatings, WEAR_PERIODS, type WearPeriod } from "@/lib/queries"
 import { getColor } from "@/lib/utils/colors"
@@ -8,6 +8,7 @@ import useTheme from "@/contexts/theme-context"
 import TopListItem from "@/components/top-list-item"
 import EmptyState from "@/components/shared/ui/empty-state"
 import FilterChip from "@/components/shared/ui/filter-chip"
+import SkeletonList from "@/components/shared/ui/skeleton-list"
 
 const MostWornScreen = () => {
   const insets = useSafeAreaInsets()
@@ -25,7 +26,7 @@ const MostWornScreen = () => {
         ))}
       </View>
       {isLoading ? (
-        <ActivityIndicator color={getColor(accentColors)} size='large' className='mt-24' />
+        <SkeletonList />
       ) : error ? (
         <EmptyState
           icon='cloud-alert'
