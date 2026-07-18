@@ -1,9 +1,7 @@
 import React from "react"
 import { useRouter } from "expo-router"
-import { AntDesign } from "@expo/vector-icons"
 import useAuth from "@/contexts/auth-context"
 import Card from "./card"
-import { Text } from "react-native"
 
 interface TopListItemProps {
   name: string
@@ -57,11 +55,14 @@ const TopListItem = ({
       <Card.Content>
         <Card.Title>{title}</Card.Title>
         <Card.Subtitle>{brand}</Card.Subtitle>
-        <Card.WearInfoText timesWorn={wearCount || 0} avgRating={avgRating} ratingCount={ratingCount} />
+        <Card.WearInfoText
+          community
+          timesWorn={wearCount || 0}
+          avgRating={avgRating}
+          ratingCount={ratingCount}
+        />
       </Card.Content>
-      <Card.ActionButton variant='wear' className='mr-3' onPress={handleAddFragrance}>
-        {(iconColor) => <AntDesign name='plus' color={iconColor} size={22} />}
-      </Card.ActionButton>
+      <Card.ActionPill label='Add' className='mr-3' onPress={handleAddFragrance} />
     </Card.Root>
   )
 }

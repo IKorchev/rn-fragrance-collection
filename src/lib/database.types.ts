@@ -51,6 +51,50 @@ export type Database = {
           },
         ]
       }
+      fragrance_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          fragrance_id: string
+          id: string
+          moderator_note: string | null
+          reason: string
+          reviewed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          fragrance_id: string
+          id?: string
+          moderator_note?: string | null
+          reason: string
+          reviewed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          fragrance_id?: string
+          id?: string
+          moderator_note?: string | null
+          reason?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fragrance_reports_fragrance_id_fkey"
+            columns: ["fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "fragrances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fragrance_submissions: {
         Row: {
           brand: string
@@ -196,6 +240,7 @@ export type Database = {
           name: string
           notes: string | null
           rating: number | null
+          tags: string[]
           times_worn: number
           user_id: string
         }
@@ -210,6 +255,7 @@ export type Database = {
           name: string
           notes?: string | null
           rating?: number | null
+          tags?: string[]
           times_worn?: number
           user_id: string
         }
@@ -224,6 +270,7 @@ export type Database = {
           name?: string
           notes?: string | null
           rating?: number | null
+          tags?: string[]
           times_worn?: number
           user_id?: string
         }
@@ -346,6 +393,19 @@ export type Database = {
           fragrance_count: number
         }[]
       }
+      list_fragrance_reports: {
+        Args: { p_max_results?: number }
+        Returns: {
+          brand: string
+          created_at: string
+          details: string
+          fragrance_id: string
+          id: string
+          image_url: string
+          name: string
+          reason: string
+        }[]
+      }
       list_pending_submissions: {
         Args: { p_max_results?: number }
         Returns: {
@@ -359,6 +419,10 @@ export type Database = {
           similarity: number
           title: string
         }[]
+      }
+      review_fragrance_report: {
+        Args: { p_action: string; p_note?: string; p_report_id: string }
+        Returns: string
       }
       review_submission: {
         Args: {
@@ -384,6 +448,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submit_fragrance_report: {
+        Args: { p_details?: string; p_fragrance_id: string; p_reason: string }
+        Returns: string
+      }
       submit_fragrance_suggestion: {
         Args: { p_brand: string; p_title: string; p_user_fragrance_id?: string }
         Returns: string
@@ -399,6 +467,7 @@ export type Database = {
         }[]
       }
       undo_wear: { Args: { row_id: string; tz?: string }; Returns: boolean }
+      valid_tag_array: { Args: { tags: string[] }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

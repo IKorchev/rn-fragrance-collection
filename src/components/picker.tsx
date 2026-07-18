@@ -10,14 +10,16 @@ import {
   InteractionManager,
   PanResponder,
 } from "react-native"
-import { MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons"
+import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useAuth, { type UserFragrance } from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import { pickWeightedIndex } from "@/lib/utils/pick-weighted-index"
 import { isWornToday } from "@/lib/utils/worn-today"
 import { getImageSource } from "@/lib/utils/image-source"
+import { EMPTY_PICKER_FILTERS } from "@/lib/utils/picker-filters"
 import Card from "./card"
+import Button from "@/components/shared/ui/button"
 
 interface PickerProps {
   fragrance: UserFragrance | undefined
@@ -25,7 +27,14 @@ interface PickerProps {
 }
 
 const Picker = ({ fragrance, index }: PickerProps) => {
-  const { incrementWear, userCollection, getNewFrag } = useAuth()
+  const {
+    incrementWear,
+    userCollection,
+    pickerPool: pool,
+    pickerHasActiveFilters,
+    setPickerFilters,
+    getNewFrag,
+  } = useAuth()
   const { theme, baseBorderClass, mutedTextClass } = useTheme()
   const animatedOffset = useRef(new Animated.Value(0)).current
   const animationLoopRef = useRef<Animated.CompositeAnimation | null>(null)
@@ -43,10 +52,10 @@ const Picker = ({ fragrance, index }: PickerProps) => {
     const task = InteractionManager.runAfterInteractions(() => setReelReady(true))
     return () => task.cancel()
   }, [])
-  const currentItem = userCollection[spinIndex]
-  const reelItems = userCollection.length
-    ? Array.from({ length: userCollection.length * 12 }, (_, offset) => {
-        return userCollection[offset % userCollection.length]
+  const currentItem = pool[spinIndex]
+  const reelItems = pool.length
+    ? Array.from({ length: pool.length * 12 }, (_, offset) => {
+        return pool[offset % pool.length]
       })
     : []
   const [containerHeight, setContainerHeight] = useState(288) // measured via onLayout, 288 (h-72) until then
@@ -55,21 +64,21 @@ const Picker = ({ fragrance, index }: PickerProps) => {
   const offsetForIndex = (i: number) => -i * containerHeight
 
   useEffect(() => {
-    if (typeof index === "number" && userCollection[index]) {
+    if (typeof index === "number" && pool[index]) {
       setSpinIndex(index)
-    } else if (userCollection.length) {
-      setSpinIndex(Math.min(spinIndex, userCollection.length - 1))
+    } else if (pool.length) {
+      setSpinIndex(Math.min(spinIndex, pool.length - 1))
     }
-  }, [index, userCollection.length])
+  }, [index, pool.length])
 
   useEffect(() => {
-    if (!isSpinning && fragrance?.id && userCollection.length) {
-      const matchedIndex = userCollection.findIndex((el) => el.id === fragrance.id)
+    if (!isSpinning && fragrance?.id && pool.length) {
+      const matchedIndex = pool.findIndex((el) => el.id === fragrance.id)
       if (matchedIndex >= 0) {
         setSpinIndex(matchedIndex)
       }
     }
-  }, [fragrance?.id, isSpinning, userCollection])
+  }, [fragrance?.id, isSpinning, pool])
 
   useEffect(() => {
     if (!isSpinning) {
@@ -86,16 +95,16 @@ const Picker = ({ fragrance, index }: PickerProps) => {
   }, [])
 
   const handleReroll = () => {
-    if (!userCollection.length) return
+    if (!pool.length) return
 
     if (animationLoopRef.current) {
       animationLoopRef.current.stop()
     }
 
     setReelReady(true)
-    const count = userCollection.length
+    const count = pool.length
     const startIndex = spinIndex % count
-    const targetIndex = pickWeightedIndex(userCollection)
+    const targetIndex = pickWeightedIndex(pool)
     const extraSpins = 3 + Math.floor(Math.random() * 3)
     const stepsToTarget = (targetIndex - startIndex + count) % count
     const totalSteps = extraSpins * count + stepsToTarget
@@ -242,7 +251,7 @@ const Picker = ({ fragrance, index }: PickerProps) => {
                       <Card.Overlay>
                           <Card.Title color='white'>{title}</Card.Title>
                           <Card.Subtitle color='white'>{brand}</Card.Subtitle>
-                          <Card.WearInfoText color='white' timesWorn={item?.times_worn ?? 0} lastWorn={item?.last_worn} />
+                          <Card.WearInfoText overlay timesWorn={item?.times_worn ?? 0} lastWorn={item?.last_worn} />
                       </Card.Overlay>
                     </View>
                   )
@@ -254,21 +263,35 @@ const Picker = ({ fragrance, index }: PickerProps) => {
                   Dimmed once worn today (one wear per day) — still tappable,
                   the increment_wear round-trip shows the "already worn" toast */}
               {spinPhase !== "spinning" && (
-                <Card.ActionButton
-                  variant='wear'
+                <Card.ActionPill
+                  label='Wear'
+                  appearance='solid'
                   size='lg'
-                  className='absolute bottom-2.5 right-2.5'
+                  className='absolute bottom-3.5 right-3'
                   testID='picker-wear-button'
                   style={styles.knob}
-                  dimmed={isWornToday(currentItem.last_worn)}
-                  onPress={() => incrementWear({ id: currentItem.id })}>
-                  {(iconColor) => <FontAwesome5 name='spray-can' size={22} color={iconColor} />}
-                </Card.ActionButton>
+                  worn={isWornToday(currentItem.last_worn)}
+                  onPress={() => incrementWear({ id: currentItem.id })}
+                />
               )}
             </View>
           ) : (
-            <View className='flex-1 items-center justify-center'>
-              <Text className={`${mutedTextClass}`}>No fragrances yet</Text>
+            <View className='flex-1 items-center justify-center px-6'>
+              <Text className={`${mutedTextClass} text-center`}>
+                {userCollection.length === 0
+                  ? "No fragrances yet"
+                  : "No fragrances match your picker filters"}
+              </Text>
+              {userCollection.length > 0 && pickerHasActiveFilters && (
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  fullWidth={false}
+                  label='Clear filters'
+                  className='mt-3'
+                  onPress={() => setPickerFilters(EMPTY_PICKER_FILTERS)}
+                />
+              )}
             </View>
           )}
         </View>

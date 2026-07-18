@@ -1,4 +1,5 @@
 import React, {
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -32,7 +33,16 @@ import {
   resetPurchaser,
   isProFromCustomerInfo,
 } from "@/lib/purchases"
+import { FREE_COLLECTION_LIMIT, isFreeTierLimitError, promptProUpsell } from "@/lib/entitlements"
+import {
+  EMPTY_PICKER_FILTERS,
+  applyPickerFilters,
+  pickerFiltersActive,
+  type PickerFilters,
+} from "@/lib/utils/picker-filters"
 import useToast from "@/contexts/toast-context"
+import type { ReportReason } from "@/lib/queries"
+import { reportError } from "@/lib/sentry"
 import type { Tables } from "@/lib/database.types"
 
 WebBrowser.maybeCompleteAuthSession()
@@ -54,6 +64,11 @@ export interface FragranceInput {
 interface AuthContextValue {
   user: AppUser | null
   authLoading: boolean
+  // Set when the initial supabase.auth.getSession() check itself fails (e.g.
+  // corrupt AsyncStorage, not just "no session") — lets the root layout show
+  // a recovery screen instead of hanging or silently falling to sign-in.
+  authError: Error | null
+  retryAuthInit: () => void
   signInWithGoogle: () => void
   signInWithApple: () => Promise<void>
   logOut: () => void
@@ -66,8 +81,8 @@ interface AuthContextValue {
   cancelDelete: (id: string) => void
   updateFragrance: (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
-  ) => Promise<void>
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags">>
+  ) => Promise<boolean>
   // Community rating for a catalog-linked fragrance (fragrance_ratings table,
   // separate from the manual-add-only rating column on updateFragrance above).
   // null clears the caller's rating (tap-to-clear on the detail sheet).
@@ -88,6 +103,25 @@ interface AuthContextValue {
     mergeTarget?: string
     note?: string
   }) => Promise<void>
+  // Catalog feedback (wrong image / duplicate / incorrect name-brand /
+  // other) on an EXISTING catalog row — src/app/report-fragrance.tsx.
+  // Separate from addManualFragrance/submit_fragrance_suggestion, which
+  // propose NEW rows. Idempotent server-side (re-reporting the same reason
+  // just returns the existing pending report). Throws on failure — the
+  // caller owns the error UI (same convention as deleteAccount above).
+  reportFragrance: (input: {
+    fragranceId: string
+    reason: ReportReason
+    details?: string
+  }) => Promise<void>
+  // Moderator decision on a pending catalog-issue report
+  // (src/app/moderation.tsx's Reports tab). review_fragrance_report itself
+  // re-checks moderators-table membership — this is just the client wrapper.
+  reviewFragranceReport: (input: {
+    id: string
+    action: "resolve" | "dismiss"
+    note?: string
+  }) => Promise<void>
   // Pro-tier entitlement — sourced from RevenueCat's local CustomerInfo cache
   // (instant, no network round-trip); always false when purchases aren't
   // configured (see src/lib/purchases.ts).
@@ -104,6 +138,15 @@ interface AuthContextValue {
   setFrag: React.Dispatch<React.SetStateAction<UserFragrance | undefined>>
   getNewFrag: (targetIndex?: number) => void
   index: number | undefined
+  // Picker filtering (Pro — see src/lib/entitlements.ts). pickerPool is
+  // userCollection narrowed by the active filters (or unfiltered when not
+  // Pro) — same base collection getNewFrag always drew from, just optionally
+  // narrowed; getNewFrag/index/frag above operate over this pool, so
+  // weighting always runs over the filtered set.
+  pickerPool: UserFragrance[]
+  pickerFilters: PickerFilters
+  setPickerFilters: (filters: PickerFilters) => void
+  pickerHasActiveFilters: boolean
 }
 
 const AuthContext = createContext<AuthContextValue>({} as AuthContextValue)
@@ -122,13 +165,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { showToast } = useToast()
   const [user, setUser] = useState<AppUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [authError, setAuthError] = useState<Error | null>(null)
   const [isPro, setIsPro] = useState(false)
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
   const deleteTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
-  // The currently "picked" fragrance + its index in userCollection
+  // The currently "picked" fragrance + its index in pickerPool
   const [frag, setFrag] = useState<UserFragrance | undefined>()
   const [index, setIndex] = useState<number | undefined>()
+  const [pickerFiltersState, setPickerFiltersState] = useState<PickerFilters>(EMPTY_PICKER_FILTERS)
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
@@ -136,19 +181,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   })
 
+  // Pulled out of the effect (and memoized) so the root layout can offer a
+  // manual retry if this genuinely fails or stalls (see StartupRecovery).
+  const loadSession = useCallback(() => {
+    setAuthLoading(true)
+    setAuthError(null)
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        // getSession() resolves (rather than rejects) with `error` set for
+        // things like a stale/invalid refresh token — thrown here so the
+        // shared .catch() below treats it the same as an outright rejection
+        // instead of silently falling through to a "signed-out" user: null.
+        if (error) throw error
+        setUser(toAppUser(data.session?.user))
+        setAuthLoading(false)
+      })
+      .catch((error) => {
+        // Previously unhandled — a rejection here (e.g. corrupt AsyncStorage)
+        // left authLoading stuck true forever, hanging the app on a blank
+        // screen with no way to recover short of a reinstall.
+        reportError(error)
+        setAuthError(error instanceof Error ? error : new Error("Failed to restore session"))
+        setAuthLoading(false)
+      })
+  }, [])
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(toAppUser(session?.user))
-      setAuthLoading(false)
-    })
+    loadSession()
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(toAppUser(session?.user))
       setAuthLoading(false)
+      setAuthError(null)
     })
     return () => subscription.unsubscribe()
-  }, [])
+  }, [loadSession])
 
   // Configure once as early as possible (RevenueCat's own recommendation);
   // no-ops if EXPO_PUBLIC_REVENUECAT_*_API_KEY isn't set.
@@ -172,9 +241,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // can attribute purchases to the right row in `subscriptions`.
   useEffect(() => {
     if (!purchasesEnabled || !user?.id) return
-    identifyPurchaser(user.id).then((result) => {
-      if (result) setIsPro(isProFromCustomerInfo(result.customerInfo))
-    })
+    identifyPurchaser(user.id)
+      .then((result) => {
+        if (result) setIsPro(isProFromCustomerInfo(result.customerInfo))
+      })
+      .catch(reportError)
   }, [user?.id])
 
   const {
@@ -196,6 +267,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   })
   const userCollection = collectionData ?? []
   const sortedCollection = [...userCollection].sort((el1, el2) => el1.times_worn - el2.times_worn)
+
+  // Free users' filters are ignored even if some were set before a downgrade
+  // — the picker always sees the whole collection when not Pro.
+  const activePickerFilters = isPro ? pickerFiltersState : EMPTY_PICKER_FILTERS
+  const pickerPool = applyPickerFilters(userCollection, activePickerFilters)
 
   const invalidateCollection = () =>
     queryClient.invalidateQueries({ queryKey: ["collection", user?.id] })
@@ -234,27 +310,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           },
           { onConflict: "token" }
         )
-      if (error) console.log("Failed to save push token", error)
+      if (error) reportError(error, { rpc: "save-push-token" })
     })
   }, [user?.id])
 
+  // Operates over pickerPool (userCollection narrowed by the active picker
+  // filters), not the raw collection — filtering only shrinks the candidate
+  // set, so pickWeightedIndex's weighting math is unchanged.
   const getNewFrag = (targetIndex?: number) => {
-    const max = userCollection.length - 1
+    const max = pickerPool.length - 1
     let nextIndex = targetIndex
 
     if (typeof nextIndex !== "number" || nextIndex < 0 || nextIndex > max) {
-      nextIndex = pickWeightedIndex(userCollection)
+      nextIndex = pickWeightedIndex(pickerPool)
     }
 
-    setFrag(userCollection[nextIndex])
-    setIndex(nextIndex)
+    setFrag(nextIndex >= 0 ? pickerPool[nextIndex] : undefined)
+    setIndex(nextIndex >= 0 ? nextIndex : undefined)
   }
 
   useEffect(() => {
-    if (userCollection.length >= 1) {
+    if (pickerPool.length >= 1) {
       getNewFrag()
+    } else {
+      setFrag(undefined)
+      setIndex(undefined)
     }
-  }, [userCollection.length])
+  }, [pickerPool.length])
+
+  // Updates the filters and immediately re-picks from the new pool — waiting
+  // for the mount effect above to notice would race pickerPool.length staying
+  // the same across a filter change (e.g. swapping one tag for another).
+  const setPickerFilters = (filters: PickerFilters) => {
+    setPickerFiltersState(filters)
+    const nextPool = applyPickerFilters(userCollection, isPro ? filters : EMPTY_PICKER_FILTERS)
+    const nextIndex = nextPool.length ? pickWeightedIndex(nextPool) : -1
+    setFrag(nextIndex >= 0 ? nextPool[nextIndex] : undefined)
+    setIndex(nextIndex >= 0 ? nextIndex : undefined)
+  }
 
   useEffect(() => {
     if (response?.type === "success") {
@@ -263,7 +356,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .signInWithIdToken({ provider: "google", token: id_token, access_token })
         .then(({ error }) => {
           if (error) {
-            console.log(error)
+            reportError(error, { flow: "google-sign-in" })
             Alert.alert("Sign in failed", "Something went wrong, please try again.")
           }
         })
@@ -272,11 +365,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const addFragranceToCollection = async (object: FragranceInput) => {
     if (object.name.length < 3) {
-      Alert.alert("Ooops", "The name must be 3 or more characters!")
+      showToast({ message: "The name must be 3 or more characters" })
       return
     }
     if (userCollection.find((el) => el.name === object.name)) {
-      Alert.alert("Ooops", `You already have ${object.name} in your collection`)
+      showToast({ message: `You already have ${object.name} in your collection` })
       return
     }
 
@@ -290,17 +383,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
       await invalidateCollection()
-      Alert.alert("Item added successfully", `${object.name}`)
+      showToast({ message: `${object.name} added to your collection` })
     } catch (error) {
-      Alert.alert("Item was not added", "Something went wrong, please try again later.")
-      console.log(error)
+      if (isFreeTierLimitError(error)) {
+        reportError(error, { flow: "add-to-collection" })
+        if (isPro) {
+          showToast({ message: "Your Pro access is syncing. Please try adding it again in a moment." })
+          return
+        }
+        promptProUpsell(
+          "Collection limit reached",
+          `Free accounts can track up to ${FREE_COLLECTION_LIMIT} fragrances. Upgrade to Pro for unlimited tracking.`
+        )
+        return
+      }
+      showToast({ message: "Couldn't add that fragrance, please try again later" })
+      reportError(error, { flow: "add-to-collection" })
     }
   }
 
   const addManualFragrance = async (input: { brand: string; title: string }) => {
     const name = `${input.brand} - ${input.title}`
     if (userCollection.find((el) => el.name === name)) {
-      Alert.alert("Ooops", `You already have ${name} in your collection`)
+      showToast({ message: `You already have ${name} in your collection` })
       return
     }
     try {
@@ -310,10 +415,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
       await invalidateCollection()
-      Alert.alert("Item added successfully", name)
+      showToast({ message: `${name} added to your collection` })
     } catch (error) {
-      Alert.alert("Item was not added", "Something went wrong, please try again later.")
-      console.log(error)
+      if (isFreeTierLimitError(error)) {
+        reportError(error, { flow: "add-manual-fragrance" })
+        if (isPro) {
+          showToast({ message: "Your Pro access is syncing. Please try adding it again in a moment." })
+          return
+        }
+        promptProUpsell(
+          "Collection limit reached",
+          `Free accounts can track up to ${FREE_COLLECTION_LIMIT} fragrances. Upgrade to Pro for unlimited tracking.`
+        )
+        return
+      }
+      showToast({ message: "Couldn't add that fragrance, please try again later" })
+      reportError(error, { flow: "add-manual-fragrance" })
     }
   }
 
@@ -334,7 +451,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ["pending-submissions"] })
     } catch (error) {
       Alert.alert("Review failed", "Something went wrong, please try again later.")
-      console.log(error)
+      reportError(error, { flow: "review-submission" })
+    }
+  }
+
+  const reportFragrance = async (input: {
+    fragranceId: string
+    reason: ReportReason
+    details?: string
+  }) => {
+    const { error } = await supabase.rpc("submit_fragrance_report", {
+      p_fragrance_id: input.fragranceId,
+      p_reason: input.reason,
+      p_details: input.details,
+    })
+    if (error) throw error
+  }
+
+  const reviewFragranceReport = async (input: {
+    id: string
+    action: "resolve" | "dismiss"
+    note?: string
+  }) => {
+    try {
+      const { error } = await supabase.rpc("review_fragrance_report", {
+        p_report_id: input.id,
+        p_action: input.action,
+        p_note: input.note,
+      })
+      if (error) throw error
+      queryClient.invalidateQueries({ queryKey: ["pending-reports"] })
+    } catch (error) {
+      Alert.alert("Review failed", "Something went wrong, please try again later.")
+      reportError(error, { flow: "review-fragrance-report" })
     }
   }
 
@@ -345,7 +494,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await invalidateCollection()
     } catch (err) {
       Alert.alert("Delete failed", "Something went wrong, please try again later.")
-      console.log(err)
+      reportError(err, { flow: "delete-fragrance" })
     }
   }
 
@@ -371,15 +520,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateFragrance = async (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes">>
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags">>
   ) => {
     try {
       const { error } = await supabase.from("user_fragrances").update(updates).eq("id", object.id)
       if (error) throw error
       await invalidateCollection()
+      return true
     } catch (error) {
       Alert.alert("Update failed", "Something went wrong, please try again later.")
-      console.log(error)
+      // Only the error is reported — never `updates` itself, which can carry
+      // user-entered notes/rating (see CLAUDE.md on personal per-item content).
+      reportError(error, { flow: "update-fragrance" })
+      return false
     }
   }
 
@@ -408,7 +561,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ["fragrance-ratings"] })
     } catch (error) {
       Alert.alert("Update failed", "Something went wrong, please try again later.")
-      console.log(error)
+      reportError(error, { flow: "rate-fragrance" })
     }
   }
 
@@ -431,7 +584,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (undone) await invalidateWearQueries()
     } catch (error) {
       Alert.alert("Oops", "Couldn't undo that wear.")
-      console.log(error)
+      reportError(error, { flow: "undo-wear" })
     }
   }
 
@@ -465,6 +618,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
     } catch (error) {
       Alert.alert("Oops", `Something went wrong!`)
+      reportError(error, { flow: "increment-wear" })
     }
   }
 
@@ -532,7 +686,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       // User dismissed the native sheet — not an error
       if ((error as { code?: string })?.code === "ERR_REQUEST_CANCELED") return
-      console.log(error)
+      reportError(error, { flow: "apple-sign-in" })
       Alert.alert("Sign in failed", "Something went wrong, please try again.")
     }
   }
@@ -560,6 +714,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         authLoading,
+        authError,
+        retryAuthInit: loadSession,
         signInWithGoogle,
         signInWithApple,
         logOut,
@@ -572,6 +728,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         addFragranceToCollection,
         addManualFragrance,
         reviewSubmission,
+        reportFragrance,
+        reviewFragranceReport,
         isPro,
         userCollection,
         sortedCollection,
@@ -583,6 +741,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setFrag,
         getNewFrag,
         index,
+        pickerPool,
+        pickerFilters: activePickerFilters,
+        setPickerFilters,
+        pickerHasActiveFilters: pickerFiltersActive(activePickerFilters),
       }}>
       {children}
     </AuthContext.Provider>

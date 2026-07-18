@@ -18,6 +18,23 @@ export type WearEvent = Tables<"wear_events">
 export type PendingSubmission =
   Database["public"]["Functions"]["list_pending_submissions"]["Returns"][number]
 
+export type PendingFragranceReport =
+  Database["public"]["Functions"]["list_fragrance_reports"]["Returns"][number]
+
+// Catalog feedback reasons (src/app/report-fragrance.tsx). Kept in sync with
+// the fragrance_reports_reason_valid CHECK constraint in db/schema.sql.
+export const REPORT_REASONS = [
+  { key: "wrong_image", label: "Wrong or missing photo" },
+  { key: "duplicate", label: "Duplicate entry" },
+  { key: "incorrect_name_or_brand", label: "Incorrect name or brand" },
+  { key: "other", label: "Something else" },
+] as const
+
+export type ReportReason = (typeof REPORT_REASONS)[number]["key"]
+
+export const reportReasonLabel = (reason: string) =>
+  REPORT_REASONS.find((r) => r.key === reason)?.label ?? reason
+
 // Community rating aggregate for one catalog fragrance, keyed for lookup
 export interface RatingSummary {
   avg: number
@@ -70,7 +87,6 @@ export const useWearHistory = (userId: string | undefined) =>
     queryKey: ["wear-history", userId],
     enabled: !!userId,
     queryFn: async (): Promise<WearEvent[]> => {
-      console.log('topWorn');
       const { data, error } = await supabase
         .from("wear_events")
         .select("*")
@@ -189,6 +205,43 @@ export const usePendingSubmissions = (enabled: boolean) =>
     enabled,
     queryFn: async (): Promise<PendingSubmission[]> => {
       const { data, error } = await supabase.rpc("list_pending_submissions")
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// Pending catalog-issue reports (moderation screen's Reports tab). Same
+// shape as usePendingSubmissions: RLS only exposes a user's own
+// fragrance_reports rows, so this goes through the moderator-gated
+// list_fragrance_reports RPC instead of a direct select.
+export const usePendingFragranceReports = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["pending-reports"],
+    enabled,
+    queryFn: async (): Promise<PendingFragranceReport[]> => {
+      const { data, error } = await supabase.rpc("list_fragrance_reports")
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// Complete wear history for the data-export screen (src/app/export-data.tsx)
+// — no 500-row cap like useWearHistory's diary view, since export should be
+// as complete as practical; capped at 2000 as a disclosed ceiling (keeps the
+// shared-as-text payload well under Android's binder transaction limit).
+// A separate query key from useWearHistory's so the diary view's cache
+// isn't disturbed by the larger limit.
+export const useWearHistoryExport = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["wear-history-export", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<WearEvent[]> => {
+      const { data, error } = await supabase
+        .from("wear_events")
+        .select("*")
+        .eq("user_id", userId!)
+        .order("worn_at", { ascending: false })
+        .limit(2000)
       if (error) throw error
       return data ?? []
     },

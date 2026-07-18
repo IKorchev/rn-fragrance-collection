@@ -1,28 +1,51 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { View, TouchableOpacity } from "react-native"
+import { View, Text, TouchableOpacity } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import { showInterstitial } from "@/lib/ads"
+import { promptProUpsell } from "@/lib/entitlements"
+import { tagFacets, brandFacets } from "@/lib/utils/collection-facets"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import useLocale from "@/contexts/locale-context"
+import { markPickerTried } from "@/lib/utils/use-onboarding"
 import { buildPickerResultShareText } from "@/lib/share"
 import Picker from "@/components/picker"
+import PickerFilterSheet from "@/components/picker-filter-sheet"
 import ShareSheetModal from "@/components/share-sheet-modal"
 
 const PickerScreen = () => {
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const { frag, index, isPro } = useAuth()
-  const { viewColors, mutedColors } = useTheme()
+  const {
+    user,
+    frag,
+    index,
+    isPro,
+    userCollection,
+    pickerFilters,
+    setPickerFilters,
+    pickerHasActiveFilters,
+  } = useAuth()
+  const { viewColors, mutedColors, accentColors, accentTintBg } = useTheme()
   const { t } = useLocale()
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [shareVisible, setShareVisible] = useState(false)
+
+  const tagOptions = useMemo(() => tagFacets(userCollection), [userCollection])
+  const brandOptions = useMemo(() => brandFacets(userCollection), [userCollection])
   const shareMessage = useMemo(
     () => (frag ? buildPickerResultShareText(t, { name: frag.name }) : ""),
     [t, frag]
   )
+
+  // Marks the "Try the picker" onboarding step done regardless of whether the
+  // user actually pulls the lever — opening the modal is the tried part.
+  useEffect(() => {
+    markPickerTried(user?.id)
+  }, [user?.id])
 
   // Interstitial on close (X button or Android hardware back — unmount
   // catches both). Pro removes ads. Ref so upgrading mid-picker is honored.
@@ -37,6 +60,17 @@ const PickerScreen = () => {
     []
   )
 
+  const handleFilterPress = () => {
+    if (!isPro) {
+      promptProUpsell(
+        "Picker filters are a Pro feature",
+        "Upgrade to Pro to narrow the picker by tag, brand, or unworn-only."
+      )
+      return
+    }
+    setFilterSheetOpen(true)
+  }
+
   return (
     <View className={`${viewColors.background} flex-1`}>
       {/* Presented as fullScreenModal (no swipe-to-dismiss — a sheet would
@@ -48,20 +82,48 @@ const PickerScreen = () => {
         onPress={() => router.back()}>
         <AntDesign name='close' size={26} color={getColor(mutedColors)} />
       </TouchableOpacity>
-      {frag && (
+      <View className='absolute left-4 z-10 flex-row items-center' style={{ top: insets.top + 8, gap: 8 }}>
         <TouchableOpacity
-          className='absolute left-4 z-10 h-10 w-10 items-center justify-center'
-          style={{ top: insets.top + 8 }}
-          accessibilityRole='button'
-          accessibilityLabel={t("share.action")}
-          testID='picker-share'
-          onPress={() => setShareVisible(true)}>
-          <MaterialCommunityIcons name='share-variant' size={24} color={getColor(mutedColors)} />
+          className='flex-row items-center rounded-full px-3 py-2'
+          style={{ backgroundColor: pickerHasActiveFilters ? accentTintBg : undefined }}
+          testID='picker-filter-button'
+          accessibilityLabel={isPro ? "Filter picker" : "Picker filters — Pro feature"}
+          onPress={handleFilterPress}>
+          <MaterialCommunityIcons
+            name={isPro ? "tune-variant" : "lock-outline"}
+            size={18}
+            color={pickerHasActiveFilters ? getColor(accentColors) : getColor(mutedColors)}
+          />
+          {pickerHasActiveFilters && (
+            <Text className='text-xs font-semibold pl-1' style={{ color: getColor(accentColors) }}>
+              Filtered
+            </Text>
+          )}
         </TouchableOpacity>
-      )}
+        {frag && (
+          <TouchableOpacity
+            className='h-10 w-10 items-center justify-center'
+            accessibilityRole='button'
+            accessibilityLabel={t("share.action")}
+            testID='picker-share'
+            onPress={() => setShareVisible(true)}>
+            <MaterialCommunityIcons name='share-variant' size={24} color={getColor(mutedColors)} />
+          </TouchableOpacity>
+        )}
+      </View>
       <View className='flex-1 justify-center'>
         <Picker fragrance={frag} index={index} />
       </View>
+      {isPro && (
+        <PickerFilterSheet
+          visible={filterSheetOpen}
+          filters={pickerFilters}
+          tagFacets={tagOptions}
+          brandFacets={brandOptions}
+          onChange={setPickerFilters}
+          onClose={() => setFilterSheetOpen(false)}
+        />
+      )}
 
       <ShareSheetModal
         visible={shareVisible}

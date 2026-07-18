@@ -7,32 +7,54 @@ import { Avatar } from "@rneui/themed"
 import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
 import { useIsModerator, useRemindersEnabled, useWearHistory } from "@/lib/queries"
+import { useOnboarding } from "@/lib/utils/use-onboarding"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
+import { FREE_COLLECTION_LIMIT } from "@/lib/entitlements"
 import { isWornToday } from "@/lib/utils/worn-today"
 import { buildRecapShareText, buildTodaysScentShareText } from "@/lib/share"
-import useTheme from "@/contexts/theme-context"
+import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
 import useLocale, { type LocalePreference } from "@/contexts/locale-context"
+import { reportError } from "@/lib/sentry"
 import Badge from "@/components/shared/ui/badge"
+import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
 import StatTile from "@/components/shared/ui/stat-tile"
 import Button from "@/components/shared/ui/button"
-import Dialog from "@/components/shared/ui/dialog"
 import ShareSheetModal from "@/components/share-sheet-modal"
+import WearHeatmap from "@/components/wear-heatmap"
+
+const APPEARANCE_OPTIONS: { key: ThemePreference; labelKey: string }[] = [
+  { key: "system", labelKey: "profile.appearanceSystem" },
+  { key: "light", labelKey: "profile.appearanceLight" },
+  { key: "dark", labelKey: "profile.appearanceDark" },
+]
 
 const ProfileScreen = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { modalColors, baseTextClass, mutedTextClass, mutedColors, accentColors, theme, danger } =
-    useTheme()
+  const {
+    modalColors,
+    baseTextClass,
+    mutedTextClass,
+    accentTextClass,
+    accentColors,
+    mutedColors,
+    theme,
+    themePreference,
+    setThemePreference,
+    danger,
+  } = useTheme()
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
   const { t, formatDate, localePreference, setLocalePreference, supportedLocales } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
+  const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
   const [deleting, setDeleting] = useState(false)
+  const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
   const [languagePickerVisible, setLanguagePickerVisible] = useState(false)
   const [recapShareVisible, setRecapShareVisible] = useState(false)
   const [todayShareVisible, setTodayShareVisible] = useState(false)
@@ -136,7 +158,7 @@ const ProfileScreen = () => {
               // Auth state flips to signed-out and the Protected stack swaps
               // to the sign-in screen — nothing left to dismiss here.
             } catch (error) {
-              console.log(error)
+              reportError(error, { flow: "delete-account" })
               Alert.alert(t("profile.deleteFailedTitle"), t("profile.deleteFailedMessage"))
             } finally {
               setDeleting(false)
@@ -171,6 +193,16 @@ const ProfileScreen = () => {
         </Text>
       )}
 
+      {purchasesEnabled && (!isPro || __DEV__) && (
+        <Row
+          icon='star-four-points'
+          tone='accent'
+          className='mt-6 w-full'
+          label={isPro ? t("profile.viewPaywallDev") : t("profile.upgradeToPro")}
+          onPress={handleUpgrade}
+        />
+      )}
+
       <StatTile
         className='mt-8'
         items={[
@@ -178,6 +210,11 @@ const ProfileScreen = () => {
           { value: totalWears, label: t("profile.stats.totalWears") },
         ]}
       />
+      {!isPro && (
+        <Text className={`${mutedTextClass} text-xs pt-2`}>
+          {t("profile.freeCollectionLimit", { count: userCollection.length, limit: FREE_COLLECTION_LIMIT })}
+        </Text>
+      )}
 
       <StatTile
         className='mt-4'
@@ -197,21 +234,33 @@ const ProfileScreen = () => {
         </Text>
       )}
 
-      {purchasesEnabled && (!isPro || __DEV__) && (
+      {!onboardingDone && (
         <Row
-          icon='star-four-points'
+          icon='rocket-launch-outline'
           tone='accent'
           className='mt-6'
-          label={isPro ? t("profile.viewPaywallDev") : t("profile.upgradeToPro")}
-          onPress={handleUpgrade}
+          label={t("profile.gettingStartedGuide")}
+          onPress={() => {
+            resumeOnboarding()
+            router.navigate("/(tabs)/(collection)")
+          }}
         />
       )}
 
+      <WearHeatmap events={events ?? []} className='mt-6' />
+
       <Row
         icon='history'
-        className='mt-4'
+        className='mt-6'
         label={t("profile.wearHistoryRow")}
         onPress={() => router.push("/wear-history")}
+      />
+
+      <Row
+        icon='export-variant'
+        className='mt-4'
+        label={t("profile.exportData")}
+        onPress={() => router.push("/export-data")}
       />
 
       {isModerator && (
@@ -222,6 +271,44 @@ const ProfileScreen = () => {
           onPress={() => router.push("/moderation")}
         />
       )}
+
+      {/* Theme moved here from the header — appearance is a settings concern */}
+      <Row
+        icon='theme-light-dark'
+        className='mt-4'
+        label={t("profile.appearance")}
+        onPress={() => setAppearancePickerOpen(true)}
+        trailing={
+          <View className='flex-row items-center' style={{ gap: 4 }}>
+            <Text className={`${mutedTextClass} text-base`}>
+              {t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey)}
+            </Text>
+            <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
+          </View>
+        }
+      />
+
+      <Dialog
+        visible={appearancePickerOpen}
+        title={t("profile.appearance")}
+        onClose={() => setAppearancePickerOpen(false)}>
+        {APPEARANCE_OPTIONS.map(({ key, labelKey }) => (
+          <TouchableOpacity
+            key={key}
+            className='flex-row items-center justify-between py-3'
+            onPress={() => {
+              setThemePreference(key)
+              setAppearancePickerOpen(false)
+            }}>
+            <Text className={key === themePreference ? `${accentTextClass} font-semibold` : baseTextClass}>
+              {t(labelKey)}
+            </Text>
+            {key === themePreference && (
+              <MaterialCommunityIcons name='check' size={18} color={getColor(accentColors)} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </Dialog>
 
       <Row
         icon='bell-outline'
