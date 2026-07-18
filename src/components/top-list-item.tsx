@@ -31,7 +31,7 @@ const TopListItem = ({
 
   const handleAddFragrance = () =>
     addFragranceToCollection({
-      name: name,
+      name,
       image_url: imageUrl ?? null,
       fragrance_id: fragranceId ?? null,
     })

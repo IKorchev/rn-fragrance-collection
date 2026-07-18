@@ -1,10 +1,9 @@
 import "react-native-gesture-handler"
 import "../global.css"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { TouchableWithoutFeedback, Keyboard } from "react-native"
 import * as Sentry from "@sentry/react-native"
 import * as SplashScreen from "expo-splash-screen"
-import { useFonts, Fraunces_600SemiBold } from "@expo-google-fonts/fraunces"
 import { initializeAds } from "@/lib/ads"
 import { Stack } from "expo-router"
 import { getHeaderTitle } from "expo-router/react-navigation"
@@ -17,7 +16,8 @@ import { ToastContextProvider } from "@/contexts/toast-context"
 import { LocaleContextProvider } from "@/contexts/locale-context"
 import useLocale from "@/contexts/locale-context"
 import { useAppUpdates } from "@/lib/utils/use-app-updates"
-import { initSentry, sentryEnabled, reportError } from "@/lib/sentry"
+import { useStartupReadiness } from "@/lib/utils/use-startup-readiness"
+import { initSentry, sentryEnabled } from "@/lib/sentry"
 import Header from "@/components/header"
 import AppCrashFallback from "@/components/app-crash-fallback"
 import StartupRecovery from "@/components/startup-recovery"
@@ -25,14 +25,10 @@ import StartupRecovery from "@/components/startup-recovery"
 initSentry()
 
 // Keep the native splash up until fonts + the initial auth check resolve —
-// hidden explicitly in RootNavigator below. Without this, expo-splash-screen
+// hidden explicitly by useStartupReadiness. Without this, expo-splash-screen
 // auto-hides on first frame, revealing the blank `return null` render while
-// still loading (see RootNavigator's `ready` gate).
+// still loading (see the `ready` gate below).
 SplashScreen.preventAutoHideAsync().catch(() => {})
-
-// How long to wait before treating startup as genuinely stalled (vs. a
-// normal cold-start delay) and offering a manual retry.
-const STARTUP_STALL_MS = 8000
 
 function RootLayout() {
   return (
@@ -55,25 +51,9 @@ function RootLayout() {
 export default sentryEnabled ? Sentry.wrap(RootLayout) : RootLayout
 
 function RootNavigator() {
-  const { user, authLoading, authError, retryAuthInit } = useAuth()
+  const { user } = useAuth()
   const { t } = useLocale()
-  // Display font for screen titles (tailwind's font-display). A load failure
-  // (fontError) shouldn't block the whole app forever — fall through to the
-  // system font instead of hanging on a blank screen.
-  const [fontsLoaded, fontError] = useFonts({ Fraunces_600SemiBold })
-  const fontsReady = fontsLoaded || !!fontError
-  // authError must gate readiness, not just authLoading — otherwise a
-  // resolved-with-error session load (authLoading false, authError set)
-  // reads as "ready" and falls straight through to the signed-out stack
-  // instead of the recovery screen.
-  const ready = !authLoading && fontsReady && !authError
-  const [stalled, setStalled] = useState(false)
-  // True only while a manual retry is in flight. Reset below whenever
-  // authLoading resolves (success or failure) or the retry itself stalls, so
-  // a failed/stuck retry always lands back on an actionable Retry button
-  // instead of a permanent spinner.
-  const [manualRetry, setManualRetry] = useState(false)
-  const [retryToken, setRetryToken] = useState(0)
+  const { ready, needsRecovery, retrying, retry } = useStartupReadiness()
 
   // Runs regardless of auth state — an OTA fix shouldn't wait on sign-in
   useAppUpdates()
@@ -85,58 +65,9 @@ function RootNavigator() {
     initializeAds()
   }, [])
 
-  useEffect(() => {
-    if (fontError) reportError(fontError, { flow: "load-fonts" })
-  }, [fontError])
-
-  // Genuine stall (e.g. the initial session check hanging on a bad network) —
-  // give up waiting on the native splash and offer a manual retry instead of
-  // sitting blank/frozen indefinitely. Keyed on retryToken too so each manual
-  // retry gets its own fresh stall window instead of reusing (or never
-  // re-arming) the original timer.
-  useEffect(() => {
-    if (ready) {
-      setStalled(false)
-      return
-    }
-    const timer = setTimeout(() => setStalled(true), STARTUP_STALL_MS)
-    return () => clearTimeout(timer)
-  }, [ready, retryToken])
-
-  // A retry attempt "completes" (success or failure) once authLoading drops —
-  // always resolve the spinner back to a normal state at that point.
-  useEffect(() => {
-    if (!authLoading) setManualRetry(false)
-  }, [authLoading])
-
-  // ...and if the retry itself stalls past the window, bail out of the
-  // spinner back to an actionable Retry button rather than spinning forever.
-  useEffect(() => {
-    if (stalled) setManualRetry(false)
-  }, [stalled])
-
-  // manualRetry keeps the recovery screen mounted (showing the spinner) for
-  // the duration of a retry attempt, even though authError was cleared
-  // synchronously when the retry kicked off.
-  const needsRecovery = !!authError || stalled || manualRetry
-
-  useEffect(() => {
-    if (ready || needsRecovery) SplashScreen.hideAsync().catch(() => {})
-  }, [ready, needsRecovery])
-
   if (!ready) {
     if (needsRecovery) {
-      return (
-        <StartupRecovery
-          retrying={manualRetry}
-          onRetry={() => {
-            setManualRetry(true)
-            setStalled(false)
-            setRetryToken((token) => token + 1)
-            retryAuthInit()
-          }}
-        />
-      )
+      return <StartupRecovery retrying={retrying} onRetry={retry} />
     }
     // Still within the normal loading window — the native splash covers this.
     return null

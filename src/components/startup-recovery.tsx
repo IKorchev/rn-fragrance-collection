@@ -11,8 +11,8 @@ interface StartupRecoveryProps {
 
 // Shown in place of the (already-dismissed) native splash when startup
 // genuinely stalls or the initial session check fails outright — see the
-// stall timer / authError handling in src/app/_layout.tsx. Without this the
-// app would otherwise sit on a blank screen indefinitely.
+// stall timer / authError handling in src/lib/utils/use-startup-readiness.ts.
+// Without this the app would otherwise sit on a blank screen indefinitely.
 const StartupRecovery = ({ retrying, onRetry }: StartupRecoveryProps) => {
   const { viewColors, accentColors } = useTheme()
 

@@ -247,7 +247,8 @@ export const useWearHistoryExport = (userId: string | undefined) =>
     },
   })
 
-// All 704 brands with counts — fetched once, filtered client-side
+// Fetched once and filtered client-side — the brand facet list is small and
+// changes only on a catalog re-scrape
 export const useBrands = () =>
   useQuery({
     queryKey: ["brands"],

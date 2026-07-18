@@ -57,6 +57,12 @@ const groupByDay = (events: WearEvent[]): DaySection[] => {
 
 const topFacets = (facets: Facet[], limit: number) => facets.slice(0, limit)
 
+const promptWearHistoryUpsell = () =>
+  promptProUpsell(
+    "Wear-history filters are a Pro feature",
+    "Upgrade to Pro to filter your diary by tag/brand and see wear insights."
+  )
+
 const InsightRow = ({ facet, maxCount }: { facet: Facet; maxCount: number }) => {
   const { theme, baseTextClass, mutedTextClass, accentColors } = useTheme()
   const pct = maxCount > 0 ? Math.round((facet.count / maxCount) * 100) : 0
@@ -161,10 +167,7 @@ const WearHistoryScreen = () => {
 
   const openFacetPicker = (kind: "tag" | "brand") => {
     if (!isPro) {
-      promptProUpsell(
-        "Wear-history filters are a Pro feature",
-        "Upgrade to Pro to filter your diary by tag/brand and see wear insights."
-      )
+      promptWearHistoryUpsell()
       return
     }
     setFacetSearch("")
@@ -292,12 +295,7 @@ const WearHistoryScreen = () => {
                   tone='accent'
                   className='mt-4'
                   label='Filter by tag/brand & see insights — Pro'
-                  onPress={() =>
-                    promptProUpsell(
-                      "Wear-history filters are a Pro feature",
-                      "Upgrade to Pro to filter your diary by tag/brand and see wear insights."
-                    )
-                  }
+                  onPress={promptWearHistoryUpsell}
                 />
               )}
             </View>

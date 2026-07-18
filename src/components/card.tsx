@@ -70,7 +70,6 @@ const Root = ({ onPress, swipeActions, children }: RootProps) => {
 
 const Rank = ({ place }: { place: number }) => {
   const { theme, mutedColors } = useTheme()
-  // Podium places get medal colors — the rest stay muted
   const medalColor =
     place === 1
       ? getColor(theme === "dark" ? "amber-400" : "amber-500")
@@ -112,7 +111,6 @@ const Thumbnail = ({ imageUrl, compact }: { imageUrl?: string | null; compact?: 
   }
 
   if (compact) {
-    // expo-image: disk-cached CDN thumbnails + a soft fade-in
     return (
       <Image
         source={imageSource}
@@ -127,7 +125,6 @@ const Thumbnail = ({ imageUrl, compact }: { imageUrl?: string | null; compact?: 
     // Inset rounded tile; white backing keeps product shots (white
     // backgrounds) from clashing in dark mode without a full-height slab
     <View className='ml-3 h-14 w-14 items-center justify-center rounded-xl bg-white overflow-hidden'>
-      {/* expo-image: disk-cached CDN thumbnails + a soft fade-in */}
       <Image style={{ height: 48, width: 48 }} contentFit='contain' transition={150} source={imageSource} />
     </View>
   )

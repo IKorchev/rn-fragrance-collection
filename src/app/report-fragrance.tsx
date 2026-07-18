@@ -6,6 +6,7 @@ import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import useToast from "@/contexts/toast-context"
+import { reportError } from "@/lib/sentry"
 import { REPORT_REASONS, type ReportReason } from "@/lib/queries"
 import Card from "@/components/card"
 import TextField from "@/components/shared/ui/text-field"
@@ -49,7 +50,7 @@ const ReportFragranceScreen = () => {
       router.back()
       showToast({ message: "Thanks — we'll take a look." })
     } catch (error) {
-      console.log(error)
+      reportError(error, { flow: "report-fragrance" })
       Alert.alert("Couldn't send your report", "Something went wrong, please try again.")
     } finally {
       setSubmitting(false)
