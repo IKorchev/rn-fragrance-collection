@@ -1,0 +1,73 @@
+# Fragrance profile voting: open the vote form from the read-only summary
+# card, enforce max-two seasons, save all categories, verify the card
+# collapses back to the summary, then remove the test vote.
+appId: com.korchev.fragrancecollection
+tags:
+  - voting
+---
+- runFlow: ../subflows/launch-dev-client.yaml
+
+- tapOn: "Search"
+- tapOn: "Search name or brand"
+- inputText: "sauvage"
+
+- extendedWaitUntil:
+    visible: ".*Sauvage.*"
+    timeout: 20000
+- tapOn: ".*Sauvage.*"
+
+- scrollUntilVisible:
+    element:
+      id: "fragrance-vote-open"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "fragrance-vote-open"
+
+- tapOn:
+    id: "vote-season-spring"
+- tapOn:
+    id: "vote-season-summer"
+# A third season is rejected; the saved vote must retain the first two.
+- tapOn:
+    id: "vote-season-autumn"
+- tapOn:
+    id: "vote-gender-unisex"
+
+- scrollUntilVisible:
+    element:
+      id: "sillage-4"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "sillage-4"
+- tapOn:
+    id: "longevity-5"
+
+- scrollUntilVisible:
+    element:
+      id: "fragrance-vote-save"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "fragrance-vote-save"
+
+- extendedWaitUntil:
+    visible: "Edit your vote"
+    timeout: 20000
+
+- tapOn:
+    id: "fragrance-vote-open"
+- scrollUntilVisible:
+    element:
+      id: "fragrance-vote-remove"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "fragrance-vote-remove"
+
+- extendedWaitUntil:
+    visible:
+      id: "fragrance-vote-open"
+    timeout: 20000
+- assertNotVisible: "Edit your vote"

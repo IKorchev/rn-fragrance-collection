@@ -7,6 +7,7 @@ interface FilterChipProps {
   label: string
   selected: boolean
   onPress: () => void
+  testID?: string
   // search.tsx's brand-filter chip uses 14 instead of the default 12
   paddingHorizontal?: number
 }
@@ -14,11 +15,12 @@ interface FilterChipProps {
 // Selectable pill chip — brand filter, sort options, wear-period selector.
 // None of this is className, so it's unaffected by NativeWind's literal-scan
 // constraint; colors come straight from useTheme()'s bare tokens.
-const FilterChip = ({ label, selected, onPress, paddingHorizontal = 12 }: FilterChipProps) => {
+const FilterChip = ({ label, selected, onPress, testID, paddingHorizontal = 12 }: FilterChipProps) => {
   const { accentColors, cardBorderColors, mutedColors, accentTintBg } = useTheme()
 
   return (
     <Chip
+      testID={testID}
       type='outline'
       containerStyle={{
         borderRadius: 9999,

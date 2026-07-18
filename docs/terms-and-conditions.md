@@ -1,12 +1,12 @@
 # Terms & Conditions — Fragrance Collection
 
-_Last updated: July 11, 2026_
+_Last updated: July 18, 2026_
 
 By creating an account or using Fragrance Collection ("the app"), you agree to these terms. If you do not agree, do not use the app. Host this document at a public URL alongside the privacy policy; the same text ships inside the app (`src/lib/legal-content.ts`) — keep the two in sync.
 
 ## The service
 
-The app lets you track a personal fragrance collection, log the days you wear each fragrance, and browse community features such as the Most Worn leaderboard, which shows anonymous, aggregated wear counts. The app is provided free of charge.
+The app lets you track a personal fragrance collection, log the days you wear each fragrance, and browse community features such as the Most Worn leaderboard, which shows anonymous, aggregated wear counts and anonymous aggregate fragrance ratings and voting distributions. The app is provided free of charge.
 
 ## Your account
 
@@ -14,7 +14,7 @@ You sign in with a Google or Apple account and are responsible for keeping acces
 
 ## Your content
 
-You keep ownership of the content you add to the app — ratings, notes, and fragrances you enter manually. You grant us the limited license needed to store that content and operate the app's features, including showing anonymous, aggregated wear counts (and the fragrance names and images they refer to) in community features.
+You keep ownership of the content you add to the app — ratings, notes, fragrance votes, and fragrances you enter manually. You grant us the limited license needed to store that content and operate the app's features, including showing anonymous, aggregated wear counts, ratings, and fragrance-voting distributions (and the fragrance names and images they refer to) in community features.
 
 Because the name and image of a fragrance you add manually can appear in community features once you log wears for it, you agree not to enter content that is unlawful, offensive, or infringes someone else's rights. We may remove such content.
 

@@ -198,6 +198,50 @@ export type Database = {
           },
         ]
       }
+      fragrance_votes: {
+        Row: {
+          created_at: string
+          fragrance_id: string
+          gender: string
+          id: string
+          longevity: number
+          seasons: string[]
+          sillage: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fragrance_id: string
+          gender: string
+          id?: string
+          longevity: number
+          seasons: string[]
+          sillage: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fragrance_id?: string
+          gender?: string
+          id?: string
+          longevity?: number
+          seasons?: string[]
+          sillage?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fragrance_votes_fragrance_id_fkey"
+            columns: ["fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "fragrances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fragrances: {
         Row: {
           brand: string
@@ -417,6 +461,10 @@ export type Database = {
           fragrance_id: string
           rating_count: number
         }[]
+      }
+      get_fragrance_vote_summary: {
+        Args: { p_fragrance_id: string }
+        Returns: Json
       }
       increment_wear: {
         Args: { row_id: string; tz?: string }

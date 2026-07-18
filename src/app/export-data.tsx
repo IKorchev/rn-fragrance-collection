@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native"
+import { useQuery } from "@tanstack/react-query"
 import { Directory, File, Paths } from "expo-file-system"
 import * as Sharing from "expo-sharing"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
@@ -7,12 +8,19 @@ import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import { reportError } from "@/lib/sentry"
+import { supabase } from "@/lib/supabase"
 import { useWearHistoryExport, type WearEvent } from "@/lib/queries"
+import type { Tables } from "@/lib/database.types"
 import type { UserFragrance } from "@/contexts/auth-context"
 import Button from "@/components/shared/ui/button"
 import FilterChip from "@/components/shared/ui/filter-chip"
 
 type ExportFormat = "csv" | "json"
+
+type VoteExportRow = Pick<
+  Tables<"fragrance_votes">,
+  "fragrance_id" | "seasons" | "gender" | "sillage" | "longevity"
+>
 
 const MIME_TYPES: Record<ExportFormat, string> = {
   csv: "text/csv",
@@ -59,7 +67,7 @@ const csvSection = (title: string, header: string[], rows: (string | number | nu
 // NOTE: deliberately omits bottle_price / bottle_size_ml — this app doesn't
 // surface bottle cost or value anywhere, and export shouldn't be the one
 // place that does.
-const buildCsv = (collection: UserFragrance[], wearEvents: WearEvent[]) => {
+const buildCsv = (collection: UserFragrance[], wearEvents: WearEvent[], votes: VoteExportRow[]) => {
   const collectionRows = collection.map((f) => {
     const brand = f.name.split(" - ")[0]
     const title = f.name.split(" - ").slice(1).join(" - ")
@@ -75,11 +83,23 @@ const buildCsv = (collection: UserFragrance[], wearEvents: WearEvent[]) => {
     ) +
     "\n\n" +
     csvSection("Scent Diary", ["Fragrance", "Worn At"], wearRows) +
+    "\n\n" +
+    csvSection(
+      "My Fragrance Votes",
+      ["Fragrance ID", "Seasons", "Gender", "Sillage", "Longevity"],
+      votes.map((vote) => [
+        vote.fragrance_id,
+        vote.seasons.join("; "),
+        vote.gender,
+        vote.sillage,
+        vote.longevity,
+      ])
+    ) +
     "\n"
   )
 }
 
-const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[]) =>
+const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[], votes: VoteExportRow[]) =>
   JSON.stringify(
     {
       exported_at: new Date().toISOString(),
@@ -94,6 +114,7 @@ const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[]) =>
         catalog_linked: !!f.fragrance_id,
       })),
       wear_history: wearEvents.map((e) => ({ fragrance: e.name, worn_at: e.worn_at })),
+      votes,
     },
     null,
     2
@@ -110,16 +131,48 @@ const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[]) =>
 const ExportDataScreen = () => {
   const { modalColors, baseTextClass, mutedTextClass, baseBorderClass, accentColors, mutedColors } = useTheme()
   const { user, userCollection } = useAuth()
-  const { data: wearEvents, isPending, isError, fetchStatus, refetch } = useWearHistoryExport(user?.id)
+  const {
+    data: wearEvents,
+    isPending: wearPending,
+    isError: wearError,
+    fetchStatus: wearFetchStatus,
+    refetch: refetchWearEvents,
+  } = useWearHistoryExport(user?.id)
+  const {
+    data: votes,
+    isPending: votesPending,
+    isError: votesError,
+    fetchStatus: votesFetchStatus,
+    refetch: refetchVotes,
+  } = useQuery({
+    queryKey: ["fragrance-votes-export", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fragrance_votes")
+        .select("fragrance_id,seasons,gender,sillage,longevity")
+        .eq("user_id", user!.id)
+
+      if (error) {
+        reportError(error, { flow: "export-votes" })
+        throw error
+      }
+      return data ?? []
+    },
+  })
   const [format, setFormat] = useState<ExportFormat>("csv")
   const [sharing, setSharing] = useState(false)
 
   // react-query pauses queries while offline (see src/lib/query-client.ts) —
   // fetchStatus stays "paused" instead of settling into error, so this is
   // distinguishable from a real fetch failure.
-  const offline = fetchStatus === "paused" && isPending
-  const ready = !isPending && !isError && wearEvents !== undefined
-  const isEmpty = ready && userCollection.length === 0 && wearEvents.length === 0
+  const loading = wearPending || votesPending
+  const error = wearError || votesError
+  const offline =
+    (wearPending && wearFetchStatus === "paused") ||
+    (votesPending && votesFetchStatus === "paused")
+  const ready = !loading && !error && wearEvents !== undefined && votes !== undefined
+  const isEmpty = ready && userCollection.length === 0 && wearEvents.length === 0 && votes.length === 0
 
   const handleExport = async () => {
     if (!ready) return
@@ -134,7 +187,10 @@ const ExportDataScreen = () => {
         return
       }
 
-      const content = format === "csv" ? buildCsv(userCollection, wearEvents) : buildJson(userCollection, wearEvents)
+      const content =
+        format === "csv"
+          ? buildCsv(userCollection, wearEvents, votes)
+          : buildJson(userCollection, wearEvents, votes)
       const dateStamp = new Date().toISOString().slice(0, 10)
       const filename = `fragrance-collection-export-${dateStamp}.${format}`
 
@@ -164,9 +220,10 @@ const ExportDataScreen = () => {
       showsVerticalScrollIndicator={false}>
       <Text className={`${baseTextClass} text-xl font-bold text-center`}>Export your data</Text>
       <Text className={`${mutedTextClass} text-sm text-center pt-2`}>
-        Exports your collection (brand, name, times worn, last worn, your rating and notes) and your
-        scent diary (most recent 2,000 entries) as a file you control. Nothing is uploaded — you choose
-        where it goes from the share sheet. Only your own data is included.
+        Exports your collection (brand, name, times worn, last worn, your rating and notes), your
+        scent diary (most recent 2,000 entries), and your private fragrance votes as a file you
+        control. Nothing is uploaded — you choose where it goes from the share sheet. Only your own
+        data is included.
       </Text>
 
       <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Format</Text>
@@ -181,25 +238,25 @@ const ExportDataScreen = () => {
             <MaterialCommunityIcons name='wifi-off' size={28} color={getColor(mutedColors)} />
             <Text className={`${baseTextClass} text-sm font-semibold text-center pt-3`}>You're offline</Text>
             <Text className={`${mutedTextClass} text-xs text-center pt-1`}>
-              Connect to the internet to export your scent diary — this will retry automatically.
+              Connect to the internet to prepare your data — this will retry automatically.
             </Text>
           </View>
-        ) : isPending ? (
+        ) : loading ? (
           <View className='items-center py-4'>
             <ActivityIndicator color={getColor(accentColors)} />
             <Text className={`${mutedTextClass} text-xs pt-3`}>Preparing your data…</Text>
           </View>
-        ) : isError ? (
+        ) : error ? (
           <View className='items-center py-4'>
             <MaterialCommunityIcons name='cloud-alert' size={28} color={getColor(mutedColors)} />
             <Text className={`${baseTextClass} text-sm font-semibold text-center pt-3`}>
-              Couldn't load your scent diary
+              Couldn't load your data
             </Text>
             <Button
               variant='secondary'
               fullWidth={false}
               label='Try again'
-              onPress={() => refetch()}
+              onPress={() => Promise.all([refetchWearEvents(), refetchVotes()])}
               className='mt-3 px-6'
             />
           </View>
@@ -210,6 +267,9 @@ const ExportDataScreen = () => {
             </Text>
             <Text className={`${mutedTextClass} text-sm pt-1`}>
               {wearEvents.length} entr{wearEvents.length === 1 ? "y" : "ies"} logged
+            </Text>
+            <Text className={`${mutedTextClass} text-sm pt-1`}>
+              {votes.length} vote{votes.length === 1 ? "" : "s"} submitted
             </Text>
             {isEmpty && (
               <Text className={`${mutedTextClass} text-xs pt-2`}>

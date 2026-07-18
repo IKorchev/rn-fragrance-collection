@@ -23,6 +23,7 @@ import PressableScale from "@/components/shared/ui/pressable-scale"
 import StatTile from "@/components/shared/ui/stat-tile"
 import TextField from "@/components/shared/ui/text-field"
 import TagInput from "@/components/tag-input"
+import FragranceVoting from "@/components/fragrance-voting"
 import ShareSheetModal from "@/components/share-sheet-modal"
 
 // Soft radial glow behind the hero image — same device as SignInBackdrop,
@@ -261,6 +262,8 @@ const FragranceDetailScreen = () => {
             </Text>
           </>
         )}
+
+        {fragranceId && user && <FragranceVoting userId={user.id} fragranceId={fragranceId} />}
 
         {/* Only catalog-linked rows have a fragranceId to report against — a
             manual add has nothing in the shared catalog to flag */}

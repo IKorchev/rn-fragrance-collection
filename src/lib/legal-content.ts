@@ -16,7 +16,7 @@ export interface LegalDoc {
 
 export const PRIVACY_POLICY: LegalDoc = {
   title: "Privacy Policy",
-  lastUpdated: "July 7, 2026",
+  lastUpdated: "July 18, 2026",
   sections: [
     {
       paragraphs: [
@@ -27,7 +27,7 @@ export const PRIVACY_POLICY: LegalDoc = {
       heading: "What we collect",
       paragraphs: [
         "Account information. When you sign in with Google or Apple, we receive your name, email address, and profile picture from the identity provider. We use this only to create and identify your account. We never see your Google or Apple password.",
-        "Collection and usage data. The fragrances you add, personal ratings and notes you write, and a log of the days you wear each fragrance (“wear events”). This is the app's core functionality.",
+        "Collection and usage data. The fragrances you add, personal ratings and notes you write, your private fragrance votes, and a log of the days you wear each fragrance (“wear events”). This is the app's core functionality.",
         "Push notification token. If you grant notification permission, a device push token is stored so the app can send you the daily wear reminder. You can turn reminders off at any time in your profile.",
         "Advertising. The free tier shows ads served by Google AdMob after you use the picker. AdMob may use your device's advertising identifier to serve and measure ads — see Google's privacy policy (policies.google.com) for details. Upgrading to Pro removes ads.",
         "We do not collect your location, contacts, or photos, and we run no analytics beyond crash reports.",
@@ -36,7 +36,7 @@ export const PRIVACY_POLICY: LegalDoc = {
     {
       heading: "How your data is used",
       bullets: [
-        "Your collection, ratings, and notes are private to your account and protected by row-level security — no other user can read them.",
+        "Your collection, personal notes, individual ratings, and individual fragrance votes are private to your account and protected by row-level security — no other user can read those individual rows. Anonymous aggregate ratings and voting distributions, plus aggregated wear counts, power community features.",
         "Wear events feed the community Most Worn leaderboard. Only anonymous, aggregated counts per fragrance are ever shown to other users; your identity is never attached to a leaderboard entry.",
         "We do not sell your data or use it for any purpose other than operating the app. Your collection and account data are never shared with advertisers — ads are served by Google AdMob independently of your app data.",
       ],
@@ -50,7 +50,7 @@ export const PRIVACY_POLICY: LegalDoc = {
     {
       heading: "Data retention and deletion",
       paragraphs: [
-        "Your data is kept for as long as your account exists. You can delete your account at any time from Profile → Delete account — this permanently removes your account, collection, notes, scent diary, and push tokens. Deletion is immediate and cannot be undone.",
+        "Your data is kept for as long as your account exists. You can delete your account at any time from Profile → Delete account — this permanently removes your account, collection, notes, individual ratings and votes, scent diary, and push tokens. Deletion is immediate and cannot be undone.",
       ],
     },
     {
@@ -74,7 +74,7 @@ export const PRIVACY_POLICY: LegalDoc = {
 
 export const TERMS_AND_CONDITIONS: LegalDoc = {
   title: "Terms & Conditions",
-  lastUpdated: "July 11, 2026",
+  lastUpdated: "July 18, 2026",
   sections: [
     {
       paragraphs: [
@@ -84,7 +84,7 @@ export const TERMS_AND_CONDITIONS: LegalDoc = {
     {
       heading: "The service",
       paragraphs: [
-        "The app lets you track a personal fragrance collection, log the days you wear each fragrance, and browse community features such as the Most Worn leaderboard, which shows anonymous, aggregated wear counts. The app is provided free of charge.",
+        "The app lets you track a personal fragrance collection, log the days you wear each fragrance, and browse community features such as the Most Worn leaderboard, which shows anonymous, aggregated wear counts and anonymous aggregate fragrance ratings and voting distributions. The app is provided free of charge.",
       ],
     },
     {
@@ -96,7 +96,7 @@ export const TERMS_AND_CONDITIONS: LegalDoc = {
     {
       heading: "Your content",
       paragraphs: [
-        "You keep ownership of the content you add to the app — ratings, notes, and fragrances you enter manually. You grant us the limited license needed to store that content and operate the app's features, including showing anonymous, aggregated wear counts (and the fragrance names and images they refer to) in community features.",
+        "You keep ownership of the content you add to the app — ratings, notes, fragrance votes, and fragrances you enter manually. You grant us the limited license needed to store that content and operate the app's features, including showing anonymous, aggregated wear counts, ratings, and fragrance-voting distributions (and the fragrance names and images they refer to) in community features.",
         "Because the name and image of a fragrance you add manually can appear in community features once you log wears for it, you agree not to enter content that is unlawful, offensive, or infringes someone else's rights. We may remove such content.",
       ],
     },

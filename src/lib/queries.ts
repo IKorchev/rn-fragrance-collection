@@ -1,10 +1,36 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "./supabase"
 import type { Database, Tables } from "./database.types"
+import { reportError } from "./sentry"
 
 // The catalog is name/brand/image only — all other scraped Parfumo metadata
 // (ratings, votes, year, gender, notes, …) was dropped as untrustworthy
 // (see CLAUDE.md on note poisoning).
+
+
+export const VOTE_SEASONS = ["spring", "summer", "autumn", "winter"] as const
+export type VoteSeason = (typeof VOTE_SEASONS)[number]
+export const VOTE_GENDERS = ["female", "unisex", "male"] as const
+export type VoteGender = (typeof VOTE_GENDERS)[number]
+export type VoteScale = 1 | 2 | 3 | 4 | 5
+
+export interface FragranceVote {
+  seasons: VoteSeason[]
+  gender: VoteGender
+  sillage: VoteScale
+  longevity: VoteScale
+}
+
+export interface FragranceVoteSummary {
+  total_votes: number
+  seasons: Record<VoteSeason, number>
+  genders: Record<VoteGender, number>
+  sillage: number[]
+  longevity: number[]
+  my_vote: FragranceVote | null
+}
+
+
 export type CatalogFragrance =
   Database["public"]["Functions"]["search_fragrances"]["Returns"][number]
 
@@ -37,6 +63,60 @@ export type ReportReason = (typeof REPORT_REASONS)[number]["key"]
 
 export const reportReasonLabel = (reason: string) =>
   REPORT_REASONS.find((r) => r.key === reason)?.label ?? reason
+
+
+
+export const useFragranceVoteSummary = (userId: string | undefined, fragranceId: string | null) =>
+  useQuery({
+    queryKey: ["fragrance-vote-summary", userId, fragranceId],
+    enabled: !!userId && !!fragranceId,
+    queryFn: async (): Promise<FragranceVoteSummary> => {
+      const { data, error } = await supabase.rpc("get_fragrance_vote_summary", {
+        p_fragrance_id: fragranceId!,
+      })
+      if (error) {
+        reportError(error, { flow: "fragrance-vote-summary" })
+        throw error
+      }
+      const summary = data as FragranceVoteSummary | null
+      return summary ?? {
+        total_votes: 0,
+        seasons: { spring: 0, summer: 0, autumn: 0, winter: 0 },
+        genders: { female: 0, unisex: 0, male: 0 },
+        sillage: [0, 0, 0, 0, 0],
+        longevity: [0, 0, 0, 0, 0],
+        my_vote: null,
+      }
+    },
+  })
+
+export const useFragranceVoteMutation = (userId: string | undefined, fragranceId: string | null) => {
+  const queryClient = useQueryClient()
+  const queryKey = ["fragrance-vote-summary", userId, fragranceId]
+  return useMutation({
+    mutationFn: async (vote: FragranceVote | null) => {
+      if (!userId || !fragranceId) throw new Error("A signed-in catalog fragrance is required")
+      if (vote) {
+        const { error } = await supabase.from("fragrance_votes").upsert(
+          { user_id: userId, fragrance_id: fragranceId, ...vote },
+          { onConflict: "user_id,fragrance_id" }
+        )
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from("fragrance_votes")
+          .delete()
+          .eq("user_id", userId)
+          .eq("fragrance_id", fragranceId)
+        if (error) throw error
+      }
+    },
+    onError: (error) => reportError(error, { flow: "fragrance-vote-mutation" }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey })
+    },
+  })
+}
 
 // Community rating aggregate for one catalog fragrance, keyed for lookup
 export interface RatingSummary {
