@@ -16,7 +16,7 @@ interface FilterChipProps {
 // None of this is className, so it's unaffected by NativeWind's literal-scan
 // constraint; colors come straight from useTheme()'s bare tokens.
 const FilterChip = ({ label, selected, onPress, testID, paddingHorizontal = 12 }: FilterChipProps) => {
-  const { accentColors, cardBorderColors, mutedColors, accentTintBg } = useTheme()
+  const { highlightColors, cardBorderColors, mutedColors, highlightTintBg } = useTheme()
 
   return (
     <Chip
@@ -25,14 +25,14 @@ const FilterChip = ({ label, selected, onPress, testID, paddingHorizontal = 12 }
       containerStyle={{
         borderRadius: 9999,
         borderWidth: 1,
-        borderColor: selected ? getColor(accentColors) : getColor(cardBorderColors),
-        backgroundColor: selected ? accentTintBg : undefined,
+        borderColor: selected ? getColor(highlightColors) : getColor(cardBorderColors),
+        backgroundColor: selected ? highlightTintBg : undefined,
       }}
       buttonStyle={{ paddingHorizontal, borderRadius: 9999 }}
       titleStyle={{
         fontSize: 13,
         fontWeight: "600",
-        color: selected ? getColor(accentColors) : getColor(mutedColors),
+        color: selected ? getColor(highlightColors) : getColor(mutedColors),
       }}
       title={label}
       onPress={onPress}

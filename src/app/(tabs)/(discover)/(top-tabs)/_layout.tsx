@@ -9,19 +9,19 @@ const { Navigator } = createMaterialTopTabNavigator()
 export const MaterialTopTabs = withLayoutContext(Navigator)
 
 export default function TopTabsLayout() {
-  const { baseColors, mutedColors, accentColors, theme } = useTheme()
+  const { mutedColors, highlightColors, theme } = useTheme()
   return (
     <View className='flex-1'>
       <MaterialTopTabs
         screenOptions={{
-          tabBarActiveTintColor: getColor(baseColors),
+          tabBarActiveTintColor: getColor(highlightColors),
           tabBarInactiveTintColor: getColor(mutedColors),
           tabBarLabelStyle: {
             fontSize: 15,
             fontWeight: "bold",
           },
           tabBarIndicatorStyle: {
-            backgroundColor: getColor(accentColors),
+            backgroundColor: getColor(highlightColors),
             height: 3,
             borderRadius: 3,
           },

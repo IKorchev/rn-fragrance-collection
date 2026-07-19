@@ -40,8 +40,9 @@ const TopScreen = () => {
   const { refreshing, onRefresh } = usePullToRefresh(
     section === "fragrances" ? refetch : refetchCollectors
   )
-  const { viewColors, accentColors, mutedTextClass } = useTheme()
+  const { viewColors, accentColors, mutedTextClass, highlightColors } = useTheme()
   const { t } = useLocale()
+  const highlightTint = getColor(highlightColors)
 
   const refreshControl = (
     <RefreshControl
@@ -60,8 +61,8 @@ const TopScreen = () => {
       <View className='px-4 pt-3'>
         <SegmentedControl
           options={[
-            { label: t("collectors.segmentFragrances"), value: "fragrances" as const, testID: "top-segment-fragrances" },
-            { label: t("collectors.segmentCollectors"), value: "collectors" as const, testID: "top-segment-collectors" },
+            { label: t("collectors.segmentFragrances"), value: "fragrances" as const, tint: highlightTint, testID: "top-segment-fragrances" },
+            { label: t("collectors.segmentCollectors"), value: "collectors" as const, tint: highlightTint, testID: "top-segment-collectors" },
           ]}
           value={section}
           onChange={setSection}
