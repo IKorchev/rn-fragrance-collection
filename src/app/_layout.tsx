@@ -105,6 +105,15 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="badges"
+            options={{
+              title: t("screens.badges"),
+              header: ({ navigation, route, options, back }) => (
+                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
+              ),
+            }}
+          />
+          <Stack.Screen
             name="moderation"
             options={{
               headerShown: false,

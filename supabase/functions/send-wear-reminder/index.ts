@@ -1,9 +1,14 @@
 // Daily "pick today's fragrance" push reminder.
-// Invoked by pg_cron (see db/schema.sql) with the anon key as Bearer JWT;
-// reads tokens with the service role (RLS bypass is intentional — this is
-// the trusted sender), sends via Expo's push API, and prunes tokens Expo
-// reports as DeviceNotRegistered. Each user gets a suggested fragrance and
-// the "wear-reminder" action category (buttons registered in
+// Invoked by pg_cron (see db/schema.sql) with the anon key as Bearer JWT plus
+// the x-internal-secret header (Vault secret `internal_fn_secret`) — the anon
+// key ships in the app binary, so without the secret anyone could trigger
+// push spam to every opted-in user. Enforcement activates once the
+// INTERNAL_FN_SECRET function secret is set (supabase secrets set), so
+// deploying ahead of the secret can't break the cron job. Reads tokens with
+// the service role (RLS bypass is intentional — this is the trusted sender),
+// sends via Expo's push API, and prunes tokens Expo reports as
+// DeviceNotRegistered. Each user gets a suggested fragrance and the
+// "wear-reminder" action category (buttons registered in
 // src/lib/notifications.ts).
 import { createClient } from "npm:@supabase/supabase-js@2"
 
@@ -50,7 +55,12 @@ const titleOf = (name: string) => {
   return parts[1] ?? parts[0]
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  const secret = Deno.env.get("INTERNAL_FN_SECRET")
+  if (secret && req.headers.get("x-internal-secret") !== secret) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

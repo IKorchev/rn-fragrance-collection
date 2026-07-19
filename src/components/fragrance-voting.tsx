@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import useTheme from "@/contexts/theme-context";
+import { getColor } from "@/lib/utils/colors";
 import useToast from "@/contexts/toast-context";
 import Button from "@/components/shared/ui/button";
-import FilterChip from "@/components/shared/ui/filter-chip";
+import SegmentedControl from "@/components/shared/ui/segmented-control";
 import StatTile from "@/components/shared/ui/stat-tile";
 import {
   VOTE_GENDERS,
@@ -40,8 +41,28 @@ const longevityLabels = [
   "Long lasting",
   "Eternal",
 ];
-const winner = (labels: string[], values: number[]) =>
-  labels[values.indexOf(Math.max(...values))] ?? "—";
+// Bare getColor() tokens per theme — resolved via tint() inside the component
+type TintTokens = { light: string; dark: string };
+const seasonTints: Record<VoteSeason, TintTokens> = {
+  spring: { light: "lime-600", dark: "lime-400" },
+  summer: { light: "amber-600", dark: "amber-400" },
+  autumn: { light: "orange-600", dark: "orange-400" },
+  winter: { light: "sky-600", dark: "sky-400" },
+};
+const genderTints: Record<VoteGender, TintTokens> = {
+  female: { light: "pink-600", dark: "pink-400" },
+  unisex: { light: "violet-600", dark: "violet-400" },
+  male: { light: "blue-600", dark: "blue-400" },
+};
+// Cool → hot ramp for the 1–5 sillage/longevity scales
+const scaleTints: TintTokens[] = [
+  { light: "sky-600", dark: "sky-400" },
+  { light: "teal-600", dark: "teal-400" },
+  { light: "amber-600", dark: "amber-400" },
+  { light: "orange-600", dark: "orange-400" },
+  { light: "rose-600", dark: "rose-400" },
+];
+const maxIndex = (values: number[]) => values.indexOf(Math.max(...values));
 interface VoteDraft {
   seasons: VoteSeason[];
   gender: VoteGender | null;
@@ -65,8 +86,10 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
   );
   const mutation = useFragranceVoteMutation(userId, fragranceId);
   const { showToast } = useToast();
-  const { baseTextClass, mutedTextClass, baseBorderClass, cardColors } =
+  const { theme, baseTextClass, mutedTextClass, baseBorderClass, cardColors } =
     useTheme();
+  const tint = (tokens: TintTokens) =>
+    getColor(theme === "dark" ? tokens.dark : tokens.light);
   const [draft, setDraft] = useState<VoteDraft>(createEmptyDraft);
   const [dirty, setDirty] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -175,6 +198,12 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         />
       </View>
     );
+  const topSeason =
+    VOTE_SEASONS[maxIndex(VOTE_SEASONS.map((season) => data.seasons[season] ?? 0))];
+  const topGender =
+    VOTE_GENDERS[maxIndex(VOTE_GENDERS.map((gender) => data.genders[gender] ?? 0))];
+  const topSillage = maxIndex(data.sillage);
+  const topLongevity = maxIndex(data.longevity);
   if (!editing) {
     return (
       <View
@@ -200,26 +229,24 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
               className="mt-4"
               items={[
                 {
-                  value: winner(
-                    VOTE_SEASONS.map((season) => seasonLabels[season]),
-                    VOTE_SEASONS.map((season) => data.seasons[season] ?? 0),
-                  ),
+                  value: seasonLabels[topSeason],
                   label: "Season",
+                  color: tint(seasonTints[topSeason]),
                 },
                 {
-                  value: winner(
-                    VOTE_GENDERS.map((gender) => genderLabels[gender]),
-                    VOTE_GENDERS.map((gender) => data.genders[gender] ?? 0),
-                  ),
+                  value: genderLabels[topGender],
                   label: "Gender",
+                  color: tint(genderTints[topGender]),
                 },
                 {
-                  value: winner(sillageLabels, data.sillage),
+                  value: sillageLabels[topSillage] ?? "—",
                   label: "Sillage",
+                  color: scaleTints[topSillage] && tint(scaleTints[topSillage]),
                 },
                 {
-                  value: winner(longevityLabels, data.longevity),
+                  value: longevityLabels[topLongevity] ?? "—",
                   label: "Longevity",
+                  color: scaleTints[topLongevity] && tint(scaleTints[topLongevity]),
                 },
               ]}
             />
@@ -268,65 +295,59 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         Seasons
         <Text className={mutedTextClass + " font-normal"}> (pick 1–2)</Text>
       </Text>
-      <View className="flex-row flex-wrap pt-2" style={{ gap: 8 }}>
-        {VOTE_SEASONS.map((season) => (
-          <FilterChip
-            key={season}
-            label={seasonLabels[season]}
-            selected={draft.seasons.includes(season)}
-            onPress={() => toggleSeason(season)}
-            testID={`vote-season-${season}`}
-          />
-        ))}
-      </View>
+      <SegmentedControl
+        className="mt-2"
+        options={VOTE_SEASONS.map((season) => ({
+          label: seasonLabels[season],
+          value: season,
+          testID: `vote-season-${season}`,
+          tint: tint(seasonTints[season]),
+        }))}
+        values={draft.seasons}
+        onChange={toggleSeason}
+      />
       <Text className={baseTextClass + " pt-4 text-sm font-semibold"}>
         Gender
       </Text>
-      <View className="flex-row flex-wrap pt-2" style={{ gap: 8 }}>
-        {VOTE_GENDERS.map((gender) => (
-          <FilterChip
-            key={gender}
-            label={genderLabels[gender]}
-            selected={draft.gender === gender}
-            onPress={() => setDraftValue("gender", gender)}
-            testID={`vote-gender-${gender}`}
-          />
-        ))}
-      </View>
+      <SegmentedControl
+        className="mt-2"
+        options={VOTE_GENDERS.map((gender) => ({
+          label: genderLabels[gender],
+          value: gender,
+          testID: `vote-gender-${gender}`,
+          tint: tint(genderTints[gender]),
+        }))}
+        value={draft.gender}
+        onChange={(gender) => setDraftValue("gender", gender)}
+      />
       <Text className={baseTextClass + " pt-4 text-sm font-semibold"}>
         Sillage
       </Text>
-      <View className="flex-row flex-wrap pt-2" style={{ gap: 8 }}>
-        {sillageLabels.map((label, index) => {
-          const level = (index + 1) as VoteScale;
-          return (
-            <FilterChip
-              key={label}
-              label={label}
-              selected={draft.sillage === level}
-              onPress={() => setDraftValue("sillage", level)}
-              testID={`sillage-${level}`}
-            />
-          );
-        })}
-      </View>
+      <SegmentedControl
+        className="mt-2"
+        options={sillageLabels.map((label, index) => ({
+          label,
+          value: (index + 1) as VoteScale,
+          testID: `sillage-${index + 1}`,
+          tint: tint(scaleTints[index]),
+        }))}
+        value={draft.sillage}
+        onChange={(level) => setDraftValue("sillage", level)}
+      />
       <Text className={baseTextClass + " pt-4 text-sm font-semibold"}>
         Longevity
       </Text>
-      <View className="flex-row flex-wrap pt-2" style={{ gap: 8 }}>
-        {longevityLabels.map((label, index) => {
-          const level = (index + 1) as VoteScale;
-          return (
-            <FilterChip
-              key={label}
-              label={label}
-              selected={draft.longevity === level}
-              onPress={() => setDraftValue("longevity", level)}
-              testID={`longevity-${level}`}
-            />
-          );
-        })}
-      </View>
+      <SegmentedControl
+        className="mt-2"
+        options={longevityLabels.map((label, index) => ({
+          label,
+          value: (index + 1) as VoteScale,
+          testID: `longevity-${index + 1}`,
+          tint: tint(scaleTints[index]),
+        }))}
+        value={draft.longevity}
+        onChange={(level) => setDraftValue("longevity", level)}
+      />
       {(validationError || mutation.isError) && (
         <Text className="pt-3 text-sm text-rose-600">
           {validationError ?? "Could not save your vote. Try again."}

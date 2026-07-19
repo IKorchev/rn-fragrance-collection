@@ -14,6 +14,7 @@ const en: Dictionary = {
     wearHistory: "Scent Diary",
     privacyPolicy: "Privacy Policy",
     terms: "Terms & Conditions",
+    badges: "Badge Wall",
   },
 
   profile: {
@@ -67,6 +68,117 @@ const en: Dictionary = {
     system: "System default",
     english: "English",
     spanish: "Español",
+  },
+
+  gamification: {
+    header: {
+      levelLabel: "Level {{level}}",
+      xpToNext: "{{current}}/{{target}} XP to next level",
+      maxLevelXp: "{{xp}} XP total · Max level",
+      streakLabel_one: "{{count}}-day streak",
+      streakLabel_other: "{{count}}-day streak",
+      badgesEarned: "{{count}}/{{total}} badges",
+    },
+
+    levels: {
+      "1": "Rookie Sniffer",
+      "2": "Scent Scout",
+      "3": "Fragrance Apprentice",
+      "4": "Perfume Enthusiast",
+      "5": "Top-Note Tactician",
+      "6": "Sillage Connoisseur",
+      "7": "Master Blender",
+      "8": "Olfactory Sage",
+      "9": "Scent Virtuoso",
+      "10": "The Nose",
+    },
+
+    badgeWall: {
+      title: "Badge Wall",
+      sectionStreak: "Streaks",
+      sectionWears: "Wears",
+      sectionCollection: "Collection",
+      sectionExplorer: "Explorer",
+      sectionSpecial: "Special",
+      lockedProgress: "{{current}}/{{target}}",
+      seeAllRow: "See all badges",
+      recentlyEarned: "Recently earned",
+      almostThere: "Almost there",
+      emptyTitle: "No badges yet",
+      emptyMessage: "Log a wear to start earning badges.",
+    },
+
+    toasts: {
+      levelUp: "Level up! You're now {{title}} 🎉",
+      badgeUnlocked: "Badge unlocked: {{name}} 🏅",
+    },
+
+    badges: {
+      "streak-3": {
+        name: "Warming Up",
+        description: "Wear something 3 days in a row.",
+      },
+      "streak-7": {
+        name: "Week of Whiffs",
+        description: "Hit a 7-day wearing streak.",
+      },
+      "streak-30": {
+        name: "Scent Habit",
+        description: "Keep a streak going for 30 days.",
+      },
+      "streak-100": {
+        name: "Centurion Nose",
+        description: "Reach a 100-day streak. Certified addiction.",
+      },
+      "wears-1": {
+        name: "First Whiff",
+        description: "Log your very first wear.",
+      },
+      "wears-25": {
+        name: "Getting Into It",
+        description: "Log 25 wears.",
+      },
+      "wears-100": {
+        name: "Triple Digits",
+        description: "Log 100 wears.",
+      },
+      "wears-500": {
+        name: "Wear Machine",
+        description: "Log 500 wears. Are you okay?",
+      },
+      "collection-5": {
+        name: "Starter Shelf",
+        description: "Add 5 fragrances to your collection.",
+      },
+      "collection-15": {
+        name: "Building a Wardrobe",
+        description: "Grow your collection to 15 fragrances.",
+      },
+      "collection-40": {
+        name: "Fragrance Hoarder",
+        description: "Grow your collection to 40 fragrances.",
+      },
+      "explorer-3": {
+        name: "Brand Curious",
+        description: "Wear fragrances from 3 different brands.",
+      },
+      "explorer-8": {
+        name: "Well-Traveled Nose",
+        description: "Wear fragrances from 8 different brands.",
+      },
+      "explorer-15": {
+        name: "Perfume Passport",
+        description: "Wear fragrances from 15 different brands.",
+      },
+      "special-dusted-off": {
+        name: "Dusted Off",
+        description: "Re-wear a fragrance after 30+ days in the drawer.",
+      },
+      "special-loyalist": {
+        name: "Loyalist",
+        description: "Wear the same fragrance 10 times.",
+      },
+    },
   },
 
   share: {
