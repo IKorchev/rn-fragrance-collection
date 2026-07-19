@@ -1,12 +1,25 @@
 import React, { useMemo, useState } from "react"
-import { ScrollView, View, Text, TouchableOpacity, Switch, Alert } from "react-native"
+import { ScrollView, View, Text, TouchableOpacity, Switch, Alert, ActivityIndicator } from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
-import { Avatar } from "@rneui/themed"
 import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
-import { useIsModerator, useRemindersEnabled, useWearHistory } from "@/lib/queries"
+import {
+  useIsModerator,
+  useMyProfile,
+  useRemindersEnabled,
+  useWearHistory,
+  type UserProfile,
+} from "@/lib/queries"
+import {
+  pickHeaderPhoto,
+  uploadHeaderPhoto,
+  removeHeaderPhotoObject,
+  headerPhotoUrl,
+  type HeaderPhotoSource,
+} from "@/lib/profile-header-photo"
+import { buildProfileSnapshot } from "@/lib/utils/use-profile-sync"
 import { useOnboarding } from "@/lib/utils/use-onboarding"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
 import { FREE_COLLECTION_LIMIT } from "@/lib/entitlements"
@@ -21,6 +34,8 @@ import useGamification from "@/lib/utils/use-gamification"
 import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
 import { useMonthlyRecapPrompt } from "@/lib/utils/use-monthly-recap-prompt"
 import Badge from "@/components/shared/ui/badge"
+import IconButton from "@/components/shared/ui/icon-button"
+import ProfileHero from "@/components/profile-hero"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
 import RowGroup from "@/components/shared/ui/row-group"
@@ -66,6 +81,9 @@ const ProfileScreen = () => {
   const [languagePickerVisible, setLanguagePickerVisible] = useState(false)
   const [recapShareVisible, setRecapShareVisible] = useState(false)
   const [todayShareVisible, setTodayShareVisible] = useState(false)
+  const [headerBusy, setHeaderBusy] = useState(false)
+  const { data: myProfile } = useMyProfile(user?.id)
+  const headerUrl = headerPhotoUrl(myProfile?.header_image_path)
 
   const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? t("profile.anonymous")
   const totalWears = userCollection.reduce((sum, el) => sum + el.times_worn, 0)
@@ -130,6 +148,91 @@ const ProfileScreen = () => {
     }
   }
 
+  // Upsert so the first-ever write creates the row (is_public defaults false;
+  // PostgREST merge-duplicates only touches the provided columns on conflict)
+  const upsertProfilePatch = async (patch: Partial<UserProfile>) => {
+    const { error } = await supabase
+      .from("user_profiles")
+      .upsert({ user_id: user!.id, ...patch }, { onConflict: "user_id" })
+    if (error) throw error
+    await queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
+  }
+
+  // Publishing writes the full snapshot eagerly — without it a just-published
+  // profile would sit at level 1 / 0 XP until use-profile-sync's next pass
+  const togglePublicProfile = async (value: boolean) => {
+    queryClient.setQueryData(["my-profile", user?.id], (old: UserProfile | null | undefined) =>
+      old ? { ...old, is_public: value } : old
+    )
+    try {
+      await upsertProfilePatch({
+        is_public: value,
+        ...buildProfileSnapshot(user!, gamification, userCollection),
+      })
+      queryClient.invalidateQueries({ queryKey: ["top-collectors"] })
+    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
+      reportError(error, { flow: "public-profile-toggle" })
+      Alert.alert(t("profile.publicUpdateFailedTitle"), t("profile.publicUpdateFailedMessage"))
+    }
+  }
+
+  const applyHeaderPhoto = async (source: HeaderPhotoSource) => {
+    const pick = await pickHeaderPhoto(source)
+    if (pick.status === "denied") {
+      Alert.alert(t("profile.headerPhoto.permissionTitle"), t("profile.headerPhoto.permissionMessage"))
+      return
+    }
+    if (pick.status === "canceled") return
+    setHeaderBusy(true)
+    try {
+      const oldPath = myProfile?.header_image_path
+      const path = await uploadHeaderPhoto(user!.id, pick.uri)
+      await upsertProfilePatch({ header_image_path: path })
+      if (oldPath) removeHeaderPhotoObject(oldPath)
+      showToast({ message: t("profile.headerPhoto.saved") })
+    } catch (error) {
+      reportError(error, { flow: "profile-header-photo" })
+      showToast({ message: t("profile.headerPhoto.failed") })
+    } finally {
+      setHeaderBusy(false)
+    }
+  }
+
+  const removeHeaderPhoto = async () => {
+    const oldPath = myProfile?.header_image_path
+    if (!oldPath) return
+    setHeaderBusy(true)
+    try {
+      await upsertProfilePatch({ header_image_path: null })
+      removeHeaderPhotoObject(oldPath)
+      showToast({ message: t("profile.headerPhoto.removed") })
+    } catch (error) {
+      reportError(error, { flow: "profile-header-photo" })
+      showToast({ message: t("profile.headerPhoto.failed") })
+    } finally {
+      setHeaderBusy(false)
+    }
+  }
+
+  const openHeaderPhotoMenu = () => {
+    if (headerBusy) return
+    Alert.alert(t("profile.headerPhoto.title"), undefined, [
+      { text: t("profile.headerPhoto.take"), onPress: () => applyHeaderPhoto("camera") },
+      { text: t("profile.headerPhoto.choose"), onPress: () => applyHeaderPhoto("library") },
+      ...(myProfile?.header_image_path
+        ? [
+            {
+              text: t("profile.headerPhoto.remove"),
+              style: "destructive" as const,
+              onPress: removeHeaderPhoto,
+            },
+          ]
+        : []),
+      { text: t("common.cancel"), style: "cancel" as const },
+    ])
+  }
+
   // Optimistic — the switch flips immediately, reverts if the write fails
   const toggleReminders = async (value: boolean) => {
     queryClient.setQueryData(["reminder-prefs", user?.id], value)
@@ -175,24 +278,33 @@ const ProfileScreen = () => {
       className={`flex-1 ${modalColors.background}`}
       contentContainerClassName='px-5 pt-8 pb-12 items-center'
       showsVerticalScrollIndicator={false}>
-      <Avatar
-        size={96}
-        rounded
-        source={user?.photoURL ? { uri: user.photoURL } : undefined}
-        icon={<MaterialCommunityIcons name='account' size={56} color={getColor("zinc-500")} />}
-        containerStyle={{ backgroundColor: getColor(theme === "dark" ? "zinc-800" : "zinc-200") }}
+      <ProfileHero
+        headerImageUrl={headerUrl}
+        avatarUrl={user?.photoURL}
+        name={displayName}
+        subtitles={[
+          user?.email ?? null,
+          memberSince ? t("profile.memberSince", { date: memberSince }) : null,
+        ].filter((line): line is string => !!line)}
+        badge={isPro ? <Badge label='PRO' /> : undefined}
+        trailing={
+          <IconButton
+            bgClassName={headerUrl ? "bg-black/40" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
+            dimmed={headerBusy}
+            testID='profile-header-photo-button'
+            onPress={openHeaderPhotoMenu}>
+            {headerBusy ? (
+              <ActivityIndicator size='small' color={headerUrl ? "white" : getColor(mutedColors)} />
+            ) : (
+              <MaterialCommunityIcons
+                name='camera-outline'
+                size={22}
+                color={headerUrl ? "white" : getColor(mutedColors)}
+              />
+            )}
+          </IconButton>
+        }
       />
-
-      <View className='flex-row items-center pt-4' style={{ gap: 6 }}>
-        <Text className={`${baseTextClass} text-2xl font-bold`}>{displayName}</Text>
-        {isPro && <Badge label='PRO' />}
-      </View>
-      {user?.email && <Text className={`${mutedTextClass} text-base pt-1`}>{user.email}</Text>}
-      {memberSince && (
-        <Text className={`${mutedTextClass} text-sm pt-1`}>
-          {t("profile.memberSince", { date: memberSince })}
-        </Text>
-      )}
 
       <GamificationHeader state={gamification} className='mt-6' />
 
@@ -324,6 +436,18 @@ const ProfileScreen = () => {
             <Switch
               value={remindersEnabled ?? true}
               onValueChange={toggleReminders}
+              trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
+            />
+          }
+        />
+        <Row
+          icon='earth'
+          label={t("profile.publicProfile")}
+          testID='profile-public-toggle-row'
+          trailing={
+            <Switch
+              value={myProfile?.is_public ?? false}
+              onValueChange={togglePublicProfile}
               trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
             />
           }

@@ -15,6 +15,7 @@ const en: Dictionary = {
     privacyPolicy: "Privacy Policy",
     terms: "Terms & Conditions",
     badges: "Badge Wall",
+    userProfile: "Collector",
   },
 
   profile: {
@@ -50,6 +51,21 @@ const en: Dictionary = {
     reminderUpdateFailedTitle: "Oops",
     reminderUpdateFailedMessage: "Couldn't update your reminder setting, please try again.",
     language: "Language",
+    publicProfile: "Public profile",
+    publicUpdateFailedTitle: "Oops",
+    publicUpdateFailedMessage: "Couldn't update your public profile, please try again.",
+    headerPhoto: {
+      title: "Collection photo",
+      take: "Take photo",
+      choose: "Choose from library",
+      remove: "Remove photo",
+      saved: "Collection photo updated",
+      removed: "Collection photo removed",
+      failed: "Couldn't update your photo — please try again.",
+      permissionTitle: "Permission needed",
+      permissionMessage:
+        "Allow camera or photo access for Whiff in your device settings to add a collection photo.",
+    },
     shareRecap: "Share my recap",
     shareToday: "Share today's scent",
     signOut: "Sign out",
@@ -68,6 +84,22 @@ const en: Dictionary = {
     system: "System default",
     english: "English",
     spanish: "Español",
+  },
+
+  collectors: {
+    meta: "Level {{level}} · {{count}} wears",
+    emptyTitle: "No public collectors yet",
+    emptyMessage: "Make your profile public to be the first one here.",
+    errorTitle: "Couldn't load collectors",
+    errorMessage: "Check your connection and try again.",
+    errorAction: "Try again",
+  },
+
+  userProfile: {
+    privateTitle: "This profile is private",
+    privateMessage: "This collector hasn't made their profile public.",
+    badgesTitle: "Badges",
+    topWornTitle: "Most worn",
   },
 
   gamification: {

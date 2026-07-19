@@ -2,7 +2,7 @@
   "expo": {
     "name": "Whiff",
     "slug": "fragrance-collection",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -70,7 +70,14 @@
         }
       ],
       "@sentry/react-native/expo",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Whiff uses your photo library so you can pick a photo of your fragrance collection for your profile.",
+          "cameraPermission": "Whiff uses your camera so you can photograph your fragrance collection for your profile."
+        }
+      ]
     ],
     "extra": {
       "router": {},

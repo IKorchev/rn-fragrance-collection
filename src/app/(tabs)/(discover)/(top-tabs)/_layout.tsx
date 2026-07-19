@@ -31,6 +31,7 @@ export default function TopTabsLayout() {
         }}>
         <MaterialTopTabs.Screen name="recommendations" options={{ title: "For You" }} />
         <MaterialTopTabs.Screen name="index" options={{ title: "Leaderboard" }} />
+        <MaterialTopTabs.Screen name="collectors" options={{ title: "Collectors" }} />
         <MaterialTopTabs.Screen name="search" options={{ title: "Search" }} />
       </MaterialTopTabs>
     </View>

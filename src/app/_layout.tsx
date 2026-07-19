@@ -121,6 +121,15 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="user-profile"
+            options={{
+              title: t("screens.userProfile"),
+              header: ({ navigation, route, options, back }) => (
+                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
+              ),
+            }}
+          />
+          <Stack.Screen
             name="moderation"
             options={{
               headerShown: false,

@@ -46,6 +46,11 @@ export type WearEvent = Tables<"wear_events">
 
 export type StreakSave = Tables<"streak_saves">
 
+export type UserProfile = Tables<"user_profiles">
+
+export type UserTopWornFragrance =
+  Database["public"]["Functions"]["user_top_worn"]["Returns"][number]
+
 export type PendingSubmission =
   Database["public"]["Functions"]["list_pending_submissions"]["Returns"][number]
 
@@ -364,6 +369,76 @@ export const useStreakSaves = (userId: string | undefined) =>
         .from("streak_saves")
         .select("*")
         .eq("user_id", userId!)
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// The signed-in user's own profile row (null until they've ever toggled
+// public or uploaded a header photo — the row is created lazily by the first
+// write). Owns the header photo path and the is_public flag; the snapshot
+// fields on it are kept fresh by use-profile-sync.ts.
+export const useMyProfile = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["my-profile", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<UserProfile | null> => {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId!)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+  })
+
+// Another user's profile — RLS only returns the row while is_public, so a
+// user flipping private disappears here on next fetch. null = private or
+// nonexistent (indistinguishable on purpose).
+export const usePublicProfile = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["public-profile", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<UserProfile | null> => {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId!)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+  })
+
+// Top-collectors leaderboard: public profiles ranked by XP. A plain select —
+// the "public or own profile" RLS policy is the gate, no RPC needed.
+export const useTopCollectors = () =>
+  useQuery({
+    queryKey: ["top-collectors"],
+    queryFn: async (): Promise<UserProfile[]> => {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("is_public", true)
+        .order("xp", { ascending: false })
+        .limit(50)
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// A public user's most-worn fragrances, from their real wear_events via the
+// user_top_worn SECURITY DEFINER RPC (empty for private profiles).
+export const useUserTopWorn = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["user-top-worn", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<UserTopWornFragrance[]> => {
+      const { data, error } = await supabase.rpc("user_top_worn", {
+        target_user: userId!,
+        max_results: 5,
+      })
       if (error) throw error
       return data ?? []
     },
