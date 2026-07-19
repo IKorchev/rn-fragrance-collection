@@ -91,6 +91,8 @@ const es: Dictionary = {
   },
 
   collectors: {
+    segmentFragrances: "Fragancias",
+    segmentCollectors: "Coleccionistas",
     meta: "Nivel {{level}} · {{count}} usos",
     emptyTitle: "Aún no hay coleccionistas públicos",
     emptyMessage: "Haz público tu perfil para ser el primero en aparecer aquí.",

@@ -88,6 +88,8 @@ const en: Dictionary = {
   },
 
   collectors: {
+    segmentFragrances: "Fragrances",
+    segmentCollectors: "Collectors",
     meta: "Level {{level}} · {{count}} wears",
     emptyTitle: "No public collectors yet",
     emptyMessage: "Make your profile public to be the first one here.",

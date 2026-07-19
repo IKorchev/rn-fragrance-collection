@@ -6,12 +6,13 @@ tags:
 ---
 - runFlow: ../subflows/launch-dev-client.yaml
 
-# Discover tab: Most Worn / Search sub-tabs are present
+# Discover tab: Top / Search sub-tabs are present
 - assertVisible: "Search"
-- assertVisible: "Leaderboard"
+- assertVisible: "Top"
 
-# Leaderboard renders its period chips
-- tapOn: "Leaderboard"
+# Top renders its Fragrances/Collectors toggle and period chips
+- tapOn: "Top"
+- assertVisible: "Collectors"
 - extendedWaitUntil:
     visible: "Today"
     timeout: 10000
