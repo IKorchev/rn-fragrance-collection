@@ -37,13 +37,13 @@ export default function SigninScreen() {
 
           <Text
             className={`mt-8 text-center font-display text-4xl tracking-tight ${baseTextClass}`}>
-            Fragrance <Text className={accentTextClass}>Collection</Text>
+            <Text className={accentTextClass}>Whiff</Text>
           </Text>
           <Text
             className={`mt-3 text-center text-base leading-6 ${mutedTextClass}`}
             style={{ maxWidth: MAX_CONTENT_WIDTH }}>
-            Build your collection, log every wear, and let the picker choose
-            today's scent.
+            Your nose knows. Build your collection, log every spritz, and let
+            the picker decide what today smells like.
           </Text>
 
           <View className='mt-12 w-full' style={{ maxWidth: MAX_CONTENT_WIDTH }}>

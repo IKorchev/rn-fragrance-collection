@@ -1,4 +1,6 @@
-# Fragrance Collection
+# Whiff
+
+_Formerly "Fragrance Collection."_
 
 A React Native (Expo) app for tracking a personal fragrance collection. Search a ~64k-fragrance database, build your collection, log wears, and let the weighted picker decide what to wear today.
 

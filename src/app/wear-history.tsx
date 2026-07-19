@@ -307,7 +307,7 @@ const WearHistoryScreen = () => {
               icon='bottle-tonic-outline'
               illustration={<EmptyCollectionIllustration />}
               title='Nothing logged yet'
-              message='Tap the spray button on a fragrance to start your diary.'
+              message='Tap the spray icon next time you wear something — that starts the diary.'
             />
           ) : (
             <EmptyState

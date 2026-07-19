@@ -77,7 +77,7 @@ const buildCsv = (collection: UserFragrance[], wearEvents: WearEvent[], votes: V
 
   return (
     csvSection(
-      "My Fragrance Collection",
+      "My Collection",
       ["Brand", "Title", "Times Worn", "Last Worn", "My Rating", "My Notes", "Added On", "Catalog Linked"],
       collectionRows
     ) +
