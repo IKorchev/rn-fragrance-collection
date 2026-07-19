@@ -6,6 +6,8 @@ import useTheme from "@/contexts/theme-context"
 interface StatItem {
   value: string | number
   label: string
+  // Full color string — overrides the accent on this item's value text
+  color?: string
 }
 
 interface StatTileProps {
@@ -39,7 +41,9 @@ const StatTile = ({ items, columns = items.length, className, size = "md" }: Sta
               <React.Fragment key={item.label}>
                 {index > 0 && <View style={{ width: 1, backgroundColor: getColor(cardBorderColors) }} />}
                 <View className={`flex-1 items-center ${cellPaddingClass}`}>
-                  <Text className={valueClass}>{item.value}</Text>
+                  <Text className={valueClass} style={item.color ? { color: item.color } : undefined}>
+                    {item.value}
+                  </Text>
                   <Text className={labelClass}>{item.label}</Text>
                 </View>
               </React.Fragment>
