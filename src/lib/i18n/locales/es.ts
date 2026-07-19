@@ -17,6 +17,7 @@ const es: Dictionary = {
     wearHistory: "Diario de aromas",
     privacyPolicy: "Política de privacidad",
     terms: "Términos y condiciones",
+    badges: "Muro de insignias",
   },
 
   profile: {
@@ -70,6 +71,117 @@ const es: Dictionary = {
     system: "Predeterminado del sistema",
     english: "English",
     spanish: "Español",
+  },
+
+  gamification: {
+    header: {
+      levelLabel: "Nivel {{level}}",
+      xpToNext: "{{current}}/{{target}} XP para el siguiente nivel",
+      maxLevelXp: "{{xp}} XP en total · Nivel máximo",
+      streakLabel_one: "Racha de {{count}} día",
+      streakLabel_other: "Racha de {{count}} días",
+      badgesEarned: "{{count}}/{{total}} insignias",
+    },
+
+    levels: {
+      "1": "Olfateador Novato",
+      "2": "Explorador de Aromas",
+      "3": "Aprendiz de Fragancias",
+      "4": "Entusiasta del Perfume",
+      "5": "Táctico de Salida",
+      "6": "Conocedor del Sillage",
+      "7": "Maestro Perfumista",
+      "8": "Sabio Olfativo",
+      "9": "Virtuoso del Aroma",
+      "10": "La Nariz",
+    },
+
+    badgeWall: {
+      title: "Muro de insignias",
+      sectionStreak: "Rachas",
+      sectionWears: "Usos",
+      sectionCollection: "Colección",
+      sectionExplorer: "Explorador",
+      sectionSpecial: "Especiales",
+      lockedProgress: "{{current}}/{{target}}",
+      seeAllRow: "Ver todas las insignias",
+      recentlyEarned: "Ganadas recientemente",
+      almostThere: "Casi lo logras",
+      emptyTitle: "Aún no hay insignias",
+      emptyMessage: "Registra un uso para empezar a ganar insignias.",
+    },
+
+    toasts: {
+      levelUp: "¡Subiste de nivel! Ahora eres {{title}} 🎉",
+      badgeUnlocked: "Insignia desbloqueada: {{name}} 🏅",
+    },
+
+    badges: {
+      "streak-3": {
+        name: "Calentando Motores",
+        description: "Usa un perfume 3 días seguidos.",
+      },
+      "streak-7": {
+        name: "Semana de Aromas",
+        description: "Alcanza una racha de 7 días.",
+      },
+      "streak-30": {
+        name: "Hábito Aromático",
+        description: "Mantén una racha de 30 días.",
+      },
+      "streak-100": {
+        name: "Nariz Centenaria",
+        description: "Llega a una racha de 100 días. Ya es oficial: es una adicción.",
+      },
+      "wears-1": {
+        name: "Primer Toque",
+        description: "Registra tu primer uso.",
+      },
+      "wears-25": {
+        name: "Agarrando el Ritmo",
+        description: "Registra 25 usos.",
+      },
+      "wears-100": {
+        name: "Triple Dígito",
+        description: "Registra 100 usos.",
+      },
+      "wears-500": {
+        name: "Máquina de Perfumar",
+        description: "Registra 500 usos. ¿Estás bien?",
+      },
+      "collection-5": {
+        name: "Estante Inicial",
+        description: "Agrega 5 perfumes a tu colección.",
+      },
+      "collection-15": {
+        name: "Armando el Armario",
+        description: "Haz crecer tu colección a 15 perfumes.",
+      },
+      "collection-40": {
+        name: "Coleccionista Empedernido",
+        description: "Haz crecer tu colección a 40 perfumes.",
+      },
+      "explorer-3": {
+        name: "Curioso de Marcas",
+        description: "Usa perfumes de 3 marcas distintas.",
+      },
+      "explorer-8": {
+        name: "Nariz Viajera",
+        description: "Usa perfumes de 8 marcas distintas.",
+      },
+      "explorer-15": {
+        name: "Pasaporte Perfumado",
+        description: "Usa perfumes de 15 marcas distintas.",
+      },
+      "special-dusted-off": {
+        name: "Desempolvado",
+        description: "Vuelve a usar un perfume tras 30+ días guardado.",
+      },
+      "special-loyalist": {
+        name: "Fiel de Corazón",
+        description: "Usa el mismo perfume 10 veces.",
+      },
+    },
   },
 
   share: {
