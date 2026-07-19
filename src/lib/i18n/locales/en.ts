@@ -179,6 +179,52 @@ const en: Dictionary = {
         description: "Wear the same fragrance 10 times.",
       },
     },
+
+    quests: {
+      cardTitle: "Weekly quests",
+      doneCount: "{{done}}/{{total}} done",
+      toastComplete: "Quest complete: {{title}} +{{xp}} XP 🎉",
+      "days-3": {
+        title: "Three-Peat",
+        description: "Wear a fragrance on 3 different days this week.",
+      },
+      "days-5": {
+        title: "Nearly Every Day",
+        description: "Wear a fragrance on 5 different days this week.",
+      },
+      "scents-3": {
+        title: "Mix It Up",
+        description: "Wear 3 different fragrances this week.",
+      },
+      "brands-2": {
+        title: "Brand Hopper",
+        description: "Wear fragrances from 2 different brands this week.",
+      },
+      "wears-7": {
+        title: "Seven Spritzes",
+        description: "Log 7 wears this week.",
+      },
+      "dust-off": {
+        title: "Dust Off",
+        description: "Re-wear something you haven't touched in 30+ days.",
+      },
+      "favorite-4": {
+        title: "Crowd Pleaser",
+        description: "Wear something you rated 4 stars or higher.",
+      },
+      "first-wear": {
+        title: "Fresh Debut",
+        description: "Wear a fragrance for the very first time.",
+      },
+    },
+  },
+
+  streakSaver: {
+    usedToast: "🔥 Streak Saver used — your {{count}}-day streak lives!",
+    upsellTitle: "Your streak just broke",
+    upsellMessage:
+      "Your {{count}}-day streak just broke — Streak Saver (Pro) auto-fills a missed day so streaks like this survive.",
+    remainingThisMonth: "{{count}}/{{limit}} streak saves left this month",
   },
 
   share: {

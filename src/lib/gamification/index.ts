@@ -9,6 +9,16 @@ import { evaluateBadges, type EarnedBadge } from "./badges"
 export { XP_PER_WEAR, XP_PER_BADGE, MAX_LEVEL, LEVEL_TITLE_KEYS, levelForXp } from "./levels"
 export { BADGE_DEFINITIONS, evaluateBadges } from "./badges"
 export type { BadgeDefinition, BadgeTier, BadgeCategory, EarnedBadge } from "./badges"
+export {
+  QUEST_DEFINITIONS,
+  XP_PER_QUEST,
+  ACTIVE_QUESTS_PER_WEEK,
+  getWeeklyQuests,
+  totalQuestXp,
+  questIdsForIsoWeek,
+  weekKeyFor,
+} from "./quests"
+export type { QuestDefinition, ActiveQuest, QuestWearEvent, QuestCollectionItem } from "./quests"
 
 export type StreakOptions = {
   // Keys are Date.toDateString() values. A freeze date fills a gap day as if

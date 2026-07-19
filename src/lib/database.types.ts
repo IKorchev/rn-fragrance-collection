@@ -284,6 +284,27 @@ export type Database = {
         }
         Relationships: []
       }
+      streak_saves: {
+        Row: {
+          created_at: string
+          id: string
+          saved_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          saved_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          saved_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           entitlement: string | null
@@ -569,6 +590,7 @@ export type Database = {
         }[]
       }
       undo_wear: { Args: { row_id: string; tz?: string }; Returns: boolean }
+      use_streak_save: { Args: { p_saved_date: string }; Returns: boolean }
       valid_tag_array: { Args: { tags: string[] }; Returns: boolean }
     }
     Enums: {

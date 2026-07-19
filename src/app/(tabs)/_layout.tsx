@@ -4,6 +4,9 @@ import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useGamification from "@/lib/utils/use-gamification"
 import useGamificationAlerts from "@/lib/utils/use-gamification-alerts"
+import useWeeklyQuests from "@/lib/utils/use-weekly-quests"
+import useQuestAlerts from "@/lib/utils/use-quest-alerts"
+import useStreakSaver from "@/lib/utils/use-streak-saver"
 
 export default function TabsLayout() {
   const { theme, tabBarBackgroundColor, accentTintBg } = useTheme()
@@ -14,6 +17,10 @@ export default function TabsLayout() {
   // is active rather than only when the Profile tab happens to be open.
   const gamification = useGamification()
   useGamificationAlerts(gamification)
+  useQuestAlerts(useWeeklyQuests())
+  // Detects a just-broken streak on app open and either auto-spends a Pro
+  // Streak Saver or shows the free-tier upsell (see src/lib/utils/use-streak-saver.ts)
+  useStreakSaver()
 
   return (
     <NativeTabs tintColor={tintColor} backgroundColor={tabBarBackgroundColor} indicatorColor={accentTintBg}>
