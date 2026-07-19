@@ -385,6 +385,54 @@ export type Database = {
           },
         ]
       }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          badge_ids: string[]
+          collection_count: number
+          created_at: string
+          display_name: string
+          header_image_path: string | null
+          is_public: boolean
+          level: number
+          streak: number
+          total_wears: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          badge_ids?: string[]
+          collection_count?: number
+          created_at?: string
+          display_name?: string
+          header_image_path?: string | null
+          is_public?: boolean
+          level?: number
+          streak?: number
+          total_wears?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          badge_ids?: string[]
+          collection_count?: number
+          created_at?: string
+          display_name?: string
+          header_image_path?: string | null
+          is_public?: boolean
+          level?: number
+          streak?: number
+          total_wears?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       user_push_tokens: {
         Row: {
           id: string
@@ -591,6 +639,14 @@ export type Database = {
       }
       undo_wear: { Args: { row_id: string; tz?: string }; Returns: boolean }
       use_streak_save: { Args: { p_saved_date: string }; Returns: boolean }
+      user_top_worn: {
+        Args: { max_results?: number; target_user: string }
+        Returns: {
+          image_url: string
+          name: string
+          wear_count: number
+        }[]
+      }
       valid_tag_array: { Args: { tags: string[] }; Returns: boolean }
     }
     Enums: {
