@@ -17,6 +17,8 @@ import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
 import useLocale, { type LocalePreference } from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
+import useGamification from "@/lib/utils/use-gamification"
+import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
 import Badge from "@/components/shared/ui/badge"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
@@ -25,6 +27,8 @@ import StatTile from "@/components/shared/ui/stat-tile"
 import Button from "@/components/shared/ui/button"
 import ShareSheetModal from "@/components/share-sheet-modal"
 import WearHeatmap from "@/components/wear-heatmap"
+import GamificationHeader from "@/components/gamification-header"
+import BadgeTile from "@/components/badge-tile"
 
 const APPEARANCE_OPTIONS: { key: ThemePreference; labelKey: string }[] = [
   { key: "system", labelKey: "profile.appearanceSystem" },
@@ -65,29 +69,22 @@ const ProfileScreen = () => {
     ? formatDate(new Date(user.created_at), { month: "long", year: "numeric" })
     : null
 
-  // Wears this calendar month + current daily streak, from the personal wear
-  // diary (same day semantics as the once-per-day wear cap: device-local days)
-  const { monthWears, streak } = useMemo(() => {
+  // Streak, XP, level, and badges all come from the shared gamification core
+  // (src/lib/gamification) — this used to be computed inline here.
+  const gamification = useGamification()
+  const streak = gamification.streak
+  const highlightBadges = useMemo(() => pickHighlightBadges(gamification.badges), [gamification.badges])
+
+  // Wears this calendar month, from the personal wear diary (device-local
+  // days — same semantics as the once-per-day wear cap)
+  const monthWears = useMemo(() => {
     const now = new Date()
-    const wornDays = new Set<string>()
-    let monthWears = 0
+    let count = 0
     for (const event of events ?? []) {
       const date = new Date(event.worn_at)
-      wornDays.add(date.toDateString())
-      if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-        monthWears++
-      }
+      if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) count++
     }
-    // A streak survives until a full day is missed — start counting from
-    // today if worn, else from yesterday
-    let streak = 0
-    const cursor = new Date()
-    if (!wornDays.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1)
-    while (wornDays.has(cursor.toDateString())) {
-      streak++
-      cursor.setDate(cursor.getDate() - 1)
-    }
-    return { monthWears, streak }
+    return count
   }, [events])
 
   const mostWorn = useMemo(() => {
@@ -192,6 +189,23 @@ const ProfileScreen = () => {
           {t("profile.memberSince", { date: memberSince })}
         </Text>
       )}
+
+      <GamificationHeader state={gamification} className='mt-6' />
+
+      <View className='w-full mt-4'>
+        <View className='flex-row' style={{ gap: 10 }}>
+          {highlightBadges.map((badge) => (
+            <BadgeTile key={badge.id} badge={badge} size='sm' />
+          ))}
+        </View>
+        <Row
+          icon='trophy-outline'
+          label={t("gamification.badgeWall.seeAllRow")}
+          testID='profile-see-all-badges-row'
+          className='mt-3'
+          onPress={() => router.push("/badges")}
+        />
+      </View>
 
       {purchasesEnabled && (!isPro || __DEV__) && (
         <Row
