@@ -18,6 +18,7 @@ const es: Dictionary = {
     privacyPolicy: "Política de privacidad",
     terms: "Términos y condiciones",
     badges: "Muro de insignias",
+    userProfile: "Coleccionista",
   },
 
   profile: {
@@ -53,6 +54,22 @@ const es: Dictionary = {
     reminderUpdateFailedTitle: "Ups",
     reminderUpdateFailedMessage: "No se pudo actualizar tu recordatorio, inténtalo de nuevo.",
     language: "Idioma",
+    publicProfile: "Perfil público",
+    publicUpdateFailedTitle: "Ups",
+    publicUpdateFailedMessage: "No se pudo actualizar tu perfil público, inténtalo de nuevo.",
+    headerPhoto: {
+      title: "Foto de colección",
+      take: "Tomar foto",
+      choose: "Elegir de la galería",
+      remove: "Quitar foto",
+      saved: "Foto de colección actualizada",
+      removed: "Foto de colección eliminada",
+      failed: "No se pudo actualizar la foto, inténtalo de nuevo.",
+      rejected: "Esa foto no se puede usar; elige una foto de tu colección.",
+      permissionTitle: "Se necesita permiso",
+      permissionMessage:
+        "Permite el acceso a la cámara o a las fotos para Whiff en los ajustes del dispositivo para añadir una foto de colección.",
+    },
     shareRecap: "Compartir mi resumen",
     shareToday: "Compartir el perfume de hoy",
     signOut: "Cerrar sesión",
@@ -71,6 +88,22 @@ const es: Dictionary = {
     system: "Predeterminado del sistema",
     english: "English",
     spanish: "Español",
+  },
+
+  collectors: {
+    meta: "Nivel {{level}} · {{count}} usos",
+    emptyTitle: "Aún no hay coleccionistas públicos",
+    emptyMessage: "Haz público tu perfil para ser el primero en aparecer aquí.",
+    errorTitle: "No se pudieron cargar los coleccionistas",
+    errorMessage: "Revisa tu conexión e inténtalo de nuevo.",
+    errorAction: "Reintentar",
+  },
+
+  userProfile: {
+    privateTitle: "Este perfil es privado",
+    privateMessage: "Este coleccionista no ha hecho público su perfil.",
+    badgesTitle: "Insignias",
+    topWornTitle: "Más usados",
   },
 
   gamification: {
