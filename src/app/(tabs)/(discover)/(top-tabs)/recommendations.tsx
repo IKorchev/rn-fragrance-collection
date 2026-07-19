@@ -47,7 +47,7 @@ const RecommendationsScreen = () => {
             <EmptyState
               icon='compass-outline'
               title='No recommendations yet'
-              message='Add a few fragrances or check back as the community logs more scents.'
+              message='Add a few fragrances to your collection, or check back as the community logs more scents.'
             />
           }
         />
