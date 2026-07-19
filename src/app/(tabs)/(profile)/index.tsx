@@ -82,8 +82,12 @@ const ProfileScreen = () => {
   const [recapShareVisible, setRecapShareVisible] = useState(false)
   const [todayShareVisible, setTodayShareVisible] = useState(false)
   const [headerBusy, setHeaderBusy] = useState(false)
+  // Optimistic local render of a just-picked photo — the remote public URL
+  // only takes over on the next mount, so the hero never sits on a spinner
+  // waiting for the scan + upload + re-download round trip
+  const [localHeaderUri, setLocalHeaderUri] = useState<string | null>(null)
   const { data: myProfile } = useMyProfile(user?.id)
-  const headerUrl = headerPhotoUrl(myProfile?.header_image_path)
+  const headerUrl = localHeaderUri ?? headerPhotoUrl(myProfile?.header_image_path)
 
   const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? t("profile.anonymous")
   const totalWears = userCollection.reduce((sum, el) => sum + el.times_worn, 0)
@@ -185,17 +189,20 @@ const ProfileScreen = () => {
     }
     if (pick.status === "canceled") return
     setHeaderBusy(true)
+    setLocalHeaderUri(pick.uri)
     try {
       // The edge function scans, stores, updates the profile row, and sweeps
       // old objects — a refetch is all that's left client-side
       const result = await uploadHeaderPhoto(pick.uri)
       if (result.status === "rejected") {
+        setLocalHeaderUri(null)
         showToast({ message: t("profile.headerPhoto.rejected") })
         return
       }
       await queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
       showToast({ message: t("profile.headerPhoto.saved") })
     } catch (error) {
+      setLocalHeaderUri(null)
       reportError(error, { flow: "profile-header-photo" })
       showToast({ message: t("profile.headerPhoto.failed") })
     } finally {
@@ -207,6 +214,7 @@ const ProfileScreen = () => {
     const oldPath = myProfile?.header_image_path
     if (!oldPath) return
     setHeaderBusy(true)
+    setLocalHeaderUri(null)
     try {
       await upsertProfilePatch({ header_image_path: null })
       removeHeaderPhotoObject(oldPath)
