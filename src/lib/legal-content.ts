@@ -20,7 +20,7 @@ export const PRIVACY_POLICY: LegalDoc = {
   sections: [
     {
       paragraphs: [
-        "Fragrance Collection (“the app”) is a personal fragrance collection tracker. This policy explains what data the app collects, how it is used, and the choices you have.",
+        "Whiff (“the app”) is a personal fragrance collection tracker. This policy explains what data the app collects, how it is used, and the choices you have.",
       ],
     },
     {
@@ -78,7 +78,7 @@ export const TERMS_AND_CONDITIONS: LegalDoc = {
   sections: [
     {
       paragraphs: [
-        "By creating an account or using Fragrance Collection (“the app”), you agree to these terms. If you do not agree, do not use the app.",
+        "By creating an account or using Whiff (“the app”), you agree to these terms. If you do not agree, do not use the app.",
       ],
     },
     {

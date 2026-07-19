@@ -18,6 +18,7 @@ import FilterChip from "@/components/shared/ui/filter-chip"
 import IconButton from "@/components/shared/ui/icon-button"
 import SearchField from "@/components/shared/ui/search-field"
 import SkeletonList from "@/components/shared/ui/skeleton-list"
+import WeeklyQuestsCard from "@/components/weekly-quests-card"
 
 const SORT_OPTIONS = [
   { key: "least-worn", label: "Least worn" },
@@ -101,6 +102,9 @@ const CollectionScreen = () => {
 
   return (
     <View className={`flex-1 ${viewColors.background}`}>
+      <View className='px-3 pt-3'>
+        <WeeklyQuestsCard />
+      </View>
       {hasCollection && (
         <View className='px-3 pt-3 pb-1'>
           <SearchField
@@ -189,7 +193,7 @@ const CollectionScreen = () => {
               icon='bottle-tonic-outline'
               illustration={<EmptyCollectionIllustration />}
               title='Your collection is empty'
-              message='Find fragrances in the catalog and add them to start building your collection.'
+              message="Search the catalog (or add one by hand) and give your shelf something to say."
               actionLabel='Find fragrances'
               onAction={goToSearch}
             />

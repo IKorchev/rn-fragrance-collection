@@ -1,8 +1,8 @@
-# Terms & Conditions — Fragrance Collection
+# Terms & Conditions — Whiff
 
 _Last updated: July 18, 2026_
 
-By creating an account or using Fragrance Collection ("the app"), you agree to these terms. If you do not agree, do not use the app. Host this document at a public URL alongside the privacy policy; the same text ships inside the app (`src/lib/legal-content.ts`) — keep the two in sync.
+By creating an account or using Whiff ("the app"), you agree to these terms. If you do not agree, do not use the app. Host this document at a public URL alongside the privacy policy; the same text ships inside the app (`src/lib/legal-content.ts`) — keep the two in sync.
 
 ## The service
 

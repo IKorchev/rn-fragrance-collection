@@ -33,7 +33,7 @@ const AppCrashFallback = ({ error, resetError }: AppCrashFallbackProps) => {
         Something went wrong
       </Text>
       <Text style={{ color: muted, fontSize: 15, textAlign: "center", marginTop: 8 }}>
-        Fragrance Collection ran into a problem and couldn't continue. Your collection is safe.
+        Whiff ran into a problem and couldn't continue. Your collection is safe.
       </Text>
       {devMessage && (
         <Text style={{ color: muted, fontSize: 12, textAlign: "center", marginTop: 12 }}>

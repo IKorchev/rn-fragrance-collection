@@ -21,6 +21,22 @@ export const isFreeTierLimitError = (error: unknown): boolean => {
   return typeof message === "string" && message.includes(FREE_TIER_LIMIT_ERROR)
 }
 
+// Streak Saver (Pro perk) RPC error messages — matched verbatim against
+// use_streak_save's RAISE EXCEPTION text (db/schema.sql), same convention as
+// FREE_TIER_LIMIT_ERROR above.
+export const STREAK_SAVER_REQUIRES_PRO_ERROR = "streak_saver_requires_pro"
+export const STREAK_SAVER_DATE_OUT_OF_RANGE_ERROR = "streak_saver_date_out_of_range"
+export const STREAK_SAVER_MONTHLY_LIMIT_ERROR = "streak_saver_monthly_limit"
+
+const rpcErrorMessage = (error: unknown): string | undefined =>
+  (error as { message?: string } | null)?.message
+
+// The auto-save flow (src/lib/utils/use-streak-saver.ts) hits this whenever
+// a user has already spent both of this month's saves on earlier breaks —
+// an expected, silent no-op, not a real failure worth alerting on.
+export const isStreakSaverMonthlyLimitError = (error: unknown): boolean =>
+  rpcErrorMessage(error)?.includes(STREAK_SAVER_MONTHLY_LIMIT_ERROR) ?? false
+
 // Shared upsell prompt for a locked Pro surface — same copy pattern wherever
 // a free user hits a gated feature (collection cap, picker filters,
 // wear-history insights).

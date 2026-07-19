@@ -86,6 +86,13 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="monthly-recap"
+            options={{
+              headerShown: false,
+              presentation: "fullScreenModal",
+            }}
+          />
+          <Stack.Screen
             name="fragrance-detail"
             options={{
               headerShown: false,

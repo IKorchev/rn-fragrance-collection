@@ -1,8 +1,8 @@
-# Privacy Policy — Fragrance Collection
+# Privacy Policy — Whiff
 
 _Last updated: July 18, 2026_
 
-Fragrance Collection ("the app") is a personal fragrance collection tracker. This policy explains what data the app collects, how it is used, and the choices you have. Host this document at a public URL and link it in the App Store / Play Store listings.
+Whiff ("the app") is a personal fragrance collection tracker. This policy explains what data the app collects, how it is used, and the choices you have. Host this document at a public URL and link it in the App Store / Play Store listings.
 
 ## What we collect
 

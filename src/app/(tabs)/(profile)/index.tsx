@@ -19,6 +19,7 @@ import useLocale, { type LocalePreference } from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
 import useGamification from "@/lib/utils/use-gamification"
 import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
+import { useMonthlyRecapPrompt } from "@/lib/utils/use-monthly-recap-prompt"
 import Badge from "@/components/shared/ui/badge"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
@@ -57,6 +58,9 @@ const ProfileScreen = () => {
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
+  // Once-per-month "your recap is ready" toast — fires at most once per
+  // calendar month, see use-monthly-recap-prompt.ts for the AsyncStorage marker.
+  useMonthlyRecapPrompt()
   const [deleting, setDeleting] = useState(false)
   const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
   const [languagePickerVisible, setLanguagePickerVisible] = useState(false)
@@ -263,6 +267,12 @@ const ProfileScreen = () => {
           icon='history'
           label={t("profile.wearHistoryRow")}
           onPress={() => router.push("/wear-history")}
+        />
+        <Row
+          icon='calendar-star'
+          label={t("recap.entryRow")}
+          testID='profile-monthly-recap-row'
+          onPress={() => router.push("/monthly-recap")}
         />
         <Row
           icon='chart-timeline-variant'

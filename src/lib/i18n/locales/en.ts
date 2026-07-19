@@ -179,6 +179,52 @@ const en: Dictionary = {
         description: "Wear the same fragrance 10 times.",
       },
     },
+
+    quests: {
+      cardTitle: "Weekly quests",
+      doneCount: "{{done}}/{{total}} done",
+      toastComplete: "Quest complete: {{title}} +{{xp}} XP 🎉",
+      "days-3": {
+        title: "Three-Peat",
+        description: "Wear a fragrance on 3 different days this week.",
+      },
+      "days-5": {
+        title: "Nearly Every Day",
+        description: "Wear a fragrance on 5 different days this week.",
+      },
+      "scents-3": {
+        title: "Mix It Up",
+        description: "Wear 3 different fragrances this week.",
+      },
+      "brands-2": {
+        title: "Brand Hopper",
+        description: "Wear fragrances from 2 different brands this week.",
+      },
+      "wears-7": {
+        title: "Seven Spritzes",
+        description: "Log 7 wears this week.",
+      },
+      "dust-off": {
+        title: "Dust Off",
+        description: "Re-wear something you haven't touched in 30+ days.",
+      },
+      "favorite-4": {
+        title: "Crowd Pleaser",
+        description: "Wear something you rated 4 stars or higher.",
+      },
+      "first-wear": {
+        title: "Fresh Debut",
+        description: "Wear a fragrance for the very first time.",
+      },
+    },
+  },
+
+  streakSaver: {
+    usedToast: "🔥 Streak Saver used — your {{count}}-day streak lives!",
+    upsellTitle: "Your streak just broke",
+    upsellMessage:
+      "Your {{count}}-day streak just broke — Streak Saver (Pro) auto-fills a missed day so streaks like this survive.",
+    remainingThisMonth: "{{count}}/{{limit}} streak saves left this month",
   },
 
   share: {
@@ -186,6 +232,7 @@ const en: Dictionary = {
     sheetTitleToday: "Share today's scent",
     sheetTitlePicker: "Share the pick",
     sheetTitleRecap: "Share your recap",
+    sheetTitleMonthlyRecap: "Share your Whiffs recap",
     previewLabel: "Preview",
     action: "Share",
     includeTimesWorn: "Include times worn",
@@ -195,7 +242,7 @@ const en: Dictionary = {
     todayEmptyTitle: "Nothing worn yet today",
     todayEmptyMessage: "Wear something today, then come back to share it.",
     pickerMessage: "The picker just chose {{name}} for me! 🎰",
-    recapIntro: "My Fragrance Collection recap 🌸",
+    recapIntro: "My Whiff recap 🌸",
     wearsFragment_one: "Worn once this month",
     wearsFragment_other: "Worn {{count}} times this month",
     streakFragment: "{{count}}-day streak",
@@ -204,8 +251,37 @@ const en: Dictionary = {
     timesWornFragment_one: "worn {{count}} time",
     timesWornFragment_other: "worn {{count}} times",
     ratingFragment: "rated {{stars}}/5",
-    appSignature: "— tracked with Fragrance Collection",
+    appSignature: "— tracked with Whiff",
     failedMessage: "Couldn't share — something went wrong.",
+  },
+
+  recap: {
+    entryRow: "Your month in Whiffs",
+    eyebrow: "Your month in Whiffs",
+    heroTitle: "Your {{month}} in Whiffs",
+    heroSubtitle: "Here's what your nose got up to.",
+    totalWearsLabel: "Wears logged",
+    distinctLabel: "Fragrances worn",
+    topThreeTitle: "Your top 3",
+    bestStreakLabel_one: "Best streak: {{count}} day",
+    bestStreakLabel_other: "Best streak: {{count}} days",
+    newBadgesTitle: "New badges this month",
+    noNewBadges: "No new badges this month — keep the streak alive.",
+    levelSectionTitle: "Where you landed",
+    levelLabel: "Level",
+    xpGainedLabel: "XP gained",
+    emptyTitle: "Nothing logged in {{month}}",
+    emptyMessage: "No wears yet that month — log one to fill next month's recap.",
+    promptToast: "Your {{month}} recap is ready",
+    promptAction: "View",
+    shareIntro: "My {{month}} in Whiffs 🌸",
+    shareWearsFragment_one: "{{count}} wear logged",
+    shareWearsFragment_other: "{{count}} wears logged",
+    shareTopFragment: "Most worn: {{name}}",
+    shareStreakFragment: "{{count}}-day streak",
+    shareBadgesFragment_one: "{{count}} new badge earned",
+    shareBadgesFragment_other: "{{count}} new badges earned",
+    shareLevelFragment: "Ended the month as {{title}}",
   },
 }
 

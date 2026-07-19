@@ -182,6 +182,52 @@ const es: Dictionary = {
         description: "Usa el mismo perfume 10 veces.",
       },
     },
+
+    quests: {
+      cardTitle: "Misiones semanales",
+      doneCount: "{{done}}/{{total}} completadas",
+      toastComplete: "Misión completa: {{title}} +{{xp}} XP 🎉",
+      "days-3": {
+        title: "Triplete",
+        description: "Usa un perfume en 3 días diferentes esta semana.",
+      },
+      "days-5": {
+        title: "Casi Todos los Días",
+        description: "Usa un perfume en 5 días diferentes esta semana.",
+      },
+      "scents-3": {
+        title: "Mézclalo",
+        description: "Usa 3 perfumes diferentes esta semana.",
+      },
+      "brands-2": {
+        title: "Saltamarcas",
+        description: "Usa perfumes de 2 marcas diferentes esta semana.",
+      },
+      "wears-7": {
+        title: "Siete Rociadas",
+        description: "Registra 7 usos esta semana.",
+      },
+      "dust-off": {
+        title: "Desempolvado",
+        description: "Vuelve a usar algo que no tocas hace 30+ días.",
+      },
+      "favorite-4": {
+        title: "Favorito de la Casa",
+        description: "Usa algo que calificaste con 4 estrellas o más.",
+      },
+      "first-wear": {
+        title: "Debut Aromático",
+        description: "Usa un perfume por primera vez.",
+      },
+    },
+  },
+
+  streakSaver: {
+    usedToast: "🔥 ¡Streak Saver usado — tu racha de {{count}} días sigue viva!",
+    upsellTitle: "Tu racha se acaba de romper",
+    upsellMessage:
+      "Tu racha de {{count}} días se acaba de romper — Streak Saver (Pro) rellena automáticamente un día perdido para que rachas así sobrevivan.",
+    remainingThisMonth: "{{count}}/{{limit}} rachas salvadas restantes este mes",
   },
 
   share: {
@@ -189,6 +235,7 @@ const es: Dictionary = {
     sheetTitleToday: "Compartir el perfume de hoy",
     sheetTitlePicker: "Compartir el resultado",
     sheetTitleRecap: "Compartir tu resumen",
+    sheetTitleMonthlyRecap: "Compartir tu resumen de Whiffs",
     previewLabel: "Vista previa",
     action: "Compartir",
     includeTimesWorn: "Incluir veces usado",
@@ -198,7 +245,7 @@ const es: Dictionary = {
     todayEmptyTitle: "Aún no registraste un uso hoy",
     todayEmptyMessage: "Registra un uso y vuelve para compartirlo.",
     pickerMessage: "¡El selector eligió {{name}} para mí! 🎰",
-    recapIntro: "Mi resumen de Fragrance Collection 🌸",
+    recapIntro: "Mi resumen de Whiff 🌸",
     wearsFragment_one: "{{count}} uso registrado este mes",
     wearsFragment_other: "{{count}} usos registrados este mes",
     streakFragment: "racha de {{count}} días",
@@ -207,8 +254,37 @@ const es: Dictionary = {
     timesWornFragment_one: "usado {{count}} vez",
     timesWornFragment_other: "usado {{count}} veces",
     ratingFragment: "calificado {{stars}}/5",
-    appSignature: "— registrado con Fragrance Collection",
+    appSignature: "— registrado con Whiff",
     failedMessage: "No se pudo compartir — algo salió mal.",
+  },
+
+  recap: {
+    entryRow: "Tu mes en Whiffs",
+    eyebrow: "Tu mes en Whiffs",
+    heroTitle: "Tu {{month}} en Whiffs",
+    heroSubtitle: "Esto fue lo que hizo tu nariz.",
+    totalWearsLabel: "Usos registrados",
+    distinctLabel: "Perfumes usados",
+    topThreeTitle: "Tu top 3",
+    bestStreakLabel_one: "Mejor racha: {{count}} día",
+    bestStreakLabel_other: "Mejor racha: {{count}} días",
+    newBadgesTitle: "Insignias nuevas este mes",
+    noNewBadges: "Sin insignias nuevas este mes — no rompas la racha.",
+    levelSectionTitle: "Dónde quedaste",
+    levelLabel: "Nivel",
+    xpGainedLabel: "XP ganado",
+    emptyTitle: "Nada registrado en {{month}}",
+    emptyMessage: "Aún no hay usos ese mes — registra uno para llenar el próximo resumen.",
+    promptToast: "Tu resumen de {{month}} ya está listo",
+    promptAction: "Ver",
+    shareIntro: "Mi {{month}} en Whiffs 🌸",
+    shareWearsFragment_one: "{{count}} uso registrado",
+    shareWearsFragment_other: "{{count}} usos registrados",
+    shareTopFragment: "Más usado: {{name}}",
+    shareStreakFragment: "racha de {{count}} días",
+    shareBadgesFragment_one: "{{count}} insignia nueva ganada",
+    shareBadgesFragment_other: "{{count}} insignias nuevas ganadas",
+    shareLevelFragment: "Terminaste el mes como {{title}}",
   },
 }
 

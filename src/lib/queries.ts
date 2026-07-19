@@ -44,6 +44,8 @@ export type FragranceRecommendation =
 
 export type WearEvent = Tables<"wear_events">
 
+export type StreakSave = Tables<"streak_saves">
+
 export type PendingSubmission =
   Database["public"]["Functions"]["list_pending_submissions"]["Returns"][number]
 
@@ -343,6 +345,25 @@ export const useWearHistoryExport = (userId: string | undefined) =>
         .eq("user_id", userId!)
         .order("worn_at", { ascending: false })
         .limit(2000)
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// Streak Saver saves (Pro perk — see streak_saves in db/schema.sql). RLS
+// already scopes reads to own rows; the explicit user_id filter just keeps
+// the cache keyed per user. Consumed by use-gamification.ts (converted to
+// Date.toDateString() keys and passed as computeStreak's freezeDates) and
+// use-streak-save-budget.ts (the "N left this month" footer).
+export const useStreakSaves = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["streak-saves", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<StreakSave[]> => {
+      const { data, error } = await supabase
+        .from("streak_saves")
+        .select("*")
+        .eq("user_id", userId!)
       if (error) throw error
       return data ?? []
     },

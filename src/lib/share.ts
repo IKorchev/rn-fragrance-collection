@@ -94,6 +94,40 @@ export const buildRecapShareText = (t: Translate, stats: RecapStats): string => 
   return lines.join("\n")
 }
 
+export interface MonthlyRecapShareStats {
+  month: string // already-formatted display month, e.g. "June"
+  wears: number
+  // Display name (already run through displayFragranceName), null when the
+  // month had no wears logged against any single fragrance
+  topFragranceName?: string | null
+  // Best streak achieved within that month (not the live current streak)
+  streak: number
+  badgesCount: number
+  // Already-resolved display string (caller passes t(state.levelTitle)) —
+  // matches every other i18n-key field in this file, which are always
+  // resolved by the caller before reaching a builder.
+  levelTitle: string
+}
+
+// "Your Month in Whiffs" recap share (src/app/monthly-recap.tsx) — a richer,
+// once-a-month sibling of buildRecapShareText's month-to-date snapshot.
+// Same aggregate-only rule applies: every figure here is already visible on
+// the recap screen itself, nothing gated behind a toggle.
+export const buildMonthlyRecapShareText = (t: Translate, stats: MonthlyRecapShareStats): string => {
+  const lines = [t("recap.shareIntro", { month: stats.month })]
+  lines.push(t("recap.shareWearsFragment", { count: stats.wears }))
+  if (stats.topFragranceName) {
+    lines.push(t("recap.shareTopFragment", { name: stats.topFragranceName }))
+  }
+  if (stats.streak > 0) lines.push(t("recap.shareStreakFragment", { count: stats.streak }))
+  if (stats.badgesCount > 0) {
+    lines.push(t("recap.shareBadgesFragment", { count: stats.badgesCount }))
+  }
+  lines.push(t("recap.shareLevelFragment", { title: stats.levelTitle }))
+  lines.push(t("share.appSignature"))
+  return lines.join("\n")
+}
+
 // Wraps RN core's Share API — no extra native module, so this works in the
 // existing dev-client build without a rebuild. Returns whether the user
 // actually completed a share (vs. dismissing the sheet).
