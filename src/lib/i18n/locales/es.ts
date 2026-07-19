@@ -182,6 +182,52 @@ const es: Dictionary = {
         description: "Usa el mismo perfume 10 veces.",
       },
     },
+
+    quests: {
+      cardTitle: "Misiones semanales",
+      doneCount: "{{done}}/{{total}} completadas",
+      toastComplete: "Misión completa: {{title}} +{{xp}} XP 🎉",
+      "days-3": {
+        title: "Triplete",
+        description: "Usa un perfume en 3 días diferentes esta semana.",
+      },
+      "days-5": {
+        title: "Casi Todos los Días",
+        description: "Usa un perfume en 5 días diferentes esta semana.",
+      },
+      "scents-3": {
+        title: "Mézclalo",
+        description: "Usa 3 perfumes diferentes esta semana.",
+      },
+      "brands-2": {
+        title: "Saltamarcas",
+        description: "Usa perfumes de 2 marcas diferentes esta semana.",
+      },
+      "wears-7": {
+        title: "Siete Rociadas",
+        description: "Registra 7 usos esta semana.",
+      },
+      "dust-off": {
+        title: "Desempolvado",
+        description: "Vuelve a usar algo que no tocas hace 30+ días.",
+      },
+      "favorite-4": {
+        title: "Favorito de la Casa",
+        description: "Usa algo que calificaste con 4 estrellas o más.",
+      },
+      "first-wear": {
+        title: "Debut Aromático",
+        description: "Usa un perfume por primera vez.",
+      },
+    },
+  },
+
+  streakSaver: {
+    usedToast: "🔥 ¡Streak Saver usado — tu racha de {{count}} días sigue viva!",
+    upsellTitle: "Tu racha se acaba de romper",
+    upsellMessage:
+      "Tu racha de {{count}} días se acaba de romper — Streak Saver (Pro) rellena automáticamente un día perdido para que rachas así sobrevivan.",
+    remainingThisMonth: "{{count}}/{{limit}} rachas salvadas restantes este mes",
   },
 
   share: {
