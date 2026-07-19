@@ -2,8 +2,11 @@
 // Invoked by review_submission (see db/schema.sql) through pg_net, the same
 // way pg_cron invokes send-wear-reminder — fire-and-forget, best-effort, and
 // wrapped in an exception handler there so a push failure never blocks the
-// moderator's decision. Reads with the service role since this runs with no
-// caller session; sends via Expo's push API and prunes stale tokens.
+// moderator's decision. Requires the same x-internal-secret header as
+// send-wear-reminder (enforced once INTERNAL_FN_SECRET is set) so app
+// clients holding only the anon key can't replay decision pushes. Reads with
+// the service role since this runs with no caller session; sends via Expo's
+// push API and prunes stale tokens.
 import { createClient } from "npm:@supabase/supabase-js@2"
 
 type PushTicket = {
@@ -46,6 +49,11 @@ const messageFor = (submission: SubmissionRow) => {
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return Response.json({ error: "Method not allowed" }, { status: 405 })
+  }
+
+  const secret = Deno.env.get("INTERNAL_FN_SECRET")
+  if (secret && req.headers.get("x-internal-secret") !== secret) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { submission_id } = (await req.json().catch(() => ({}))) as { submission_id?: string }

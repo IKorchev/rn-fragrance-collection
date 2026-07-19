@@ -60,27 +60,37 @@ CREATE INDEX IF NOT EXISTS wear_events_user_id_idx ON wear_events (user_id);
 
 ALTER TABLE wear_events ENABLE ROW LEVEL SECURITY;
 
--- Users write/read only their own events; the cross-user leaderboard goes
--- through the SECURITY DEFINER aggregate below (no raw rows exposed).
-CREATE POLICY "own events" ON wear_events FOR ALL
+-- Clients only ever READ their own events (history/export screens); all
+-- writes go through increment_wear/undo_wear below. A FOR ALL policy here
+-- would let a signed-in user bypass the one-wear-per-day rule with direct
+-- PostgREST inserts and poison the community leaderboard/recommendations
+-- (migration lock_down_wear_writes_and_rpc_grants closed exactly that hole).
+-- The cross-user leaderboard goes through the SECURITY DEFINER aggregate
+-- below (no raw rows exposed).
+CREATE POLICY "own events" ON wear_events FOR SELECT
   TO authenticated
-  USING ((SELECT auth.uid()) = user_id)
-  WITH CHECK ((SELECT auth.uid()) = user_id);
+  USING ((SELECT auth.uid()) = user_id);
+REVOKE INSERT, UPDATE, DELETE ON TABLE wear_events FROM PUBLIC, anon, authenticated;
 
 -- Atomic wear increment (avoids read-modify-write races) + event log, capped
 -- at one wear per calendar day. The app passes the device's IANA timezone so
 -- "day" means the user's day, not UTC's (invalid tz falls back to UTC).
 -- Returns whether the wear was counted (false -> already worn today).
--- SECURITY INVOKER: the UPDATE is RLS-scoped to the caller's rows, so the
--- INSERT inherits a legit user_id.
+-- SECURITY DEFINER (clients have no direct write access to wear_events) with
+-- an explicit user_id = auth.uid() ownership check replacing what RLS did.
 CREATE OR REPLACE FUNCTION increment_wear(row_id uuid, tz text DEFAULT 'UTC')
 RETURNS boolean
-LANGUAGE plpgsql SECURITY INVOKER
+LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_uid uuid := auth.uid();
   r record;
 BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not signed in';
+  END IF;
+
   BEGIN
     PERFORM now() AT TIME ZONE tz;
   EXCEPTION WHEN OTHERS THEN
@@ -90,12 +100,13 @@ BEGIN
   UPDATE user_fragrances u
   SET times_worn = u.times_worn + 1, last_worn = now()
   WHERE u.id = row_id
+    AND u.user_id = v_uid
     AND (u.last_worn IS NULL
          OR (u.last_worn AT TIME ZONE tz)::date < (now() AT TIME ZONE tz)::date)
   RETURNING u.user_id, u.fragrance_id, u.name, u.image_url INTO r;
 
   IF NOT FOUND THEN
-    RETURN false;  -- already worn today (or row not visible under RLS)
+    RETURN false;  -- already worn today, not the caller's row, or no such row
   END IF;
 
   INSERT INTO wear_events (user_id, fragrance_id, user_fragrance_id, name, image_url)
@@ -104,21 +115,29 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION increment_wear(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION increment_wear(uuid, text) TO authenticated;
+
 -- Reverses today's wear (the toast-undo window after a mistap): deletes
 -- today's wear_event, decrements times_worn, restores last_worn from the
 -- remaining linked events. Returns false when there's nothing to undo today.
--- SECURITY INVOKER — RLS scopes everything to the caller's own rows.
+-- SECURITY DEFINER with explicit ownership checks, same as increment_wear.
 -- NOTE: legacy rows whose earlier wears predate wear_events linkage may
 -- restore last_worn to NULL (picker then treats them as not recently worn).
 CREATE OR REPLACE FUNCTION undo_wear(row_id uuid, tz text DEFAULT 'UTC')
 RETURNS boolean
-LANGUAGE plpgsql SECURITY INVOKER
+LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_uid uuid := auth.uid();
   ev_id uuid;
   prev_worn timestamptz;
 BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not signed in';
+  END IF;
+
   BEGIN
     PERFORM now() AT TIME ZONE tz;
   EXCEPTION WHEN OTHERS THEN
@@ -128,27 +147,31 @@ BEGIN
   SELECT id INTO ev_id
   FROM wear_events
   WHERE user_fragrance_id = row_id
+    AND user_id = v_uid
     AND (worn_at AT TIME ZONE tz)::date = (now() AT TIME ZONE tz)::date
   ORDER BY worn_at DESC
   LIMIT 1;
 
   IF ev_id IS NULL THEN
-    RETURN false;  -- no wear today (or row not visible under RLS)
+    RETURN false;  -- no wear today, or not the caller's row
   END IF;
 
   DELETE FROM wear_events WHERE id = ev_id;
 
   SELECT max(worn_at) INTO prev_worn
   FROM wear_events
-  WHERE user_fragrance_id = row_id;
+  WHERE user_fragrance_id = row_id AND user_id = v_uid;
 
   UPDATE user_fragrances u
   SET times_worn = GREATEST(u.times_worn - 1, 0), last_worn = prev_worn
-  WHERE u.id = row_id;
+  WHERE u.id = row_id AND u.user_id = v_uid;
 
   RETURN true;
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION undo_wear(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION undo_wear(uuid, text) TO authenticated;
 
 -- Top-100 most worn across ALL users (the app's "Most Worn" tab). Every
 -- period counts wear_events ('all' just uses an unbounded cutoff), so results
@@ -377,7 +400,14 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- SELECT vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
 -- SELECT vault.create_secret('<anon key>', 'anon_key');
+-- SELECT vault.create_secret('<random hex>', 'internal_fn_secret');
 
+-- x-internal-secret: shared secret for internally-invoked edge functions —
+-- the anon key ships in the app binary, so the Bearer JWT alone can't
+-- distinguish this cron job from an abusive client triggering push spam.
+-- The same value must be set as the INTERNAL_FN_SECRET function secret
+-- (supabase secrets set INTERNAL_FN_SECRET=<random hex>); the functions
+-- enforce the header once that env var exists.
 SELECT cron.schedule(
   'send-wear-reminder-daily',
   '0 6 * * *',  -- 06:00 UTC daily
@@ -386,7 +416,8 @@ SELECT cron.schedule(
     url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_url') || '/functions/v1/send-wear-reminder',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key')
+      'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key'),
+      'x-internal-secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'internal_fn_secret')
     ),
     body := '{}'::jsonb
   ) AS request_id;
@@ -643,7 +674,8 @@ BEGIN
              || '/functions/v1/notify-submission-decision',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key')
+        'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anon_key'),
+        'x-internal-secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'internal_fn_secret')
       ),
       body := jsonb_build_object('submission_id', p_submission_id)
     );
@@ -744,6 +776,7 @@ GRANT EXECUTE ON FUNCTION list_pending_submissions(integer) TO authenticated;
 CREATE OR REPLACE FUNCTION valid_tag_array(tags text[])
 RETURNS boolean
 LANGUAGE plpgsql IMMUTABLE
+SET search_path = public
 AS $$
 DECLARE
   t text;
