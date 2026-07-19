@@ -38,18 +38,23 @@ const compressForUpload = async (uri: string): Promise<string> => {
   return saved.uri
 }
 
-// Uploads to a fresh timestamped path (never overwrites — stale image caches
-// can't survive a path change) and returns the new storage path. The caller
-// persists it on user_profiles and then removes the previous object.
-export const uploadHeaderPhoto = async (userId: string, localUri: string): Promise<string> => {
+export type HeaderPhotoUpload = { status: "uploaded"; path: string } | { status: "rejected" }
+
+// Uploads go through the upload-header-photo edge function — it NSFW-scans
+// the image and only then stores it (the bucket has no client INSERT
+// policy), updates user_profiles.header_image_path, and sweeps older objects
+// itself, so the caller only needs to refetch the profile row. "rejected"
+// means the scan said no — surface that distinctly from a technical failure.
+export const uploadHeaderPhoto = async (localUri: string): Promise<HeaderPhotoUpload> => {
   const compressedUri = await compressForUpload(localUri)
-  const bytes = await new File(compressedUri).bytes()
-  const path = `${userId}/${Date.now()}.jpg`
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, bytes, { contentType: "image/jpeg" })
+  const image = await new File(compressedUri).base64()
+  const { data, error } = await supabase.functions.invoke("upload-header-photo", {
+    body: { image },
+  })
   if (error) throw error
-  return path
+  if (data?.ok) return { status: "uploaded", path: data.path }
+  if (data?.reason === "rejected") return { status: "rejected" }
+  throw new Error(`Header photo upload failed: ${data?.reason ?? "unknown"}`)
 }
 
 // Best-effort cleanup of a replaced/removed header object — an orphaned file

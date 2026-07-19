@@ -186,10 +186,14 @@ const ProfileScreen = () => {
     if (pick.status === "canceled") return
     setHeaderBusy(true)
     try {
-      const oldPath = myProfile?.header_image_path
-      const path = await uploadHeaderPhoto(user!.id, pick.uri)
-      await upsertProfilePatch({ header_image_path: path })
-      if (oldPath) removeHeaderPhotoObject(oldPath)
+      // The edge function scans, stores, updates the profile row, and sweeps
+      // old objects — a refetch is all that's left client-side
+      const result = await uploadHeaderPhoto(pick.uri)
+      if (result.status === "rejected") {
+        showToast({ message: t("profile.headerPhoto.rejected") })
+        return
+      }
+      await queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
       showToast({ message: t("profile.headerPhoto.saved") })
     } catch (error) {
       reportError(error, { flow: "profile-header-photo" })

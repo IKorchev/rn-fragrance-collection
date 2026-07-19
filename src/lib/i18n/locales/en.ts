@@ -62,6 +62,7 @@ const en: Dictionary = {
       saved: "Collection photo updated",
       removed: "Collection photo removed",
       failed: "Couldn't update your photo — please try again.",
+      rejected: "That photo can't be used — please pick a photo of your collection.",
       permissionTitle: "Permission needed",
       permissionMessage:
         "Allow camera or photo access for Whiff in your device settings to add a collection photo.",

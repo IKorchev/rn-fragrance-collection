@@ -1603,21 +1603,23 @@ REVOKE EXECUTE ON FUNCTION user_top_worn(uuid, int) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION user_top_worn(uuid, int) TO authenticated;
 
 -- Profile header photos (storage, not Postgres tables — recreate via the
--- migration if bootstrapping a fresh project). The bucket is public-read
+-- migrations if bootstrapping a fresh project). The bucket is public-read
 -- (the photo decorates a profile other users can open; no signed-URL churn),
 -- but the path is only discoverable through a user_profiles row, which RLS
 -- hides unless is_public. Objects are keyed "<user_id>/<timestamp>.jpg" —
--- every upload is a fresh path (no image-cache staleness), the client
--- deletes the old one; the delete-account edge function purges the folder.
+-- every upload is a fresh path (no image-cache staleness).
+-- There is deliberately NO client INSERT policy (dropped in migration
+-- header_photo_upload_via_edge_fn): uploads only happen through the
+-- upload-header-photo edge function, which NSFW-scans the image (NSFWJS
+-- MobileNetV2 on tfjs, fail-closed) before storing with the service role,
+-- swaps user_profiles.header_image_path, and sweeps older objects. The
+-- delete-account edge function purges the whole folder.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('profile-headers', 'profile-headers', true, 3145728, ARRAY['image/jpeg'])
 ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "own profile header select" ON storage.objects FOR SELECT TO authenticated
   USING (bucket_id = 'profile-headers' AND (storage.foldername(name))[1] = (SELECT auth.uid()::text));
-
-CREATE POLICY "own profile header insert" ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'profile-headers' AND (storage.foldername(name))[1] = (SELECT auth.uid()::text));
 
 CREATE POLICY "own profile header delete" ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'profile-headers' AND (storage.foldername(name))[1] = (SELECT auth.uid()::text));

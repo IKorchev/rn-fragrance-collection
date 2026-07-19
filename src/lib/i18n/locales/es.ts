@@ -65,6 +65,7 @@ const es: Dictionary = {
       saved: "Foto de colección actualizada",
       removed: "Foto de colección eliminada",
       failed: "No se pudo actualizar la foto, inténtalo de nuevo.",
+      rejected: "Esa foto no se puede usar; elige una foto de tu colección.",
       permissionTitle: "Se necesita permiso",
       permissionMessage:
         "Permite el acceso a la cámara o a las fotos para Whiff en los ajustes del dispositivo para añadir una foto de colección.",
