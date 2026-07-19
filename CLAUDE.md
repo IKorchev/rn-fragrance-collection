@@ -26,6 +26,8 @@ yarn web             # expo start --web
 yarn typecheck       # tsc --noEmit
 ```
 
+**DB schema changes go through versioned migration files** — write a new `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql`, apply it with the Supabase MCP `apply_migration` (same name, exact file contents), and update `db/schema.sql` to keep it an accurate description of the current schema. Never run ad hoc DDL via `execute_sql` or the dashboard SQL editor — the repo folder mirrors the live `supabase_migrations.schema_migrations` history and must stay in lockstep (see `supabase/migrations/README.md`, including the CREATE-OR-REPLACE-preserves-ACLs gotcha that once let function grants drift).
+
 The project is TypeScript-only (`strict: true`, `tsconfig.json` extends `expo/tsconfig.base`; NativeWind `className` props are typed via `nativewind-env.d.ts`). `src/lib/database.types.ts` holds Supabase-generated DB types — regenerate via the Supabase MCP (`generate_typescript_types`) after schema changes; `src/lib/queries.ts` and `src/contexts/auth-context.tsx` derive their row types (`CatalogFragrance`, `TopFragrance`, `UserFragrance`) from it via the `Tables<"...">` helper. Note: `@rneui` icon-prop typings clash with React 19 types — pass `@expo/vector-icons` elements (e.g. `icon={<FontAwesome .../>}`) instead of `{ name, type }` icon objects.
 
 The project is on Expo SDK 57 (`react-native` 0.86, React 19.2). Google Sign-In requires a real dev-client build (`expo run:ios`/`run:android`) rather than plain Expo Go — Expo Go's fixed identity (`host.exp.exponent`) can't satisfy the OAuth redirect URI registered for this app's real bundle ID (`com.korchev.fragrancecollection`).
