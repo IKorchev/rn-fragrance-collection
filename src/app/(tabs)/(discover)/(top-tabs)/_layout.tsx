@@ -9,19 +9,19 @@ const { Navigator } = createMaterialTopTabNavigator()
 export const MaterialTopTabs = withLayoutContext(Navigator)
 
 export default function TopTabsLayout() {
-  const { baseColors, mutedColors, accentColors, theme } = useTheme()
+  const { mutedColors, highlightColors, theme } = useTheme()
   return (
     <View className='flex-1'>
       <MaterialTopTabs
         screenOptions={{
-          tabBarActiveTintColor: getColor(baseColors),
+          tabBarActiveTintColor: getColor(highlightColors),
           tabBarInactiveTintColor: getColor(mutedColors),
           tabBarLabelStyle: {
             fontSize: 15,
             fontWeight: "bold",
           },
           tabBarIndicatorStyle: {
-            backgroundColor: getColor(accentColors),
+            backgroundColor: getColor(highlightColors),
             height: 3,
             borderRadius: 3,
           },
@@ -30,8 +30,7 @@ export default function TopTabsLayout() {
           },
         }}>
         <MaterialTopTabs.Screen name="recommendations" options={{ title: "For You" }} />
-        <MaterialTopTabs.Screen name="index" options={{ title: "Leaderboard" }} />
-        <MaterialTopTabs.Screen name="collectors" options={{ title: "Collectors" }} />
+        <MaterialTopTabs.Screen name="index" options={{ title: "Top" }} />
         <MaterialTopTabs.Screen name="search" options={{ title: "Search" }} />
       </MaterialTopTabs>
     </View>

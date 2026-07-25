@@ -28,7 +28,7 @@ import { buildRecapShareText, buildTodaysScentShareText } from "@/lib/share"
 import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
-import useLocale, { type LocalePreference } from "@/contexts/locale-context"
+import useLocale from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
 import useGamification from "@/lib/utils/use-gamification"
 import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
@@ -68,7 +68,7 @@ const ProfileScreen = () => {
   } = useTheme()
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
-  const { t, formatDate, localePreference, setLocalePreference, supportedLocales } = useLocale()
+  const { t, formatDate } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
@@ -78,12 +78,15 @@ const ProfileScreen = () => {
   useMonthlyRecapPrompt()
   const [deleting, setDeleting] = useState(false)
   const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
-  const [languagePickerVisible, setLanguagePickerVisible] = useState(false)
   const [recapShareVisible, setRecapShareVisible] = useState(false)
   const [todayShareVisible, setTodayShareVisible] = useState(false)
   const [headerBusy, setHeaderBusy] = useState(false)
+  // Optimistic local render of a just-picked photo — the remote public URL
+  // only takes over on the next mount, so the hero never sits on a spinner
+  // waiting for the scan + upload + re-download round trip
+  const [localHeaderUri, setLocalHeaderUri] = useState<string | null>(null)
   const { data: myProfile } = useMyProfile(user?.id)
-  const headerUrl = headerPhotoUrl(myProfile?.header_image_path)
+  const headerUrl = localHeaderUri ?? headerPhotoUrl(myProfile?.header_image_path)
 
   const displayName = user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? t("profile.anonymous")
   const totalWears = userCollection.reduce((sum, el) => sum + el.times_worn, 0)
@@ -132,9 +135,6 @@ const ProfileScreen = () => {
     () => (todayFragrance ? buildTodaysScentShareText(t, { name: todayFragrance.name }) : ""),
     [t, todayFragrance]
   )
-
-  const languageLabel = (pref: LocalePreference) =>
-    pref === "system" ? t("language.system") : pref === "es" ? t("language.spanish") : t("language.english")
 
   // Presents the native paywall configured in the RevenueCat dashboard.
   // isPro flips reactively (see AuthContext's CustomerInfo listener) once a
@@ -185,17 +185,20 @@ const ProfileScreen = () => {
     }
     if (pick.status === "canceled") return
     setHeaderBusy(true)
+    setLocalHeaderUri(pick.uri)
     try {
       // The edge function scans, stores, updates the profile row, and sweeps
       // old objects — a refetch is all that's left client-side
       const result = await uploadHeaderPhoto(pick.uri)
       if (result.status === "rejected") {
+        setLocalHeaderUri(null)
         showToast({ message: t("profile.headerPhoto.rejected") })
         return
       }
       await queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
       showToast({ message: t("profile.headerPhoto.saved") })
     } catch (error) {
+      setLocalHeaderUri(null)
       reportError(error, { flow: "profile-header-photo" })
       showToast({ message: t("profile.headerPhoto.failed") })
     } finally {
@@ -207,6 +210,7 @@ const ProfileScreen = () => {
     const oldPath = myProfile?.header_image_path
     if (!oldPath) return
     setHeaderBusy(true)
+    setLocalHeaderUri(null)
     try {
       await upsertProfilePatch({ header_image_path: null })
       removeHeaderPhotoObject(oldPath)
@@ -422,18 +426,6 @@ const ProfileScreen = () => {
           }
         />
         <Row
-          icon='translate'
-          label={t("profile.language")}
-          testID='profile-language-row'
-          onPress={() => setLanguagePickerVisible(true)}
-          trailing={
-            <View className='flex-row items-center' style={{ gap: 4 }}>
-              <Text className={`${mutedTextClass} text-sm`}>{languageLabel(localePreference)}</Text>
-              <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(mutedColors)} />
-            </View>
-          }
-        />
-        <Row
           icon='bell-outline'
           label={t("profile.dailyReminder")}
           trailing={
@@ -516,31 +508,6 @@ const ProfileScreen = () => {
             )}
           </TouchableOpacity>
         ))}
-      </Dialog>
-
-      <Dialog
-        visible={languagePickerVisible}
-        title={t("language.title")}
-        onClose={() => setLanguagePickerVisible(false)}
-        cancelLabel={t("common.close")}>
-        {(["system", ...supportedLocales] as LocalePreference[]).map((pref) => {
-          const selected = pref === localePreference
-          return (
-            <TouchableOpacity
-              key={pref}
-              accessibilityRole='button'
-              accessibilityState={{ selected }}
-              testID={`language-option-${pref}`}
-              className='flex-row items-center justify-between py-3'
-              onPress={() => {
-                setLocalePreference(pref)
-                setLanguagePickerVisible(false)
-              }}>
-              <Text className={`${baseTextClass} text-base`}>{languageLabel(pref)}</Text>
-              {selected && <MaterialCommunityIcons name='check' size={20} color={getColor(accentColors)} />}
-            </TouchableOpacity>
-          )
-        })}
       </Dialog>
 
       <ShareSheetModal

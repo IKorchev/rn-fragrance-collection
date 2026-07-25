@@ -10,18 +10,46 @@
 // @tensorflow/tfjs union package it drags in) inlines ~40MB of sources and
 // breaks the function deploy bundler. Weights load once per isolate
 // (~160ms) from the version-pinned jsdelivr mirror of the nsfwjs repo;
-// measured inference is ~1.2s on the CPU backend.
+// measured inference is ~1.2s on the cpu backend, much less when the wasm
+// backend initializes (see initBackend).
 // Client contract: POST { image: <base64 jpeg> } → 200 with
 // { ok: true, path } | { ok: false, reason: "rejected" | "invalid_image" }.
 import { createClient } from "npm:@supabase/supabase-js@2"
 import * as tf from "npm:@tensorflow/tfjs-core@4.22.0"
 import { loadLayersModel, type LayersModel } from "npm:@tensorflow/tfjs-layers@4.22.0"
 import "npm:@tensorflow/tfjs-backend-cpu@4.22.0"
+import { setWasmPaths } from "npm:@tensorflow/tfjs-backend-wasm@4.22.0"
 import jpeg from "npm:jpeg-js@0.4.4"
 
 const MAX_BYTES = 3 * 1024 * 1024
 const MODEL_URL = "https://cdn.jsdelivr.net/gh/infinitered/nsfwjs@4.3.0/models/mobilenet_v2/model.json"
+const WASM_URL = "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/"
 const NSFW_CLASSES = ["Drawing", "Hentai", "Neutral", "Porn", "Sexy"] as const
+
+// The WASM backend runs MobileNetV2 ~5-10x faster than the pure-JS cpu
+// backend. usePlatformFetch=true makes tfjs fetch the .wasm itself (Deno has
+// global fetch) instead of emscripten's Node-flavored fs loader, which can't
+// read an https path. If init throws OR hangs (3s race), fall back to cpu —
+// worst case is exactly the previous behavior. Logged so slow uploads can be
+// diagnosed from the function logs.
+let backendPromise: Promise<string> | null = null
+const initBackend = () =>
+  (backendPromise ??= (async () => {
+    try {
+      setWasmPaths(WASM_URL, true)
+      const ok = await Promise.race([
+        tf.setBackend("wasm").then((set) => set && tf.ready().then(() => true)),
+        new Promise<false>((resolve) => setTimeout(() => resolve(false), 3000)),
+      ])
+      if (ok) return tf.getBackend()
+      throw new Error("wasm init timed out or was rejected")
+    } catch (wasmError) {
+      console.error("wasm backend unavailable, using cpu", wasmError)
+      await tf.setBackend("cpu")
+      await tf.ready()
+      return tf.getBackend()
+    }
+  })())
 
 let modelPromise: Promise<LayersModel> | null = null
 const getModel = () => (modelPromise ??= loadLayersModel(MODEL_URL))
@@ -39,6 +67,7 @@ const decodeBase64 = (input: string): Uint8Array => {
 }
 
 const classifyJpeg = async (bytes: Uint8Array): Promise<Record<string, number>> => {
+  const t0 = Date.now()
   const decoded = jpeg.decode(bytes, { useTArray: true, maxMemoryUsageInMB: 128 })
   const numPixels = decoded.width * decoded.height
   const values = new Int32Array(numPixels * 3)
@@ -47,8 +76,10 @@ const classifyJpeg = async (bytes: Uint8Array): Promise<Record<string, number>> 
     values[i * 3 + 1] = decoded.data[i * 4 + 1]
     values[i * 3 + 2] = decoded.data[i * 4 + 2]
   }
-  await tf.ready()
+  const t1 = Date.now()
+  const backend = await initBackend()
   const model = await getModel()
+  const t2 = Date.now()
   const probs = tf.tidy(() => {
     const input = tf.tensor3d(values, [decoded.height, decoded.width, 3], "int32")
     const normalized = tf.div(tf.cast(input, "float32"), 255)
@@ -58,6 +89,9 @@ const classifyJpeg = async (bytes: Uint8Array): Promise<Record<string, number>> 
   })
   try {
     const data = await probs.data()
+    console.log(
+      `scan backend=${backend} decode=${t1 - t0}ms init=${t2 - t1}ms inference=${Date.now() - t2}ms`
+    )
     return Object.fromEntries(NSFW_CLASSES.map((className, i) => [className, data[i]]))
   } finally {
     probs.dispose()
@@ -138,18 +172,25 @@ Deno.serve(async (req) => {
   }
 
   // Best-effort sweep of every older object in the folder (not just the one
-  // the profile row pointed at) so replaced/orphaned photos don't pile up
-  try {
-    const { data: objects } = await admin.storage
-      .from("profile-headers")
-      .list(user.id, { limit: 100 })
-    const stale = (objects ?? [])
-      .map((o) => `${user.id}/${o.name}`)
-      .filter((objectPath) => objectPath !== path)
-    if (stale.length > 0) await admin.storage.from("profile-headers").remove(stale)
-  } catch (cleanupError) {
-    console.error("Stale header cleanup failed for", user.id, cleanupError)
-  }
+  // the profile row pointed at) so replaced/orphaned photos don't pile up —
+  // runs after the response via waitUntil so it never adds upload latency
+  const sweep = (async () => {
+    try {
+      const { data: objects } = await admin.storage
+        .from("profile-headers")
+        .list(user.id, { limit: 100 })
+      const stale = (objects ?? [])
+        .map((o) => `${user.id}/${o.name}`)
+        .filter((objectPath) => objectPath !== path)
+      if (stale.length > 0) await admin.storage.from("profile-headers").remove(stale)
+    } catch (cleanupError) {
+      console.error("Stale header cleanup failed for", user.id, cleanupError)
+    }
+  })()
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime
+  if (runtime?.waitUntil) runtime.waitUntil(sweep)
+  else await sweep
 
   return Response.json({ ok: true, path })
 })

@@ -67,6 +67,12 @@ interface ThemeContextValue {
   // style={{backgroundColor}}, not a className, so it's exempt from the
   // literal-scanner constraint above
   accentTintBg: string
+  // Warm "you are here" accent for selection/navigation states (active tabs,
+  // selected filter chips) — emerald stays the brand/action color. Bare
+  // token + tint background, mirroring accentColors/accentTintBg; all
+  // consumers are style objects, so no literal classNames needed.
+  highlightColors: string
+  highlightTintBg: string
   // NativeTabs' backgroundColor prop takes a ColorValue, not a className —
   // matches headerColors.background so the bottom bar isn't stuck light on
   // Android (NativeTabs doesn't follow in-app theme automatically there)
@@ -171,6 +177,8 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
 
   const primaryBg = dark ? "bg-emerald-500" : "bg-emerald-600"
   const accentTintBg = dark ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50")
+  const highlightColors = dark ? "amber-400" : "amber-600"
+  const highlightTintBg = dark ? "rgba(251, 191, 36, 0.15)" : getColor("amber-50")
   const tabBarBackgroundColor = dark ? getColor("zinc-950") : "white"
   const danger: DangerGroup = {
     textClass: dark ? "text-rose-400" : "text-rose-600",
@@ -191,6 +199,8 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
         baseBorderClass,
         primaryBg,
         accentTintBg,
+        highlightColors,
+        highlightTintBg,
         tabBarBackgroundColor,
         viewColors,
         headerColors,

@@ -10,8 +10,8 @@ import useStreakSaver from "@/lib/utils/use-streak-saver"
 import useProfileSync from "@/lib/utils/use-profile-sync"
 
 export default function TabsLayout() {
-  const { theme, tabBarBackgroundColor, accentTintBg } = useTheme()
-  const tintColor = theme === "dark" ? getColor("emerald-300") : getColor("emerald-600")
+  const { tabBarBackgroundColor, highlightColors, highlightTintBg } = useTheme()
+  const tintColor = getColor(highlightColors)
 
   // Mounted once for the whole signed-in session (all 3 tabs share this
   // layout), so a level-up/badge-unlock toast fires regardless of which tab
@@ -26,7 +26,7 @@ export default function TabsLayout() {
   useProfileSync(gamification)
 
   return (
-    <NativeTabs tintColor={tintColor} backgroundColor={tabBarBackgroundColor} indicatorColor={accentTintBg}>
+    <NativeTabs tintColor={tintColor} backgroundColor={tabBarBackgroundColor} indicatorColor={highlightTintBg}>
       <NativeTabs.Trigger name="(discover)">
         <NativeTabs.Trigger.Icon sf="safari.fill" md="explore" />
         <NativeTabs.Trigger.Label>Discover</NativeTabs.Trigger.Label>

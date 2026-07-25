@@ -40,9 +40,9 @@ env:
 - tapOn: "Discover"
 - runFlow:
     when:
-      notVisible: "Leaderboard"
+      notVisible: "Top"
     commands:
       - tapOn: "Discover"
 - extendedWaitUntil:
-    visible: "Leaderboard"
+    visible: "Top"
     timeout: 10000
