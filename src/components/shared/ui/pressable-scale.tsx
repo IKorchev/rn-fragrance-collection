@@ -16,7 +16,10 @@ interface PressableScaleProps {
   children: ReactNode
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+// Exported only so Storybook can register it with NativeWind's cssInterop —
+// react-native-web drops className on animated components otherwise. No
+// behavioural difference in the app.
+export const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 // Pressable that springs to 96% while held — the tactile press feedback for
 // pills, buttons, and FABs (replaces TouchableOpacity's plain fade).

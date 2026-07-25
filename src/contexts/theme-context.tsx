@@ -7,9 +7,9 @@ import React, {
 } from "react"
 import { useColorScheme } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { getColor } from "@/lib/utils/colors"
+import { tokens, type Theme } from "@/design-system/tokens"
 
-export type Theme = "light" | "dark"
+export type { Theme }
 // What's actually stored/selected — "system" resolves to the OS scheme at
 // render time and stays live if the OS scheme changes underneath it.
 export type ThemePreference = Theme | "system"
@@ -92,7 +92,8 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({} as ThemeContextValue)
-const THEME_STORAGE_KEY = "theme"
+// Exported so Storybook's decorator can seed a theme without restating the key
+export const THEME_STORAGE_KEY = "theme"
 
 const useTheme = () => {
   return useContext(ThemeContext)
@@ -114,76 +115,42 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
 
   const theme: Theme =
     themePreference === "system" ? (systemScheme === "dark" ? "dark" : "light") : themePreference
-  const dark = theme === "dark"
 
-  const baseColors = dark ? "zinc-100" : "zinc-900"
-  const mutedColors = dark ? "zinc-400" : "zinc-500"
-  const accentColors = dark ? "emerald-400" : "emerald-600"
-  const cardBorderColors = dark ? "zinc-800" : "zinc-200"
+  // Everything below is a rename of the active theme's design tokens into the
+  // shape components already consume — no color decisions live here.
+  const t = tokens[theme]
 
-  const baseTextClass = dark ? "text-zinc-100" : "text-zinc-900"
-  const mutedTextClass = dark ? "text-zinc-400" : "text-zinc-500"
-  const accentTextClass = dark ? "text-emerald-400" : "text-emerald-600"
-  const baseBorderClass = dark ? "border-zinc-800" : "border-zinc-200"
+  const baseColors = t.ink.token
+  const mutedColors = t.inkMuted.token
+  const accentColors = t.accent.token
+  const cardBorderColors = t.line.token
 
-  const headerColors = {
-    font: dark ? "text-zinc-100" : "text-zinc-900",
-    background: dark ? "bg-zinc-950" : "bg-white",
-  }
-  const modalColors = {
-    font: dark ? "text-zinc-100" : "text-zinc-900",
-    background: dark ? "bg-zinc-900" : "bg-white",
-  }
-  const viewColors = {
-    font: dark ? "text-zinc-100" : "text-zinc-900",
-    background: dark ? "bg-zinc-950" : "bg-zinc-50",
-  }
-  const cardColors = {
-    font: dark ? "text-zinc-100" : "text-zinc-900",
-    background: dark ? "bg-zinc-900" : "bg-white",
+  const baseTextClass = t.ink.text
+  const mutedTextClass = t.inkMuted.text
+  const accentTextClass = t.accent.text
+  const baseBorderClass = t.line.border
+
+  const headerColors = t.header
+  const modalColors = t.modal
+  const viewColors = t.page
+  const cardColors = t.card
+
+  const buttons: ButtonGroup = {
+    deleteBg: t.danger.bg,
+    deleteIcon: t.danger.token,
   }
 
-  const buttons = dark
-    ? {
-        deleteBg: "bg-rose-500/20",
-        deleteIcon: "rose-400",
-      }
-    : {
-        deleteBg: "bg-rose-500/10",
-        deleteIcon: "rose-600",
-      }
+  const pill: PillGroup = t.pill
 
-  const pill: PillGroup = dark
-    ? {
-        tintBg: "bg-emerald-400/15",
-        tintText: "text-emerald-400",
-        solidBg: "bg-emerald-500",
-        solidText: "text-white",
-        wornBg: "bg-zinc-800",
-        wornText: "text-zinc-400",
-        wornOverlayBg: "bg-white/15",
-        wornOverlayText: "text-white/70",
-      }
-    : {
-        tintBg: "bg-emerald-600/10",
-        tintText: "text-emerald-700",
-        solidBg: "bg-emerald-600",
-        solidText: "text-white",
-        wornBg: "bg-zinc-100",
-        wornText: "text-zinc-500",
-        wornOverlayBg: "bg-white/15",
-        wornOverlayText: "text-white/70",
-      }
-
-  const primaryBg = dark ? "bg-emerald-500" : "bg-emerald-600"
-  const accentTintBg = dark ? "rgba(52, 211, 153, 0.15)" : getColor("emerald-50")
-  const highlightColors = dark ? "amber-400" : "amber-600"
-  const highlightTintBg = dark ? "rgba(251, 191, 36, 0.15)" : getColor("amber-50")
-  const tabBarBackgroundColor = dark ? getColor("zinc-950") : "white"
+  const primaryBg = t.primaryBg
+  const accentTintBg = t.accentTintBg
+  const highlightColors = t.highlight.token
+  const highlightTintBg = t.highlightTintBg
+  const tabBarBackgroundColor = t.tabBarBackground
   const danger: DangerGroup = {
-    textClass: dark ? "text-rose-400" : "text-rose-600",
-    bgClass: buttons.deleteBg,
-    color: buttons.deleteIcon,
+    textClass: t.danger.text,
+    bgClass: t.danger.bg,
+    color: t.danger.token,
   }
 
   return (
