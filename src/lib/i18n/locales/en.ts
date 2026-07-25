@@ -50,7 +50,6 @@ const en: Dictionary = {
     dailyReminder: "Daily reminder",
     reminderUpdateFailedTitle: "Oops",
     reminderUpdateFailedMessage: "Couldn't update your reminder setting, please try again.",
-    language: "Language",
     publicProfile: "Public profile",
     publicUpdateFailedTitle: "Oops",
     publicUpdateFailedMessage: "Couldn't update your public profile, please try again.",
@@ -80,17 +79,10 @@ const en: Dictionary = {
     deleteFailedMessage: "Something went wrong, please try again later.",
   },
 
-  language: {
-    title: "Language",
-    system: "System default",
-    english: "English",
-    spanish: "Español",
-  },
-
   collectors: {
     segmentFragrances: "Fragrances",
     segmentCollectors: "Collectors",
-    meta: "Level {{level}} · {{count}} wears",
+    meta: "Level {{level}} · worn {{count}}×",
     emptyTitle: "No public collectors yet",
     emptyMessage: "Make your profile public to be the first one here.",
     errorTitle: "Couldn't load collectors",
@@ -131,7 +123,7 @@ const en: Dictionary = {
     badgeWall: {
       title: "Badge Wall",
       sectionStreak: "Streaks",
-      sectionWears: "Wears",
+      sectionWears: "Times Worn",
       sectionCollection: "Collection",
       sectionExplorer: "Explorer",
       sectionSpecial: "Special",
@@ -140,7 +132,7 @@ const en: Dictionary = {
       recentlyEarned: "Recently earned",
       almostThere: "Almost there",
       emptyTitle: "No badges yet",
-      emptyMessage: "Log a wear to start earning badges.",
+      emptyMessage: "Wear something to start earning badges.",
     },
 
     toasts: {
@@ -167,19 +159,19 @@ const en: Dictionary = {
       },
       "wears-1": {
         name: "First Whiff",
-        description: "Log your very first wear.",
+        description: "Wear something for the very first time.",
       },
       "wears-25": {
         name: "Getting Into It",
-        description: "Log 25 wears.",
+        description: "Wear something 25 times.",
       },
       "wears-100": {
         name: "Triple Digits",
-        description: "Log 100 wears.",
+        description: "Wear something 100 times.",
       },
       "wears-500": {
         name: "Wear Machine",
-        description: "Log 500 wears. Are you okay?",
+        description: "Wear something 500 times. Are you okay?",
       },
       "collection-5": {
         name: "Starter Shelf",
@@ -237,7 +229,7 @@ const en: Dictionary = {
       },
       "wears-7": {
         title: "Seven Spritzes",
-        description: "Log 7 wears this week.",
+        description: "Wear something 7 times this week.",
       },
       "dust-off": {
         title: "Dust Off",
@@ -295,7 +287,7 @@ const en: Dictionary = {
     eyebrow: "Your month in Whiffs",
     heroTitle: "Your {{month}} in Whiffs",
     heroSubtitle: "Here's what your nose got up to.",
-    totalWearsLabel: "Wears logged",
+    totalWearsLabel: "Times worn",
     distinctLabel: "Fragrances worn",
     topThreeTitle: "Your top 3",
     bestStreakLabel_one: "Best streak: {{count}} day",
@@ -306,12 +298,12 @@ const en: Dictionary = {
     levelLabel: "Level",
     xpGainedLabel: "XP gained",
     emptyTitle: "Nothing logged in {{month}}",
-    emptyMessage: "No wears yet that month — log one to fill next month's recap.",
+    emptyMessage: "Nothing worn that month — wear something to fill next month's recap.",
     promptToast: "Your {{month}} recap is ready",
     promptAction: "View",
     shareIntro: "My {{month}} in Whiffs 🌸",
-    shareWearsFragment_one: "{{count}} wear logged",
-    shareWearsFragment_other: "{{count}} wears logged",
+    shareWearsFragment_one: "Worn once",
+    shareWearsFragment_other: "Worn {{count}} times",
     shareTopFragment: "Most worn: {{name}}",
     shareStreakFragment: "{{count}}-day streak",
     shareBadgesFragment_one: "{{count}} new badge earned",

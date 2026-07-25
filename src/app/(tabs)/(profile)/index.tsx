@@ -28,7 +28,7 @@ import { buildRecapShareText, buildTodaysScentShareText } from "@/lib/share"
 import useTheme, { type ThemePreference } from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
-import useLocale, { type LocalePreference } from "@/contexts/locale-context"
+import useLocale from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
 import useGamification from "@/lib/utils/use-gamification"
 import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
@@ -68,7 +68,7 @@ const ProfileScreen = () => {
   } = useTheme()
   const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
-  const { t, formatDate, localePreference, setLocalePreference, supportedLocales } = useLocale()
+  const { t, formatDate } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
@@ -78,7 +78,6 @@ const ProfileScreen = () => {
   useMonthlyRecapPrompt()
   const [deleting, setDeleting] = useState(false)
   const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
-  const [languagePickerVisible, setLanguagePickerVisible] = useState(false)
   const [recapShareVisible, setRecapShareVisible] = useState(false)
   const [todayShareVisible, setTodayShareVisible] = useState(false)
   const [headerBusy, setHeaderBusy] = useState(false)
@@ -136,9 +135,6 @@ const ProfileScreen = () => {
     () => (todayFragrance ? buildTodaysScentShareText(t, { name: todayFragrance.name }) : ""),
     [t, todayFragrance]
   )
-
-  const languageLabel = (pref: LocalePreference) =>
-    pref === "system" ? t("language.system") : pref === "es" ? t("language.spanish") : t("language.english")
 
   // Presents the native paywall configured in the RevenueCat dashboard.
   // isPro flips reactively (see AuthContext's CustomerInfo listener) once a
@@ -430,18 +426,6 @@ const ProfileScreen = () => {
           }
         />
         <Row
-          icon='translate'
-          label={t("profile.language")}
-          testID='profile-language-row'
-          onPress={() => setLanguagePickerVisible(true)}
-          trailing={
-            <View className='flex-row items-center' style={{ gap: 4 }}>
-              <Text className={`${mutedTextClass} text-sm`}>{languageLabel(localePreference)}</Text>
-              <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(mutedColors)} />
-            </View>
-          }
-        />
-        <Row
           icon='bell-outline'
           label={t("profile.dailyReminder")}
           trailing={
@@ -524,31 +508,6 @@ const ProfileScreen = () => {
             )}
           </TouchableOpacity>
         ))}
-      </Dialog>
-
-      <Dialog
-        visible={languagePickerVisible}
-        title={t("language.title")}
-        onClose={() => setLanguagePickerVisible(false)}
-        cancelLabel={t("common.close")}>
-        {(["system", ...supportedLocales] as LocalePreference[]).map((pref) => {
-          const selected = pref === localePreference
-          return (
-            <TouchableOpacity
-              key={pref}
-              accessibilityRole='button'
-              accessibilityState={{ selected }}
-              testID={`language-option-${pref}`}
-              className='flex-row items-center justify-between py-3'
-              onPress={() => {
-                setLocalePreference(pref)
-                setLanguagePickerVisible(false)
-              }}>
-              <Text className={`${baseTextClass} text-base`}>{languageLabel(pref)}</Text>
-              {selected && <MaterialCommunityIcons name='check' size={20} color={getColor(accentColors)} />}
-            </TouchableOpacity>
-          )
-        })}
       </Dialog>
 
       <ShareSheetModal
