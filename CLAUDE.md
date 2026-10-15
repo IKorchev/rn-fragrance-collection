@@ -14,6 +14,8 @@ Observability: `src/lib/sentry.ts` is fully inert (no init, no native calls) unt
 
 Monetization: a RevenueCat Pro subscription (`src/lib/purchases.ts`, paywall entry on the profile screen; nothing is feature-gated behind `isPro` yet) and an AdMob interstitial shown when the picker modal closes (`src/lib/ads.ts` — preloaded at app start, fired from `picker.tsx`'s unmount cleanup, skipped for Pro users; dev builds always serve Google's test interstitial, release builds read `EXPO_PUBLIC_ADMOB_INTERSTITIAL_AD_UNIT_ID` from `.env.local`). Both native modules (`react-native-purchases`, `react-native-google-mobile-ads`) require a dev-client rebuild after a fresh checkout, and any change to them must bump `version` in app.json (runtimeVersion policy is appVersion — an OTA update reaching a binary without the native modules crashes at bundle eval). The real AdMob App ID is already in app.json's `react-native-google-mobile-ads` plugin block. UMP consent (GDPR/EEA) is handled: `initializeAds` runs `AdsConsent.gatherConsent()` from a root-layout mount effect (the form needs the Activity) and only starts the SDK when `canRequestAds` is true. **Before an iOS release**: give iOS its own AdMob App ID in that block (the Android app's id is currently used for both platforms) and add the ATT tracking prompt (iOS-only, not implemented — no iOS build exists yet).
 
+OTA updates are **self-hosted** (xprem v3.2.6 on Cloud Run at `https://xprem-419723040511.europe-west1.run.app`, a private GCS bucket for bundles, and a dedicated Neon Postgres for the control plane), not EAS Update — `eas update` must never be run. `app.config.js` extends `app.json` and owns the `updates` block because the channel header must be a build-time literal and the dev-client code-signing guard needs JS; `app.json` keeps everything else including `runtimeVersion`. Publishing goes through `yarn ota:publish` (preflight + `dotenv -e .env.local -- eoas publish`) and never bare `eoas`, because `eoas` runs `expo export` with `EXPO_NO_DOTENV=1` — a direct call inlines `undefined` for all nine `EXPO_PUBLIC_*` values the bundle reads and silently ships an app with no backend. xprem's Postgres must be a **separate database** from the app's Supabase one: it migrates itself on boot and would otherwise drop its tables into the same `public` schema that `db/schema.sql` and `generate_typescript_types` describe. See `docs/ota-self-hosted.md` and the `ota-updates` skill.
+
 ## Commands
 
 There is no unit-test suite or linter configured in this project — do not invent `npm test`/`npm run lint` commands. There IS a type checker: run `yarn typecheck` (`tsc --noEmit`) after changes. For on-device verification there are Maestro E2E flows (load the `maestro-e2e` skill).
@@ -24,7 +26,13 @@ yarn android         # expo run:android (local dev-client build)
 yarn ios             # expo run:ios (local dev-client build)
 yarn web             # expo start --web
 yarn typecheck       # tsc --noEmit
+yarn ota:publish     # publish an OTA update to the self-hosted xprem server
 ```
+
+The first four are the plain Expo commands with `cross-env DISABLE_CODE_SIGNING=1`
+in front (see the `ota-updates` skill); `cross-env` is there because inline
+`FOO=1 cmd` is a parser error in PowerShell. Never run `eas update` or `npx eoas publish` directly; `yarn ota:publish`
+is the only safe publish path.
 
 **DB schema changes go through versioned migration files** — write a new `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql`, apply it with the Supabase MCP `apply_migration` (same name, exact file contents), and update `db/schema.sql` to keep it an accurate description of the current schema. Never run ad hoc DDL via `execute_sql` or the dashboard SQL editor — the repo folder mirrors the live `supabase_migrations.schema_migrations` history and must stay in lockstep (see `supabase/migrations/README.md`, including the CREATE-OR-REPLACE-preserves-ACLs gotcha that once let function grants drift).
 
@@ -36,7 +44,7 @@ The project is on Expo SDK 57 (`react-native` 0.86, React 19.2). Google Sign-In 
 
 - **maestro-e2e** (`.claude/skills/maestro-e2e/SKILL.md`) — running/writing Maestro E2E flows: emulator + Metro + signed-in-session prerequisites, launch subflow, flow conventions and testIDs.
 - **local-env-setup** (`.claude/skills/local-env-setup/SKILL.md`) — `.env` values, Google/Apple OAuth setup, Apple entitlements/paid-team signing, `db/schema.sql` bootstrap.
-- **eas-ota-updates** (`.claude/skills/eas-ota-updates/SKILL.md`) — publishing OTA JS updates, runtimeVersion/channel mapping, `use-app-updates.ts`.
+- **ota-updates** (`.claude/skills/ota-updates/SKILL.md`) — publishing OTA JS updates to the self-hosted xprem server, runtimeVersion/channel/branch mapping, `app.config.js` guards, `use-app-updates.ts`. Vendor skills `xprem-quickstart` / `xprem-configure-expo` / `xprem-publish` / `xprem-connect-mcp` cover the server itself and defer to live docs; the full runbook is `docs/ota-self-hosted.md`.
 
 ## Architecture
 
