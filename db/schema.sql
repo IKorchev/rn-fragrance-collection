@@ -1548,17 +1548,57 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   collection_count   INT NOT NULL DEFAULT 0 CHECK (collection_count >= 0),
   badge_ids          TEXT[] NOT NULL DEFAULT '{}' CHECK (coalesce(array_length(badge_ids, 1), 0) <= 64),
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Set by review_profile_report's 'hide'; while set the owner can't
+  -- re-publish (guard trigger below). Cleared only from the dashboard SQL editor.
+  moderation_hidden_at TIMESTAMPTZ
 );
 
 -- Top-collectors leaderboard scan: public rows ordered by xp
 CREATE INDEX IF NOT EXISTS user_profiles_public_xp_idx ON user_profiles (xp DESC) WHERE is_public;
 
+-- User blocks (App Review 1.2): private to the blocker — the blocked user
+-- can't tell. Defined here because the user_profiles SELECT policy below
+-- and user_top_worn read it.
+CREATE TABLE IF NOT EXISTS user_blocks (
+  blocker_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  blocked_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (blocker_id, blocked_id),
+  CONSTRAINT user_blocks_not_self CHECK (blocker_id <> blocked_id)
+);
+
+CREATE INDEX IF NOT EXISTS user_blocks_blocked_id_idx ON user_blocks (blocked_id);
+
+ALTER TABLE user_blocks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own blocks select" ON user_blocks FOR SELECT
+  TO authenticated
+  USING ((SELECT auth.uid()) = blocker_id);
+
+CREATE POLICY "own blocks insert" ON user_blocks FOR INSERT
+  TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = blocker_id);
+
+CREATE POLICY "own blocks delete" ON user_blocks FOR DELETE
+  TO authenticated
+  USING ((SELECT auth.uid()) = blocker_id);
+
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
+-- A profile the caller blocked reads as private to them (user_blocks below)
 CREATE POLICY "public or own profile" ON user_profiles FOR SELECT
   TO authenticated
-  USING (is_public OR (SELECT auth.uid()) = user_id);
+  USING (
+    (SELECT auth.uid()) = user_id
+    OR (
+      is_public
+      AND NOT EXISTS (
+        SELECT 1 FROM user_blocks b
+        WHERE b.blocker_id = (SELECT auth.uid()) AND b.blocked_id = user_profiles.user_id
+      )
+    )
+  );
 
 CREATE POLICY "insert own profile" ON user_profiles FOR INSERT
   TO authenticated
@@ -1569,14 +1609,66 @@ CREATE POLICY "update own profile" ON user_profiles FOR UPDATE
   USING ((SELECT auth.uid()) = user_id)
   WITH CHECK ((SELECT auth.uid()) = user_id);
 
-CREATE POLICY "delete own profile" ON user_profiles FOR DELETE
-  TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
+-- No DELETE policy: deleting and re-inserting the row would wipe
+-- moderation_hidden_at. Account deletion cascades from auth.users.
+
+-- Client-role write guard (migration lock_moderation_hidden_profiles). The
+-- owner-update policy allows any column, so this trigger enforces, for
+-- authenticated/anon only:
+--   * is_public can't be true while moderation_hidden_at is set
+--     (SQLSTATE WH001, matched by PROFILE_HIDDEN_ERROR_CODE in queries.ts)
+--   * moderation_hidden_at is never client-writable
+--   * header_image_path may only be cleared (the remove-photo flow); setting
+--     it is reserved for the upload-header-photo edge function (service role)
+-- service_role and SECURITY DEFINER RPCs (run as their owner) pass untouched.
+-- Un-hide: UPDATE user_profiles SET moderation_hidden_at = NULL WHERE user_id = '<id>';
+CREATE OR REPLACE FUNCTION guard_user_profile_writes()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF current_user NOT IN ('authenticated', 'anon') THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.moderation_hidden_at IS NOT NULL THEN
+      RAISE EXCEPTION 'moderation_hidden_at is not client-writable' USING ERRCODE = '42501';
+    END IF;
+    IF NEW.header_image_path IS NOT NULL THEN
+      RAISE EXCEPTION 'header_image_path can only be set by the upload function' USING ERRCODE = '42501';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.moderation_hidden_at IS DISTINCT FROM OLD.moderation_hidden_at THEN
+    RAISE EXCEPTION 'moderation_hidden_at is not client-writable' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.header_image_path IS NOT NULL
+     AND NEW.header_image_path IS DISTINCT FROM OLD.header_image_path THEN
+    RAISE EXCEPTION 'header_image_path can only be set by the upload function' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.is_public AND NEW.moderation_hidden_at IS NOT NULL THEN
+    RAISE EXCEPTION 'profile_hidden' USING ERRCODE = 'WH001',
+      DETAIL = 'This profile was hidden by a moderator and cannot be made public.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS user_profiles_guard_writes ON user_profiles;
+CREATE TRIGGER user_profiles_guard_writes
+  BEFORE INSERT OR UPDATE ON user_profiles
+  FOR EACH ROW EXECUTE FUNCTION guard_user_profile_writes();
+
+REVOKE EXECUTE ON FUNCTION guard_user_profile_writes() FROM PUBLIC, anon, authenticated;
 
 -- A public user's most-worn fragrances, aggregated from their real
 -- wear_events (own-rows RLS makes cross-user reads impossible directly —
 -- same pattern as top_worn_fragrances). Gated: only profiles currently
--- flagged is_public are readable, except the caller's own. Grouped by the
+-- flagged is_public and not blocked by the caller are readable, except the
+-- caller's own. Grouped by the
 -- denormalized event name so history survives collection-row deletion;
 -- max(image_url) prefers a non-null snapshot when older events lack one.
 CREATE OR REPLACE FUNCTION user_top_worn(target_user uuid, max_results int DEFAULT 5)
@@ -1589,9 +1681,15 @@ AS $$
   WHERE we.user_id = target_user
     AND (
       target_user = auth.uid()
-      OR EXISTS (
-        SELECT 1 FROM user_profiles p
-        WHERE p.user_id = target_user AND p.is_public
+      OR (
+        EXISTS (
+          SELECT 1 FROM user_profiles p
+          WHERE p.user_id = target_user AND p.is_public
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM user_blocks b
+          WHERE b.blocker_id = auth.uid() AND b.blocked_id = target_user
+        )
       )
     )
   GROUP BY we.name
@@ -1623,3 +1721,184 @@ CREATE POLICY "own profile header select" ON storage.objects FOR SELECT TO authe
 
 CREATE POLICY "own profile header delete" ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'profile-headers' AND (storage.foldername(name))[1] = (SELECT auth.uid()::text));
+
+-- Profile reports (App Review 1.2) — mirrors fragrance_reports: own-rows
+-- SELECT only; writes go through the SECURITY DEFINER RPCs below so the
+-- 20-pending cap and reason validation can't be bypassed.
+CREATE TABLE IF NOT EXISTS profile_reports (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  reported_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  reason           TEXT NOT NULL CONSTRAINT profile_reports_reason_valid
+                     CHECK (reason IN ('offensive_name', 'offensive_photo', 'harassment_or_spam', 'other')),
+  details          TEXT CONSTRAINT profile_reports_details_length CHECK (char_length(details) <= 1000),
+  status           TEXT NOT NULL DEFAULT 'pending' CONSTRAINT profile_reports_status_valid
+                     CHECK (status IN ('pending', 'hidden', 'dismissed')),
+  moderator_note   TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reviewed_at      TIMESTAMPTZ,
+  CONSTRAINT profile_reports_not_self CHECK (user_id <> reported_user_id)
+);
+
+CREATE INDEX IF NOT EXISTS profile_reports_reported_user_id_idx ON profile_reports (reported_user_id);
+CREATE INDEX IF NOT EXISTS profile_reports_user_id_idx ON profile_reports (user_id);
+CREATE INDEX IF NOT EXISTS profile_reports_pending_idx
+  ON profile_reports (created_at) WHERE status = 'pending';
+-- One pending report per reporter/profile/reason — re-reporting is idempotent
+CREATE UNIQUE INDEX IF NOT EXISTS profile_reports_pending_unique
+  ON profile_reports (user_id, reported_user_id, reason) WHERE status = 'pending';
+
+ALTER TABLE profile_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own profile reports" ON profile_reports FOR SELECT
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
+
+CREATE OR REPLACE FUNCTION submit_profile_report(
+  p_reported_user uuid, p_reason text, p_details text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_details text := NULLIF(btrim(coalesce(p_details, '')), '');
+  v_id uuid;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'not signed in';
+  END IF;
+  IF p_reason NOT IN ('offensive_name', 'offensive_photo', 'harassment_or_spam', 'other') THEN
+    RAISE EXCEPTION 'invalid reason';
+  END IF;
+  IF p_reported_user = v_uid THEN
+    RAISE EXCEPTION 'cannot report yourself';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM user_profiles WHERE user_id = p_reported_user) THEN
+    RAISE EXCEPTION 'profile not found';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext('profile_reports'), hashtext(v_uid::text));
+  IF (SELECT count(*) FROM profile_reports
+      WHERE user_id = v_uid AND status = 'pending') >= 20 THEN
+    RAISE EXCEPTION 'too many pending reports';
+  END IF;
+
+  INSERT INTO profile_reports (user_id, reported_user_id, reason, details)
+  VALUES (v_uid, p_reported_user, p_reason, v_details)
+  ON CONFLICT (user_id, reported_user_id, reason) WHERE status = 'pending'
+  DO UPDATE SET details = coalesce(EXCLUDED.details, profile_reports.details)
+  RETURNING id INTO v_id;
+  RETURN v_id;
+END;
+$$;
+
+-- Moderator decision (moderators table, or the trusted no-JWT dashboard SQL
+-- editor):
+--   hide    -> force the profile private, clear header_image_path, stamp
+--              moderation_hidden_at (locks re-publishing, see the guard
+--              trigger above), and settle every other pending report against
+--              the same profile. Returns the cleared header path so the
+--              moderator's client can remove the storage object.
+--   dismiss -> stamp status/note only. Returns NULL.
+CREATE OR REPLACE FUNCTION review_profile_report(
+  p_report_id uuid, p_action text, p_note text DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  r record;
+  v_header text;
+BEGIN
+  IF NOT (
+    (auth.uid() IS NULL AND session_user = 'postgres')
+    OR EXISTS (SELECT 1 FROM moderators WHERE user_id = auth.uid())
+  ) THEN
+    RAISE EXCEPTION 'not a moderator';
+  END IF;
+  IF p_action NOT IN ('hide', 'dismiss') THEN
+    RAISE EXCEPTION 'unknown action % (use hide / dismiss)', p_action;
+  END IF;
+
+  SELECT * INTO r FROM profile_reports WHERE id = p_report_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'report not found';
+  END IF;
+  IF r.status <> 'pending' THEN
+    RAISE EXCEPTION 'report already reviewed (%)', r.status;
+  END IF;
+
+  IF p_action = 'hide' THEN
+    SELECT header_image_path INTO v_header
+    FROM user_profiles WHERE user_id = r.reported_user_id FOR UPDATE;
+    UPDATE user_profiles
+    SET is_public = false, header_image_path = NULL,
+        moderation_hidden_at = now(), updated_at = now()
+    WHERE user_id = r.reported_user_id;
+    UPDATE profile_reports
+    SET status = 'hidden', moderator_note = p_note, reviewed_at = now()
+    WHERE reported_user_id = r.reported_user_id AND status = 'pending';
+  ELSE
+    UPDATE profile_reports
+    SET status = 'dismissed', moderator_note = p_note, reviewed_at = now()
+    WHERE id = p_report_id;
+  END IF;
+
+  RETURN v_header;
+END;
+$$;
+
+-- Moderation queue read — mirrors list_fragrance_reports. LEFT JOIN: a report
+-- stays reviewable even if the profile row was deleted meanwhile.
+CREATE OR REPLACE FUNCTION list_profile_reports(p_max_results integer DEFAULT 200)
+RETURNS TABLE (
+  id uuid,
+  reported_user_id uuid,
+  reason text,
+  details text,
+  created_at timestamptz,
+  display_name text,
+  avatar_url text,
+  header_image_path text,
+  is_public boolean
+)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM moderators WHERE user_id = auth.uid()) THEN
+    RAISE EXCEPTION 'not a moderator';
+  END IF;
+
+  RETURN QUERY
+  SELECT pr.id, pr.reported_user_id, pr.reason, pr.details, pr.created_at,
+         p.display_name, p.avatar_url, p.header_image_path, p.is_public
+  FROM profile_reports pr
+  LEFT JOIN user_profiles p ON p.user_id = pr.reported_user_id
+  WHERE pr.status = 'pending'
+  ORDER BY pr.created_at
+  LIMIT p_max_results;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION submit_profile_report(uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION submit_profile_report(uuid, text, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION review_profile_report(uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION review_profile_report(uuid, text, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION list_profile_reports(integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION list_profile_reports(integer) TO authenticated;
+
+-- Moderators may remove any header photo (the hide action above). Storage
+-- API removes need SELECT as well as DELETE on the object.
+CREATE POLICY "moderator profile header select" ON storage.objects FOR SELECT TO authenticated
+  USING (bucket_id = 'profile-headers' AND EXISTS (
+    SELECT 1 FROM public.moderators m WHERE m.user_id = (SELECT auth.uid())
+  ));
+
+CREATE POLICY "moderator profile header delete" ON storage.objects FOR DELETE TO authenticated
+  USING (bucket_id = 'profile-headers' AND EXISTS (
+    SELECT 1 FROM public.moderators m WHERE m.user_id = (SELECT auth.uid())
+  ));

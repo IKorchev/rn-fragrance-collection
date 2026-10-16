@@ -49,6 +49,10 @@ export type StreakSave = Tables<"streak_saves">
 
 export type UserProfile = Tables<"user_profiles">
 
+// SQLSTATE raised by the user_profiles guard trigger when the owner tries to
+// re-publish a profile a moderator hid (moderation_hidden_at is set)
+export const PROFILE_HIDDEN_ERROR_CODE = "WH001"
+
 export type UserTopWornFragrance =
   Database["public"]["Functions"]["user_top_worn"]["Returns"][number]
 
