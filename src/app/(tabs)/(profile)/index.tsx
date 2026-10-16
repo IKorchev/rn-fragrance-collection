@@ -45,7 +45,8 @@ import useGamification from "@/lib/utils/use-gamification"
 import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
 import { useMonthlyRecapPrompt } from "@/lib/utils/use-monthly-recap-prompt"
 import Badge from "@/components/shared/ui/badge"
-import IconButton from "@/components/shared/ui/icon-button"
+import NativeMenu, { type NativeMenuItem } from "@/components/shared/ui/native-menu"
+import GlassCircle from "@/components/shared/ui/glass-circle"
 import ProfileHero from "@/components/profile-hero"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
@@ -237,23 +238,31 @@ const ProfileScreen = () => {
     }
   }
 
-  const openHeaderPhotoMenu = () => {
-    if (headerBusy) return
-    Alert.alert(t("profile.headerPhoto.title"), undefined, [
-      { text: t("profile.headerPhoto.take"), onPress: () => applyHeaderPhoto("camera") },
-      { text: t("profile.headerPhoto.choose"), onPress: () => applyHeaderPhoto("library") },
-      ...(myProfile?.header_image_path
-        ? [
-            {
-              text: t("profile.headerPhoto.remove"),
-              style: "destructive" as const,
-              onPress: removeHeaderPhoto,
-            },
-          ]
-        : []),
-      { text: t("common.cancel"), style: "cancel" as const },
-    ])
-  }
+  const headerPhotoMenuItems: NativeMenuItem[] = [
+    {
+      id: "camera",
+      title: t("profile.headerPhoto.take"),
+      icon: "camera",
+      onPress: () => applyHeaderPhoto("camera"),
+    },
+    {
+      id: "library",
+      title: t("profile.headerPhoto.choose"),
+      icon: "photo.on.rectangle",
+      onPress: () => applyHeaderPhoto("library"),
+    },
+    ...(myProfile?.header_image_path
+      ? [
+          {
+            id: "remove",
+            title: t("profile.headerPhoto.remove"),
+            icon: "trash" as const,
+            destructive: true,
+            onPress: removeHeaderPhoto,
+          },
+        ]
+      : []),
+  ]
 
   const toggleReminders = async (value: boolean) => {
     if (value) {
@@ -325,22 +334,25 @@ const ProfileScreen = () => {
         ].filter((line): line is string => !!line)}
         badge={isPro ? <Badge label='PRO' /> : undefined}
         trailing={
-          <IconButton
-            bgClassName={headerUrl ? "bg-black/40" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
-            dimmed={headerBusy}
-            testID='profile-header-photo-button'
-            accessibilityLabel={t("profile.headerPhoto.buttonLabel")}
-            onPress={openHeaderPhotoMenu}>
-            {headerBusy ? (
-              <ActivityIndicator size='small' color={headerUrl ? "white" : getColor(mutedColors)} />
-            ) : (
-              <MaterialCommunityIcons
-                name='camera-outline'
-                size={22}
-                color={headerUrl ? "white" : getColor(mutedColors)}
-              />
-            )}
-          </IconButton>
+          <NativeMenu
+            title={t("profile.headerPhoto.title")}
+            items={headerPhotoMenuItems.map((item) => ({ ...item, disabled: headerBusy }))}
+            testID='profile-header-photo-button'>
+            <GlassCircle
+              fallbackBgClassName={headerUrl ? "bg-black/40" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
+              dimmed={headerBusy}
+              accessibilityLabel={t("profile.headerPhoto.buttonLabel")}>
+              {headerBusy ? (
+                <ActivityIndicator size='small' color={headerUrl ? "white" : getColor(mutedColors)} />
+              ) : (
+                <MaterialCommunityIcons
+                  name='camera-outline'
+                  size={22}
+                  color={headerUrl ? "white" : getColor(mutedColors)}
+                />
+              )}
+            </GlassCircle>
+          </NativeMenu>
         }
       />
 
