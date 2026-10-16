@@ -1,7 +1,8 @@
 import { useMemo } from "react"
 import useAuth from "@/contexts/auth-context"
-import { useWearHistory, useStreakSaves } from "@/lib/queries"
+import { useWearHistory, useStreakSaves, useMyRatings } from "@/lib/queries"
 import { computeGamification, totalQuestXp, type GamificationState } from "@/lib/gamification"
+import useRatedCollection from "@/lib/utils/use-rated-collection"
 
 // Bridges the pure computeGamification() core to the app's live data sources
 // (the personal wear diary + the collection query already owned by
@@ -17,7 +18,8 @@ import { computeGamification, totalQuestXp, type GamificationState } from "@/lib
 // db/schema.sql). Anything that needs the user's gamification state should
 // go through this hook rather than calling computeGamification directly.
 export const useGamification = (): GamificationState => {
-  const { user, userCollection } = useAuth()
+  const { user } = useAuth()
+  const collection = useRatedCollection()
   const { data: events } = useWearHistory(user?.id)
   const { data: streakSaves } = useStreakSaves(user?.id)
 
@@ -30,11 +32,30 @@ export const useGamification = (): GamificationState => {
     const safeEvents = events ?? []
     return computeGamification({
       events: safeEvents,
-      collection: userCollection,
-      bonusXp: totalQuestXp(safeEvents, userCollection),
+      collection,
+      bonusXp: totalQuestXp(safeEvents, collection),
       streakOptions: { freezeDates },
     })
-  }, [events, userCollection, freezeDates])
+  }, [events, collection, freezeDates])
+}
+
+// True once every input above has loaded. Anything that persists or compares
+// gamification state (the level/badge/quest toasts, the public profile sync)
+// must wait for it: a snapshot taken mid-load looks like progress was lost,
+// and the real values arriving a moment later then read as a fresh level-up
+// or quest completion.
+export const useGamificationReady = (): boolean => {
+  const { user, collectionPending } = useAuth()
+  const { data: events } = useWearHistory(user?.id)
+  const { data: streakSaves } = useStreakSaves(user?.id)
+  const { data: myRatings } = useMyRatings(user?.id)
+  return (
+    !!user &&
+    !collectionPending &&
+    events !== undefined &&
+    streakSaves !== undefined &&
+    myRatings !== undefined
+  )
 }
 
 export default useGamification

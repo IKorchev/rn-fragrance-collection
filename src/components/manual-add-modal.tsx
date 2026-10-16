@@ -109,6 +109,7 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
               </View>
               <Card.ActionPill
                 label='Add'
+                accessibilityLabel={`Add ${match.name}`}
                 disabled={saving}
                 onPress={() => handleAddMatch(match)}
                 className='ml-2'

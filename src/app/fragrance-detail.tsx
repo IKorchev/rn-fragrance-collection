@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   StyleSheet,
+  type AccessibilityActionEvent,
 } from "react-native"
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg"
 import { useLocalSearchParams, useRouter } from "expo-router"
@@ -128,15 +129,24 @@ const FragranceDetailScreen = () => {
     },
   ].filter((toggle): toggle is Exclude<typeof toggle, false> => toggle !== false)
 
-  const saveRating = (star: number) => {
-    if (!collectionItem) return
-    // Tapping the current rating clears it
-    const rating = currentRating === star ? null : star
+  const setRating = (rating: number | null) => {
+    if (!collectionItem || rating === currentRating) return
     if (isManual) {
       updateFragrance({ id: collectionItem.id }, { rating })
     } else if (fragranceId) {
       rateFragrance(fragranceId, rating)
     }
+  }
+
+  // Tapping the current rating clears it
+  const onStarPress = (star: number) => setRating(currentRating === star ? null : star)
+
+  // Screen readers adjust the whole star row with swipe up/down instead of
+  // finding five unlabeled buttons
+  const onRatingAccessibilityAction = (event: AccessibilityActionEvent) => {
+    const current = currentRating ?? 0
+    if (event.nativeEvent.actionName === "increment") setRating(Math.min(current + 1, 5))
+    if (event.nativeEvent.actionName === "decrement") setRating(current > 1 ? current - 1 : null)
   }
 
   const saveNotes = () => {
@@ -224,20 +234,44 @@ const FragranceDetailScreen = () => {
 
         {collectionItem && (
           <>
-            <View className='flex-row justify-center pt-5' style={{ gap: 6 }}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <PressableScale key={star} onPress={() => saveRating(star)} hitSlop={6}>
-                  <MaterialCommunityIcons
-                    name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
-                    size={30}
-                    color={
-                      (currentRating ?? 0) >= star
-                        ? getColor("amber-400")
-                        : getColor(mutedColors)
-                    }
-                  />
-                </PressableScale>
-              ))}
+            <View
+              className='items-center pt-5'
+              accessible
+              accessibilityRole='adjustable'
+              accessibilityLabel='Your rating'
+              accessibilityValue={{
+                min: 0,
+                max: 5,
+                now: currentRating ?? 0,
+                text: currentRating ? `${currentRating} of 5 stars` : "Not rated",
+              }}
+              // "activate" is declared and ignored: otherwise a double-tap is
+              // replayed as a touch on the middle star, rating it 3
+              accessibilityActions={[
+                { name: "increment" },
+                { name: "decrement" },
+                { name: "activate" },
+              ]}
+              onAccessibilityAction={onRatingAccessibilityAction}>
+              {/* Android would still focus each star inside an accessible parent */}
+              <View
+                className='flex-row'
+                style={{ gap: 6 }}
+                importantForAccessibility='no-hide-descendants'>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <PressableScale key={star} onPress={() => onStarPress(star)} hitSlop={6}>
+                    <MaterialCommunityIcons
+                      name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
+                      size={30}
+                      color={
+                        (currentRating ?? 0) >= star
+                          ? getColor("amber-400")
+                          : getColor(mutedColors)
+                      }
+                    />
+                  </PressableScale>
+                ))}
+              </View>
             </View>
 
             <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Tags</Text>

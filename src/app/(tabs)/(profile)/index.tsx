@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from "react"
-import { ScrollView, View, Text, TouchableOpacity, Switch, Alert, ActivityIndicator } from "react-native"
+import {
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  Switch,
+  Alert,
+  ActivityIndicator,
+  Linking,
+} from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
@@ -8,10 +17,12 @@ import { supabase } from "@/lib/supabase"
 import {
   useIsModerator,
   useMyProfile,
+  useNotificationPermission,
   useRemindersEnabled,
   useWearHistory,
   type UserProfile,
 } from "@/lib/queries"
+import { enableDailyReminders } from "@/lib/notifications"
 import {
   pickHeaderPhoto,
   uploadHeaderPhoto,
@@ -70,6 +81,9 @@ const ProfileScreen = () => {
   const { showToast } = useToast()
   const { t, formatDate } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
+  const { data: notificationPermission } = useNotificationPermission()
+  // On only when this device can actually receive the reminder
+  const remindersOn = !!notificationPermission?.granted && !!remindersEnabled
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
@@ -241,8 +255,23 @@ const ProfileScreen = () => {
     ])
   }
 
-  // Optimistic — the switch flips immediately, reverts if the write fails
   const toggleReminders = async (value: boolean) => {
+    if (value) {
+      const result = await enableDailyReminders(user!.id)
+      queryClient.invalidateQueries({ queryKey: ["notification-permission"] })
+      if (result === "blocked") {
+        Alert.alert(t("profile.reminderBlockedTitle"), t("profile.reminderBlockedMessage"), [
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("profile.openSettings"), onPress: () => Linking.openSettings() },
+        ])
+        return
+      }
+      if (result === "failed") {
+        Alert.alert(t("profile.reminderUpdateFailedTitle"), t("profile.reminderUpdateFailedMessage"))
+        return
+      }
+    }
+    // Optimistic — the switch flips immediately, reverts if the write fails
     queryClient.setQueryData(["reminder-prefs", user?.id], value)
     const { error } = await supabase
       .from("user_push_tokens")
@@ -300,6 +329,7 @@ const ProfileScreen = () => {
             bgClassName={headerUrl ? "bg-black/40" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
             dimmed={headerBusy}
             testID='profile-header-photo-button'
+            accessibilityLabel={t("profile.headerPhoto.buttonLabel")}
             onPress={openHeaderPhotoMenu}>
             {headerBusy ? (
               <ActivityIndicator size='small' color={headerUrl ? "white" : getColor(mutedColors)} />
@@ -430,8 +460,9 @@ const ProfileScreen = () => {
           label={t("profile.dailyReminder")}
           trailing={
             <Switch
-              value={remindersEnabled ?? true}
+              value={remindersOn}
               onValueChange={toggleReminders}
+              accessibilityLabel={t("profile.dailyReminder")}
               trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
             />
           }
@@ -444,6 +475,7 @@ const ProfileScreen = () => {
             <Switch
               value={myProfile?.is_public ?? false}
               onValueChange={togglePublicProfile}
+              accessibilityLabel={t("profile.publicProfile")}
               trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
             />
           }

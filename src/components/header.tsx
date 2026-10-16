@@ -35,6 +35,8 @@ export default function Header({ title, navigation, back }: HeaderProps) {
             testID='header-back'
             onPress={() => navigation?.goBack()}
             hitSlop={8}
+            accessibilityRole='button'
+            accessibilityLabel='Back'
             className='mr-2 -ml-1'>
             <Ionicons
               name='chevron-back'
@@ -43,7 +45,10 @@ export default function Header({ title, navigation, back }: HeaderProps) {
             />
           </TouchableOpacity>
         )}
-        <Text className={`${headerColors.font} font-display text-2xl flex-1`} numberOfLines={1}>
+        <Text
+          accessibilityRole='header'
+          className={`${headerColors.font} font-display text-2xl flex-1`}
+          numberOfLines={1}>
           {title}
         </Text>
       </View>

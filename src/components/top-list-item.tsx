@@ -62,7 +62,12 @@ const TopListItem = ({
           ratingCount={ratingCount}
         />
       </Card.Content>
-      <Card.ActionPill label='Add' className='mr-3' onPress={handleAddFragrance} />
+      <Card.ActionPill
+        label='Add'
+        className='mr-3'
+        accessibilityLabel={`Add ${title ?? name}`}
+        onPress={handleAddFragrance}
+      />
     </Card.Root>
   )
 }

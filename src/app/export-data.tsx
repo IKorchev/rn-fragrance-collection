@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useMemo, useState } from "react"
 import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native"
 import { useQuery } from "@tanstack/react-query"
 import { Directory, File, Paths } from "expo-file-system"
@@ -9,7 +9,8 @@ import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import { reportError } from "@/lib/sentry"
 import { supabase } from "@/lib/supabase"
-import { useWearHistoryExport, type WearEvent } from "@/lib/queries"
+import { useMyRatings, useWearHistoryExport, type WearEvent } from "@/lib/queries"
+import { withMyRatings } from "@/lib/utils/use-rated-collection"
 import type { Tables } from "@/lib/database.types"
 import type { UserFragrance } from "@/contexts/auth-context"
 import Button from "@/components/shared/ui/button"
@@ -160,18 +161,33 @@ const ExportDataScreen = () => {
       return data ?? []
     },
   })
+  const {
+    data: myRatings,
+    isPending: ratingsPending,
+    isError: ratingsError,
+    fetchStatus: ratingsFetchStatus,
+    refetch: refetchRatings,
+  } = useMyRatings(user?.id)
+  // Catalog-linked bottles keep their rating in fragrance_ratings, not on the
+  // collection row — without this their "My Rating" column would be empty
+  const ratedCollection = useMemo(
+    () => withMyRatings(userCollection, myRatings),
+    [userCollection, myRatings]
+  )
   const [format, setFormat] = useState<ExportFormat>("csv")
   const [sharing, setSharing] = useState(false)
 
   // react-query pauses queries while offline (see src/lib/query-client.ts) —
   // fetchStatus stays "paused" instead of settling into error, so this is
   // distinguishable from a real fetch failure.
-  const loading = wearPending || votesPending
-  const error = wearError || votesError
+  const loading = wearPending || votesPending || ratingsPending
+  const error = wearError || votesError || ratingsError
   const offline =
     (wearPending && wearFetchStatus === "paused") ||
-    (votesPending && votesFetchStatus === "paused")
-  const ready = !loading && !error && wearEvents !== undefined && votes !== undefined
+    (votesPending && votesFetchStatus === "paused") ||
+    (ratingsPending && ratingsFetchStatus === "paused")
+  const ready =
+    !loading && !error && wearEvents !== undefined && votes !== undefined && myRatings !== undefined
   const isEmpty = ready && userCollection.length === 0 && wearEvents.length === 0 && votes.length === 0
 
   const handleExport = async () => {
@@ -189,8 +205,8 @@ const ExportDataScreen = () => {
 
       const content =
         format === "csv"
-          ? buildCsv(userCollection, wearEvents, votes)
-          : buildJson(userCollection, wearEvents, votes)
+          ? buildCsv(ratedCollection, wearEvents, votes)
+          : buildJson(ratedCollection, wearEvents, votes)
       const dateStamp = new Date().toISOString().slice(0, 10)
       const filename = `fragrance-collection-export-${dateStamp}.${format}`
 
@@ -256,7 +272,7 @@ const ExportDataScreen = () => {
               variant='secondary'
               fullWidth={false}
               label='Try again'
-              onPress={() => Promise.all([refetchWearEvents(), refetchVotes()])}
+              onPress={() => Promise.all([refetchWearEvents(), refetchVotes(), refetchRatings()])}
               className='mt-3 px-6'
             />
           </View>

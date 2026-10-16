@@ -235,7 +235,11 @@ const WearHistoryScreen = () => {
                   style={{ color: getColor(baseColors) }}
                 />
                 {search.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={() => setSearch("")}
+                    hitSlop={8}
+                    accessibilityRole='button'
+                    accessibilityLabel='Clear search'>
                     <MaterialCommunityIcons name='close-circle' size={16} color={getColor(mutedColors)} />
                   </TouchableOpacity>
                 )}

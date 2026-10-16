@@ -19,6 +19,7 @@ const CollectionListItem = ({ id, name, imageUrl, timesWorn, lastWorn }: Collect
   const { incrementWear, requestDelete, cancelDelete } = useAuth()
   const { showToast } = useToast()
   const [brand, title] = name.split(" - ")
+  const displayTitle = title ?? name
 
   const handleDelete = () => {
     requestDelete({ id })
@@ -49,10 +50,17 @@ const CollectionListItem = ({ id, name, imageUrl, timesWorn, lastWorn }: Collect
       // Delete stays behind a left swipe so the row itself stays readable —
       // only the everyday action (Wear) gets a permanent button.
       swipeActions={
-        <Card.ActionButton variant='delete' onPress={handleDelete}>
+        <Card.ActionButton
+          variant='delete'
+          onPress={handleDelete}
+          accessibilityLabel={`Delete ${displayTitle}`}>
           {(iconColor) => <AntDesign name='delete' color={iconColor} size={18} />}
         </Card.ActionButton>
-      }>
+      }
+      accessibilityActions={[{ name: "delete", label: "Delete" }]}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === "delete") handleDelete()
+      }}>
       <Card.Thumbnail imageUrl={imageUrl} />
       <Card.Content>
         <Card.Title>{title}</Card.Title>
@@ -65,6 +73,7 @@ const CollectionListItem = ({ id, name, imageUrl, timesWorn, lastWorn }: Collect
         label='Wear'
         className='mr-3'
         testID='wear-button'
+        accessibilityLabel={`Wear ${displayTitle}`}
         worn={isWornToday(lastWorn)}
         onPress={() => incrementWear({ id })}
       />

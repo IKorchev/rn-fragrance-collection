@@ -56,7 +56,11 @@ const SearchField = ({
         style={{ color: getColor(baseColors) }}
       />
       {value.length > 0 && (
-        <TouchableOpacity onPress={() => onChangeText("")} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => onChangeText("")}
+          hitSlop={8}
+          accessibilityRole='button'
+          accessibilityLabel='Clear search'>
           <MaterialCommunityIcons name='close-circle' size={18} color={getColor(mutedColors)} />
         </TouchableOpacity>
       )}

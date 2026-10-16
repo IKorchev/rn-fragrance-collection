@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
-import { showInterstitial } from "@/lib/ads"
+import { prepareInterstitial, showInterstitial } from "@/lib/ads"
 import { promptProUpsell } from "@/lib/entitlements"
 import { tagFacets, brandFacets } from "@/lib/utils/collection-facets"
 import useAuth from "@/contexts/auth-context"
@@ -48,17 +48,22 @@ const PickerScreen = () => {
   }, [user?.id])
 
   // Interstitial on close (X button or Android hardware back — unmount
-  // catches both). Pro removes ads. Ref so upgrading mid-picker is honored.
-  // Deferred: launching the ad activity while the modal-dismiss transition
-  // is still running intermittently aborts the presentation.
+  // catches both), and only if the lever was actually pulled; the frequency
+  // cap lives in src/lib/ads.ts. Pro removes ads. Ref so upgrading mid-picker
+  // is honored. Deferred: launching the ad activity while the modal-dismiss
+  // transition is still running intermittently aborts the presentation.
+  const accountCreatedAt = user?.created_at
   const isProRef = useRef(isPro)
   isProRef.current = isPro
-  useEffect(
-    () => () => {
-      if (!isProRef.current) setTimeout(showInterstitial, 400)
-    },
-    []
-  )
+  const spunRef = useRef(false)
+  useEffect(() => {
+    if (!isPro) prepareInterstitial(accountCreatedAt)
+    return () => {
+      if (!isProRef.current && spunRef.current) {
+        setTimeout(() => showInterstitial(accountCreatedAt), 400)
+      }
+    }
+  }, [])
 
   const handleFilterPress = () => {
     if (!isPro) {
@@ -79,6 +84,8 @@ const PickerScreen = () => {
         className='absolute right-4 z-10 h-10 w-10 items-center justify-center'
         style={{ top: insets.top + 8 }}
         testID='picker-close'
+        accessibilityRole='button'
+        accessibilityLabel='Close picker'
         onPress={() => router.back()}>
         <AntDesign name='close' size={26} color={getColor(mutedColors)} />
       </TouchableOpacity>
@@ -87,6 +94,7 @@ const PickerScreen = () => {
           className='flex-row items-center rounded-full px-3 py-2'
           style={{ backgroundColor: pickerHasActiveFilters ? accentTintBg : undefined }}
           testID='picker-filter-button'
+          accessibilityRole='button'
           accessibilityLabel={isPro ? "Filter picker" : "Picker filters — Pro feature"}
           onPress={handleFilterPress}>
           <MaterialCommunityIcons
@@ -112,7 +120,13 @@ const PickerScreen = () => {
         )}
       </View>
       <View className='flex-1 justify-center'>
-        <Picker fragrance={frag} index={index} />
+        <Picker
+          fragrance={frag}
+          index={index}
+          onSpin={() => {
+            spunRef.current = true
+          }}
+        />
       </View>
       {isPro && (
         <PickerFilterSheet
