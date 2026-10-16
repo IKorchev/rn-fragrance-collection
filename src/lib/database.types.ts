@@ -284,6 +284,42 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          moderator_note: string | null
+          reason: string
+          reported_user_id: string
+          reviewed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          moderator_note?: string | null
+          reason: string
+          reported_user_id: string
+          reviewed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          moderator_note?: string | null
+          reason?: string
+          reported_user_id?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       streak_saves: {
         Row: {
           created_at: string
@@ -326,6 +362,24 @@ export type Database = {
           is_pro?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
         }
         Relationships: []
       }
@@ -395,6 +449,7 @@ export type Database = {
           header_image_path: string | null
           is_public: boolean
           level: number
+          moderation_hidden_at: string | null
           streak: number
           total_wears: number
           updated_at: string
@@ -410,6 +465,7 @@ export type Database = {
           header_image_path?: string | null
           is_public?: boolean
           level?: number
+          moderation_hidden_at?: string | null
           streak?: number
           total_wears?: number
           updated_at?: string
@@ -425,6 +481,7 @@ export type Database = {
           header_image_path?: string | null
           is_public?: boolean
           level?: number
+          moderation_hidden_at?: string | null
           streak?: number
           total_wears?: number
           updated_at?: string
@@ -573,6 +630,20 @@ export type Database = {
           title: string
         }[]
       }
+      list_profile_reports: {
+        Args: { p_max_results?: number }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          details: string
+          display_name: string
+          header_image_path: string
+          id: string
+          is_public: boolean
+          reason: string
+          reported_user_id: string
+        }[]
+      }
       recommend_fragrances: {
         Args: { max_results?: number }
         Returns: {
@@ -592,6 +663,10 @@ export type Database = {
         Returns: number
       }
       review_fragrance_report: {
+        Args: { p_action: string; p_note?: string; p_report_id: string }
+        Returns: string
+      }
+      review_profile_report: {
         Args: { p_action: string; p_note?: string; p_report_id: string }
         Returns: string
       }
@@ -625,6 +700,10 @@ export type Database = {
       }
       submit_fragrance_suggestion: {
         Args: { p_brand: string; p_title: string; p_user_fragrance_id?: string }
+        Returns: string
+      }
+      submit_profile_report: {
+        Args: { p_details?: string; p_reason: string; p_reported_user: string }
         Returns: string
       }
       top_worn_fragrances: {
