@@ -50,6 +50,9 @@ const en: Dictionary = {
     dailyReminder: "Daily reminder",
     reminderUpdateFailedTitle: "Oops",
     reminderUpdateFailedMessage: "Couldn't update your reminder setting, please try again.",
+    reminderBlockedTitle: "Notifications are off",
+    reminderBlockedMessage: "Allow notifications for Whiff in Settings to get your daily reminder.",
+    openSettings: "Open Settings",
     publicProfile: "Public profile",
     publicUpdateFailedTitle: "Oops",
     publicUpdateFailedMessage: "Couldn't update your public profile, please try again.",
@@ -58,6 +61,7 @@ const en: Dictionary = {
       "A moderator hid your profile after a report, so it can't be made public right now.",
     headerPhoto: {
       title: "Collection photo",
+      buttonLabel: "Change collection photo",
       take: "Take photo",
       choose: "Choose from library",
       remove: "Remove photo",

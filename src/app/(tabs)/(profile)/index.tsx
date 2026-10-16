@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from "react"
-import { ScrollView, View, Text, TouchableOpacity, Switch, Alert, ActivityIndicator } from "react-native"
+import {
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  Switch,
+  Alert,
+  ActivityIndicator,
+  Linking,
+} from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
@@ -9,10 +18,12 @@ import {
   PROFILE_HIDDEN_ERROR_CODE,
   useIsModerator,
   useMyProfile,
+  useNotificationPermission,
   useRemindersEnabled,
   useWearHistory,
   type UserProfile,
 } from "@/lib/queries"
+import { enableDailyReminders } from "@/lib/notifications"
 import {
   pickHeaderPhoto,
   uploadHeaderPhoto,
@@ -35,7 +46,8 @@ import useGamification from "@/lib/utils/use-gamification"
 import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
 import { useMonthlyRecapPrompt } from "@/lib/utils/use-monthly-recap-prompt"
 import Badge from "@/components/shared/ui/badge"
-import IconButton from "@/components/shared/ui/icon-button"
+import NativeMenu, { type NativeMenuItem } from "@/components/shared/ui/native-menu"
+import GlassCircle from "@/components/shared/ui/glass-circle"
 import ProfileHero from "@/components/profile-hero"
 import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
@@ -71,6 +83,9 @@ const ProfileScreen = () => {
   const { showToast } = useToast()
   const { t, formatDate } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
+  const { data: notificationPermission } = useNotificationPermission()
+  // On only when this device can actually receive the reminder
+  const remindersOn = !!notificationPermission?.granted && !!remindersEnabled
   const { data: isModerator } = useIsModerator(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
@@ -234,26 +249,49 @@ const ProfileScreen = () => {
     }
   }
 
-  const openHeaderPhotoMenu = () => {
-    if (headerBusy) return
-    Alert.alert(t("profile.headerPhoto.title"), undefined, [
-      { text: t("profile.headerPhoto.take"), onPress: () => applyHeaderPhoto("camera") },
-      { text: t("profile.headerPhoto.choose"), onPress: () => applyHeaderPhoto("library") },
-      ...(myProfile?.header_image_path
-        ? [
-            {
-              text: t("profile.headerPhoto.remove"),
-              style: "destructive" as const,
-              onPress: removeHeaderPhoto,
-            },
-          ]
-        : []),
-      { text: t("common.cancel"), style: "cancel" as const },
-    ])
-  }
+  const headerPhotoMenuItems: NativeMenuItem[] = [
+    {
+      id: "camera",
+      title: t("profile.headerPhoto.take"),
+      icon: "camera",
+      onPress: () => applyHeaderPhoto("camera"),
+    },
+    {
+      id: "library",
+      title: t("profile.headerPhoto.choose"),
+      icon: "photo.on.rectangle",
+      onPress: () => applyHeaderPhoto("library"),
+    },
+    ...(myProfile?.header_image_path
+      ? [
+          {
+            id: "remove",
+            title: t("profile.headerPhoto.remove"),
+            icon: "trash" as const,
+            destructive: true,
+            onPress: removeHeaderPhoto,
+          },
+        ]
+      : []),
+  ]
 
-  // Optimistic — the switch flips immediately, reverts if the write fails
   const toggleReminders = async (value: boolean) => {
+    if (value) {
+      const result = await enableDailyReminders(user!.id)
+      queryClient.invalidateQueries({ queryKey: ["notification-permission"] })
+      if (result === "blocked") {
+        Alert.alert(t("profile.reminderBlockedTitle"), t("profile.reminderBlockedMessage"), [
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("profile.openSettings"), onPress: () => Linking.openSettings() },
+        ])
+        return
+      }
+      if (result === "failed") {
+        Alert.alert(t("profile.reminderUpdateFailedTitle"), t("profile.reminderUpdateFailedMessage"))
+        return
+      }
+    }
+    // Optimistic — the switch flips immediately, reverts if the write fails
     queryClient.setQueryData(["reminder-prefs", user?.id], value)
     const { error } = await supabase
       .from("user_push_tokens")
@@ -307,21 +345,25 @@ const ProfileScreen = () => {
         ].filter((line): line is string => !!line)}
         badge={isPro ? <Badge label='PRO' /> : undefined}
         trailing={
-          <IconButton
-            bgClassName={headerUrl ? "bg-black/40" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
-            dimmed={headerBusy}
-            testID='profile-header-photo-button'
-            onPress={openHeaderPhotoMenu}>
-            {headerBusy ? (
-              <ActivityIndicator size='small' color={headerUrl ? "white" : getColor(mutedColors)} />
-            ) : (
-              <MaterialCommunityIcons
-                name='camera-outline'
-                size={22}
-                color={headerUrl ? "white" : getColor(mutedColors)}
-              />
-            )}
-          </IconButton>
+          <NativeMenu
+            title={t("profile.headerPhoto.title")}
+            items={headerPhotoMenuItems.map((item) => ({ ...item, disabled: headerBusy }))}
+            testID='profile-header-photo-button'>
+            <GlassCircle
+              fallbackBgClassName={headerUrl ? "bg-black/40" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
+              dimmed={headerBusy}
+              accessibilityLabel={t("profile.headerPhoto.buttonLabel")}>
+              {headerBusy ? (
+                <ActivityIndicator size='small' color={headerUrl ? "white" : getColor(mutedColors)} />
+              ) : (
+                <MaterialCommunityIcons
+                  name='camera-outline'
+                  size={22}
+                  color={headerUrl ? "white" : getColor(mutedColors)}
+                />
+              )}
+            </GlassCircle>
+          </NativeMenu>
         }
       />
 
@@ -441,8 +483,9 @@ const ProfileScreen = () => {
           label={t("profile.dailyReminder")}
           trailing={
             <Switch
-              value={remindersEnabled ?? true}
+              value={remindersOn}
               onValueChange={toggleReminders}
+              accessibilityLabel={t("profile.dailyReminder")}
               trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
             />
           }
@@ -455,6 +498,7 @@ const ProfileScreen = () => {
             <Switch
               value={myProfile?.is_public ?? false}
               onValueChange={togglePublicProfile}
+              accessibilityLabel={t("profile.publicProfile")}
               trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
             />
           }

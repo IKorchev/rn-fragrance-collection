@@ -2,7 +2,7 @@ import React from "react"
 import { NativeTabs } from "expo-router/unstable-native-tabs"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
-import useGamification from "@/lib/utils/use-gamification"
+import useGamification, { useGamificationReady } from "@/lib/utils/use-gamification"
 import useGamificationAlerts from "@/lib/utils/use-gamification-alerts"
 import useWeeklyQuests from "@/lib/utils/use-weekly-quests"
 import useQuestAlerts from "@/lib/utils/use-quest-alerts"
@@ -17,8 +17,9 @@ export default function TabsLayout() {
   // layout), so a level-up/badge-unlock toast fires regardless of which tab
   // is active rather than only when the Profile tab happens to be open.
   const gamification = useGamification()
-  useGamificationAlerts(gamification)
-  useQuestAlerts(useWeeklyQuests())
+  const gamificationReady = useGamificationReady()
+  useGamificationAlerts(gamification, gamificationReady)
+  useQuestAlerts(useWeeklyQuests(), gamificationReady)
   // Detects a just-broken streak on app open and either auto-spends a Pro
   // Streak Saver or shows the free-tier upsell (see src/lib/utils/use-streak-saver.ts)
   useStreakSaver()

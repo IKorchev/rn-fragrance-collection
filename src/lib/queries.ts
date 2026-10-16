@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { supabase } from "./supabase"
 import type { Database, Tables } from "./database.types"
 import { reportError } from "./sentry"
+import { getNotificationPermission } from "./notifications"
 
 // The catalog is name/brand/image only — all other scraped Parfumo metadata
 // (ratings, votes, year, gender, notes, …) was dropped as untrustworthy
@@ -250,9 +251,26 @@ export const useMyRating = (userId: string | undefined, fragranceId: string | un
     },
   })
 
+// All of the signed-in user's catalog ratings, keyed by fragrance id — the
+// collection-wide counterpart of useMyRating, for code that needs "my rating"
+// for every bottle at once (see use-rated-collection.ts).
+export const useMyRatings = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["my-ratings", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data, error } = await supabase
+        .from("fragrance_ratings")
+        .select("fragrance_id, rating")
+        .eq("user_id", userId!)
+      if (error) throw error
+      return Object.fromEntries((data ?? []).map((row) => [row.fragrance_id, row.rating]))
+    },
+  })
+
 // Whether daily wear reminders are enabled for this user's devices (profile
-// toggle). No token rows yet reads as true — that's the default a new token
-// row gets on registration.
+// toggle). No token rows means no device can receive one yet, so that reads
+// as off.
 export const useRemindersEnabled = (userId: string | undefined) =>
   useQuery({
     queryKey: ["reminder-prefs", userId],
@@ -263,8 +281,17 @@ export const useRemindersEnabled = (userId: string | undefined) =>
         .select("reminders_enabled")
         .eq("user_id", userId!)
       if (error) throw error
-      return (data ?? []).every((row) => row.reminders_enabled)
+      return (data ?? []).length > 0 && (data ?? []).every((row) => row.reminders_enabled)
     },
+  })
+
+// This device's OS notification permission. staleTime 0 so returning from
+// the Settings app (a foreground event, see query-client.ts) re-reads it.
+export const useNotificationPermission = () =>
+  useQuery({
+    queryKey: ["notification-permission"],
+    staleTime: 0,
+    queryFn: getNotificationPermission,
   })
 
 // Live catalog search (search_fragrances RPC): ranked text match when a term

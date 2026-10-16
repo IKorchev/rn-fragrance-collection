@@ -219,6 +219,7 @@ const CollectionScreen = () => {
           size='xl'
           onPress={() => router.push("/picker")}
           testID='picker-fab'
+          accessibilityLabel='Open the picker'
           className='absolute right-5'
           style={{
             bottom: insets.bottom + 64,

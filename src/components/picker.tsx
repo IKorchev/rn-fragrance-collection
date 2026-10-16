@@ -24,9 +24,10 @@ import Button from "@/components/shared/ui/button"
 interface PickerProps {
   fragrance: UserFragrance | undefined
   index: number | undefined
+  onSpin?: () => void
 }
 
-const Picker = ({ fragrance, index }: PickerProps) => {
+const Picker = ({ fragrance, index, onSpin }: PickerProps) => {
   const {
     incrementWear,
     userCollection,
@@ -96,6 +97,7 @@ const Picker = ({ fragrance, index }: PickerProps) => {
 
   const handleReroll = () => {
     if (!pool.length) return
+    onSpin?.()
 
     if (animationLoopRef.current) {
       animationLoopRef.current.stop()
@@ -269,6 +271,7 @@ const Picker = ({ fragrance, index }: PickerProps) => {
                   size='lg'
                   className='absolute bottom-3.5 right-3'
                   testID='picker-wear-button'
+                  accessibilityLabel={`Wear ${currentItem.name.split(" - ")[1] ?? currentItem.name}`}
                   style={styles.knob}
                   worn={isWornToday(currentItem.last_worn)}
                   onPress={() => incrementWear({ id: currentItem.id })}
@@ -300,12 +303,25 @@ const Picker = ({ fragrance, index }: PickerProps) => {
           <View
             className={`absolute top-1 bottom-1 w-1.5 rounded-full ${theme === "dark" ? "bg-white/15" : "bg-black/10"}`}
           />
+          {/* Drag-only for touch, so screen readers and Switch Control get the
+              spin through the standard "activate" action instead */}
           <Animated.View
             {...leverResponder.panHandlers}
             style={{ transform: [{ translateY: leverY }] }}
             className='mt-1 items-center justify-center'
             testID='picker-lever'
             hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+            accessible
+            accessibilityRole='button'
+            accessibilityLabel='Spin the picker'
+            accessibilityHint='Picks a fragrance from your collection'
+            accessibilityState={{ disabled: isSpinning || !pool.length }}
+            accessibilityActions={[{ name: "activate" }]}
+            onAccessibilityAction={(event) => {
+              if (event.nativeEvent.actionName === "activate" && !isSpinningRef.current) {
+                handleRerollRef.current()
+              }
+            }}
           >
             <View
               className='h-11 w-11 rounded-full bg-red-500 border-2 border-red-700'

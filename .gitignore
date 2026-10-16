@@ -39,3 +39,8 @@ expo-env.d.ts
 # macOS
 .DS_Store
 *.pem
+
+# ...but the xprem code-signing certificate is public (it ships inside the
+# binary to verify update signatures) and MUST be committed. The matching
+# private key never leaves the server, so there is nothing here to leak.
+!certs/certificate.pem

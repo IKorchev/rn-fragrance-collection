@@ -10,11 +10,12 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "env": {
+        "XPREM_CHANNEL": "preview"
+      }
     },
     "production": {
-      "autoIncrement": true,
-      "channel": "production"
+      "autoIncrement": true
     }
   },
   "submit": {

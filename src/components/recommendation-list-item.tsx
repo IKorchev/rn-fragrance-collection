@@ -39,7 +39,12 @@ const RecommendationListItem = ({ item }: { item: FragranceRecommendation }) => 
           {item.reason}
         </Text>
       </Card.Content>
-      <Card.ActionPill label='Add' className='mr-3' onPress={add} />
+      <Card.ActionPill
+        label='Add'
+        className='mr-3'
+        accessibilityLabel={`Add ${item.title}`}
+        onPress={add}
+      />
     </Card.Root>
   )
 }

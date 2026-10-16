@@ -16,7 +16,7 @@ export interface LegalDoc {
 
 export const PRIVACY_POLICY: LegalDoc = {
   title: "Privacy Policy",
-  lastUpdated: "July 18, 2026",
+  lastUpdated: "October 16, 2026",
   sections: [
     {
       paragraphs: [
@@ -28,29 +28,34 @@ export const PRIVACY_POLICY: LegalDoc = {
       paragraphs: [
         "Account information. When you sign in with Google or Apple, we receive your name, email address, and profile picture from the identity provider. We use this only to create and identify your account. We never see your Google or Apple password.",
         "Collection and usage data. The fragrances you add, personal ratings and notes you write, your private fragrance votes, and a log of the days you wear each fragrance (“wear events”). This is the app's core functionality.",
+        "Profile photo (optional). If you add a collection photo to your profile, the image is uploaded and automatically screened on our servers for explicit content before it is stored. Anyone with the photo's link can view it, and the link is only shown to other users while your profile is public. Replacing or removing the photo deletes the old file.",
         "Push notification token. If you grant notification permission, a device push token is stored so the app can send you the daily wear reminder. You can turn reminders off at any time in your profile.",
-        "Advertising. The free tier shows ads served by Google AdMob after you use the picker. AdMob may use your device's advertising identifier to serve and measure ads — see Google's privacy policy (policies.google.com) for details. Upgrading to Pro removes ads.",
-        "We do not collect your location, contacts, or photos, and we run no analytics beyond crash reports.",
+        "Subscriptions. If you subscribe to Whiff Pro, payment is handled by Apple or Google — we never see your card details. Our subscription provider, RevenueCat, receives your account ID and purchase records from the store so the app knows whether Pro is active.",
+        "Advertising. The free tier occasionally shows ads served by Google AdMob after you use the picker. AdMob may use your device's advertising identifier to serve and measure ads — see Google's privacy policy (policies.google.com) for details. Upgrading to Pro removes ads.",
+        "We do not collect your location or contacts, we only collect a photo if you choose to add one to your profile, and we run no analytics beyond crash reports.",
       ],
     },
     {
       heading: "How your data is used",
       bullets: [
         "Your collection, personal notes, individual ratings, and individual fragrance votes are private to your account and protected by row-level security — no other user can read those individual rows. Anonymous aggregate ratings and voting distributions, plus aggregated wear counts, power community features.",
-        "Wear events feed the community Most Worn leaderboard. Only anonymous, aggregated counts per fragrance are ever shown to other users; your identity is never attached to a leaderboard entry.",
+        "Wear events feed the community Most Worn leaderboard, which only shows anonymous, aggregated counts per fragrance — your identity is never attached to it.",
+        "Public profile (off by default). If you turn it on, other signed-in users can see your name and profile picture, your profile photo, your level, XP, streak and badges, your total wears and collection size, and the fragrances you wear most along with how often you've worn them. You can also appear in the Top Collectors ranking. Your collection list, notes, ratings, votes, and wear diary stay private. Turning your public profile off hides all of this again.",
+        "When you add a fragrance by hand, its brand and name are also suggested for the shared catalog. Moderators review the brand and name only, and approved fragrances become part of the public catalog.",
         "We do not sell your data or use it for any purpose other than operating the app. Your collection and account data are never shared with advertisers — ads are served by Google AdMob independently of your app data.",
       ],
     },
     {
       heading: "Where your data lives",
       paragraphs: [
-        "Data is stored with Supabase (Postgres database and authentication), hosted in the EU (eu-west-1). Push notifications are delivered through Expo's push service and Apple/Google's notification services. Crash reports, if enabled, are processed by Sentry.",
+        "Data is stored with Supabase (Postgres database and authentication), hosted in the EU (eu-west-1). Push notifications are delivered through Expo's push service and Apple/Google's notification services. Subscriptions are managed by RevenueCat. App updates are downloaded from our own update server on Google Cloud in the EU, which receives standard request information such as your IP address, platform, and app version, but no account data. Crash reports, if enabled, are processed by Sentry.",
       ],
     },
     {
       heading: "Data retention and deletion",
       paragraphs: [
-        "Your data is kept for as long as your account exists. You can delete your account at any time from Profile → Delete account — this permanently removes your account, collection, notes, individual ratings and votes, scent diary, and push tokens. Deletion is immediate and cannot be undone.",
+        "Your data is kept for as long as your account exists. You can delete your account at any time from Profile → Delete account — this permanently removes your account, collection, notes, individual ratings and votes, scent diary, push tokens, public profile, and profile photo. Deletion is immediate and cannot be undone.",
+        "Deleting your account does not cancel a Whiff Pro subscription. Cancel it in your App Store or Google Play account settings.",
       ],
     },
     {
@@ -74,7 +79,7 @@ export const PRIVACY_POLICY: LegalDoc = {
 
 export const TERMS_AND_CONDITIONS: LegalDoc = {
   title: "Terms & Conditions",
-  lastUpdated: "July 18, 2026",
+  lastUpdated: "October 16, 2026",
   sections: [
     {
       paragraphs: [
@@ -84,7 +89,17 @@ export const TERMS_AND_CONDITIONS: LegalDoc = {
     {
       heading: "The service",
       paragraphs: [
-        "The app lets you track a personal fragrance collection, log the days you wear each fragrance, and browse community features such as the Most Worn leaderboard, which shows anonymous, aggregated wear counts and anonymous aggregate fragrance ratings and voting distributions. The app is provided free of charge.",
+        "The app lets you track a personal fragrance collection, log the days you wear each fragrance, and use community features such as the Most Worn leaderboard, which shows anonymous, aggregated wear counts and anonymous aggregate fragrance ratings and voting distributions, and, if you choose, a public profile. The core app is free; an optional Whiff Pro subscription unlocks extra features.",
+      ],
+    },
+    {
+      heading: "Subscriptions",
+      bullets: [
+        "Whiff Pro is an optional auto-renewing subscription, bought through and billed by the App Store or Google Play. The price and billing period are shown before you buy.",
+        "Your subscription renews automatically unless you cancel it before the renewal date (on the App Store, at least 24 hours before the end of the current period). Manage or cancel it in your App Store or Google Play account settings.",
+        "Deleting your Whiff account does not cancel your subscription.",
+        "Refunds are handled by Apple or Google under their own policies.",
+        "The features included in Pro may change over time.",
       ],
     },
     {
@@ -98,11 +113,13 @@ export const TERMS_AND_CONDITIONS: LegalDoc = {
       paragraphs: [
         "You keep ownership of the content you add to the app — ratings, notes, fragrance votes, and fragrances you enter manually. You grant us the limited license needed to store that content and operate the app's features, including showing anonymous, aggregated wear counts, ratings, and fragrance-voting distributions (and the fragrance names and images they refer to) in community features.",
         "Because the name and image of a fragrance you add manually can appear in community features once you log wears for it, you agree not to enter content that is unlawful, offensive, or infringes someone else's rights. We may remove such content.",
+        "If you turn on a public profile or add a profile photo, you also grant us the license to show them to other users. Only upload photos you have the right to share. Photos are screened automatically, and we may remove any photo or profile content that breaks these terms.",
       ],
     },
     {
       heading: "Acceptable use",
       bullets: [
+        "Don't upload photos or profile content that is explicit, hateful, or infringes someone else's rights.",
         "Don't interfere with or disrupt the app or the servers behind it.",
         "Don't attempt to access other users' data.",
         "Don't scrape, bulk-download, or access the service with automated tools.",

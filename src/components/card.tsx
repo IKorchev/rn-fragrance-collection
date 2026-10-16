@@ -2,7 +2,14 @@ import React, { type ReactNode } from "react"
 import { ListItem } from "@rneui/themed"
 import { Image } from "expo-image"
 import * as Haptics from "expo-haptics"
-import { Text, View, type StyleProp, type ViewStyle } from "react-native"
+import {
+  Text,
+  View,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
@@ -15,11 +22,22 @@ interface RootProps {
   onPress?: () => void
   // Actions revealed behind a left swipe (renders ListItem.Swipeable); omit for a plain row
   swipeActions?: ReactNode
+  // Screen readers can't swipe, so anything in swipeActions must also be
+  // offered here
+  accessibilityActions?: AccessibilityActionInfo[]
+  onAccessibilityAction?: (event: AccessibilityActionEvent) => void
   children: ReactNode
 }
 
-const Root = ({ onPress, swipeActions, children }: RootProps) => {
+const Root = ({
+  onPress,
+  swipeActions,
+  accessibilityActions,
+  onAccessibilityAction,
+  children,
+}: RootProps) => {
   const { theme, cardColors, cardBorderColors } = useTheme()
+  const a11yProps = { accessibilityActions, onAccessibilityAction }
 
   const containerStyle = {
     backgroundColor: getColor(cardColors.background.replace("bg-", "")),
@@ -29,7 +47,8 @@ const Root = ({ onPress, swipeActions, children }: RootProps) => {
     marginVertical: 4,
     marginHorizontal: 12,
     padding: 0,
-    height: 84,
+    // min, not fixed: rows grow with large accessibility text sizes instead of clipping
+    minHeight: 84,
     overflow: "hidden" as const,
     shadowColor: "#000",
     shadowOpacity: theme === "light" ? 0.06 : 0,
@@ -55,14 +74,15 @@ const Root = ({ onPress, swipeActions, children }: RootProps) => {
             {swipeActions}
           </View>
         )}
-        containerStyle={containerStyle}>
+        containerStyle={containerStyle}
+        {...a11yProps}>
         {children}
       </ListItem.Swipeable>
     )
   }
 
   return (
-    <ListItem onPress={onPress} containerStyle={containerStyle}>
+    <ListItem onPress={onPress} containerStyle={containerStyle} {...a11yProps}>
       {children}
     </ListItem>
   )
@@ -80,7 +100,9 @@ const Rank = ({ place }: { place: number }) => {
           : getColor(mutedColors)
 
   return (
-    <View className='w-10 h-full justify-center items-center pl-2'>
+    // self-stretch, not h-full: Root only has a minHeight, and a percentage
+    // height against an unresolved parent height blows the row up on Android
+    <View className='w-10 self-stretch justify-center items-center pl-2'>
       <Text
         className={`text-center font-bold ${place <= 3 ? "text-lg" : "text-base"}`}
         style={{ color: medalColor }}>
@@ -231,13 +253,22 @@ interface ActionButtonProps {
   style?: StyleProp<ViewStyle>
   // Icon-only button — testID is the only way Maestro flows can target it
   testID?: string
+  accessibilityLabel: string
   // Render prop so the tinted icon color stays paired with the variant's background
   children: (iconColor: string) => ReactNode
 }
 
 // Icon-only circular action — now just the swipe-reveal delete; the everyday
 // wear/add actions are labeled ActionPills instead.
-const ActionButton = ({ variant, onPress, className, style, testID, children }: ActionButtonProps) => {
+const ActionButton = ({
+  variant,
+  onPress,
+  className,
+  style,
+  testID,
+  accessibilityLabel,
+  children,
+}: ActionButtonProps) => {
   const { buttons } = useTheme()
   const bgByVariant: Record<ActionVariant, string> = { delete: buttons.deleteBg }
   const iconByVariant: Record<ActionVariant, string> = { delete: buttons.deleteIcon }
@@ -248,6 +279,7 @@ const ActionButton = ({ variant, onPress, className, style, testID, children }: 
       className={className}
       style={style}
       testID={testID}
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}>
       {children(getColor(iconByVariant[variant]))}
     </IconButton>
@@ -269,6 +301,8 @@ interface ActionPillProps {
   // For what className can't express (e.g. shadow when floating over an image)
   style?: StyleProp<ViewStyle>
   testID?: string
+  // The visible label alone ("Wear") doesn't say which fragrance it acts on
+  accessibilityLabel?: string
 }
 
 // Labeled action pill — "Wear" / "Add" on list rows and the picker window.
@@ -282,8 +316,10 @@ const ActionPill = ({
   className,
   style,
   testID,
+  accessibilityLabel,
 }: ActionPillProps) => {
   const { pill } = useTheme()
+  const a11yLabel = accessibilityLabel ?? label
 
   const bgClass = worn
     ? appearance === "solid"
@@ -312,7 +348,8 @@ const ActionPill = ({
       disabled={disabled}
       className={`${bgClass} ${sizeClass} flex-row items-center justify-center rounded-full ${disabled ? "opacity-40" : ""} ${className ?? ""}`}
       style={style}
-      testID={testID}>
+      testID={testID}
+      accessibilityLabel={worn ? `${a11yLabel}, already worn today` : a11yLabel}>
       {worn && (
         <MaterialCommunityIcons
           name='check'

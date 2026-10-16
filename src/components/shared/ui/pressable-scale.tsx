@@ -1,5 +1,12 @@
 import React, { type ReactNode } from "react"
-import { Pressable, type StyleProp, type ViewStyle, type Insets } from "react-native"
+import {
+  Pressable,
+  type AccessibilityRole,
+  type AccessibilityState,
+  type StyleProp,
+  type ViewStyle,
+  type Insets,
+} from "react-native"
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,6 +20,10 @@ interface PressableScaleProps {
   className?: string
   style?: StyleProp<ViewStyle>
   testID?: string
+  accessibilityLabel?: string
+  accessibilityHint?: string
+  accessibilityRole?: AccessibilityRole
+  accessibilityState?: AccessibilityState
   children: ReactNode
 }
 
@@ -30,6 +41,10 @@ const PressableScale = ({
   className,
   style,
   testID,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityRole = "button",
+  accessibilityState,
   children,
 }: PressableScaleProps) => {
   const scale = useSharedValue(1)
@@ -50,7 +65,11 @@ const PressableScale = ({
       }}
       className={className}
       style={[animatedStyle, style]}
-      testID={testID}>
+      testID={testID}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: !!disabled, ...accessibilityState }}>
       {children}
     </AnimatedPressable>
   )

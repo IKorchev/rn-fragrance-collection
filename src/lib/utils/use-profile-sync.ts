@@ -3,8 +3,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import useAuth, { type AppUser } from "@/contexts/auth-context"
 import { supabase } from "@/lib/supabase"
 import { reportError } from "@/lib/sentry"
-import { useMyProfile, useWearHistory } from "@/lib/queries"
+import { useMyProfile } from "@/lib/queries"
 import type { GamificationState } from "@/lib/gamification"
+import { useGamificationReady } from "@/lib/utils/use-gamification"
 
 // The user_profiles snapshot payload — one shape shared by the background
 // sync below and the Profile screen's public toggle (which writes it eagerly
@@ -38,19 +39,18 @@ export const buildProfileSnapshot = (
 // row exists AND is_public: private users write nothing, and the row itself
 // is created by the Profile screen's toggle, not here.
 export const useProfileSync = (state: GamificationState) => {
-  const { user, userCollection, collectionPending } = useAuth()
+  const { user, userCollection } = useAuth()
   const queryClient = useQueryClient()
   const { data: profile } = useMyProfile(user?.id)
-  const { data: events } = useWearHistory(user?.id)
+  const ready = useGamificationReady()
 
   const snapshot = user ? buildProfileSnapshot(user, state, userCollection) : null
   const snapshotKey = JSON.stringify(snapshot)
 
   useEffect(() => {
-    // The loading gates matter: while events/collection are still empty the
-    // computed state is all zeros, and syncing that would wipe a real snapshot.
-    if (!user?.id || !snapshot || !profile?.is_public || events === undefined || collectionPending)
-      return
+    // The loading gate matters: until every gamification input has loaded the
+    // computed state is partial, and syncing that would wipe a real snapshot.
+    if (!user?.id || !snapshot || !profile?.is_public || !ready) return
 
     const unchanged =
       profile.display_name === snapshot.display_name &&
@@ -74,7 +74,7 @@ export const useProfileSync = (state: GamificationState) => {
         }
         queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] })
       })
-  }, [user?.id, profile, events === undefined, collectionPending, snapshotKey])
+  }, [user?.id, profile, ready, snapshotKey])
 }
 
 export default useProfileSync

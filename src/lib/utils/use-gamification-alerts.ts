@@ -23,7 +23,9 @@ let notifiedThisSession = false
 // toast per app session — level-up wins if both happened since last seen.
 // Mount this once near the top of the signed-in tree (see (tabs)/_layout.tsx)
 // so it fires regardless of which tab is active.
-export const useGamificationAlerts = (state: GamificationState) => {
+// `ready` is useGamificationReady() — state computed from half-loaded data
+// must not be compared or persisted.
+export const useGamificationAlerts = (state: GamificationState, ready: boolean) => {
   const { user } = useAuth()
   const { showToast } = useToast()
   const { t } = useLocale()
@@ -45,7 +47,7 @@ export const useGamificationAlerts = (state: GamificationState) => {
   }, [userId])
 
   useEffect(() => {
-    if (!userId || prevSnapshot === undefined) return
+    if (!userId || !ready || prevSnapshot === undefined) return
 
     const earnedBadgeIds = state.badges.filter((b) => b.earned).map((b) => b.id)
     const next: Snapshot = { level: state.level, earnedBadgeIds }
@@ -78,7 +80,7 @@ export const useGamificationAlerts = (state: GamificationState) => {
     setPrevSnapshot(next)
     AsyncStorage.setItem(snapshotKey(userId), JSON.stringify(next))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, state.level, state.levelTitle, state.badges, prevSnapshot])
+  }, [userId, state.level, state.levelTitle, state.badges, prevSnapshot, ready])
 }
 
 export default useGamificationAlerts
