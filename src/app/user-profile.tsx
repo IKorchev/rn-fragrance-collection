@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react"
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native"
+import { Alert, ScrollView, Text, View } from "react-native"
 import { Stack, useLocalSearchParams, useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
@@ -24,6 +24,8 @@ import Card from "@/components/card"
 import StatTile from "@/components/shared/ui/stat-tile"
 import EmptyState from "@/components/shared/ui/empty-state"
 import SkeletonList from "@/components/shared/ui/skeleton-list"
+import NativeMenu, { type NativeMenuItem } from "@/components/shared/ui/native-menu"
+import GlassCircle from "@/components/shared/ui/glass-circle"
 
 // Another collector's public profile, pushed from the Collectors leaderboard.
 // Everything shown is either their self-reported snapshot (level/XP/streak/
@@ -40,7 +42,7 @@ const UserProfileScreen = () => {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const { userId } = useLocalSearchParams<{ userId: string }>()
-  const { modalColors, baseTextClass, headerColors } = useTheme()
+  const { theme, modalColors, baseTextClass, headerColors } = useTheme()
   const { t } = useLocale()
   const { user, blockUser, unblockUser } = useAuth()
   const { showToast } = useToast()
@@ -79,20 +81,25 @@ const UserProfileScreen = () => {
     )
   }
 
-  const openActions = () => {
-    Alert.alert(displayName, undefined, [
-      {
-        text: t("userProfile.report"),
-        onPress: () =>
-          router.push({
-            pathname: "/report-profile",
-            params: { userId, name: displayName, avatarUrl: profile?.avatar_url ?? "" },
-          }),
-      },
-      { text: t("userProfile.block"), style: "destructive", onPress: confirmBlock },
-      { text: t("common.cancel"), style: "cancel" },
-    ])
-  }
+  const actionItems: NativeMenuItem[] = [
+    {
+      id: "report",
+      title: t("userProfile.report"),
+      icon: "flag",
+      onPress: () =>
+        router.push({
+          pathname: "/report-profile",
+          params: { userId, name: displayName, avatarUrl: profile?.avatar_url ?? "" },
+        }),
+    },
+    {
+      id: "block",
+      title: t("userProfile.block"),
+      icon: "hand.raised",
+      destructive: true,
+      onPress: confirmBlock,
+    },
+  ]
 
   const handleUnblock = async () => {
     setUnblocking(true)
@@ -111,19 +118,17 @@ const UserProfileScreen = () => {
       options={{
         headerRight: () =>
           !isOwnProfile && profile?.is_public ? (
-            <TouchableOpacity
-              testID='user-profile-actions'
-              onPress={openActions}
-              hitSlop={8}
-              accessibilityRole='button'
-              accessibilityLabel={t("userProfile.moreActions")}
-              className='ml-2'>
-              <MaterialCommunityIcons
-                name='dots-horizontal'
-                size={26}
-                color={getColor(headerColors.font.replace("text-", ""))}
-              />
-            </TouchableOpacity>
+            <NativeMenu title={displayName} items={actionItems} testID='user-profile-actions'>
+              <GlassCircle
+                fallbackBgClassName={theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
+                accessibilityLabel={t("userProfile.moreActions")}>
+                <MaterialCommunityIcons
+                  name='dots-horizontal'
+                  size={24}
+                  color={getColor(headerColors.font.replace("text-", ""))}
+                />
+              </GlassCircle>
+            </NativeMenu>
           ) : null,
       }}
     />
