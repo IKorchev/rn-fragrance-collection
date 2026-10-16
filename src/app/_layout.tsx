@@ -125,12 +125,36 @@ function RootNavigator() {
             options={{
               title: t("screens.userProfile"),
               header: ({ navigation, route, options, back }) => (
+                <Header
+                  title={getHeaderTitle(options, route.name)}
+                  navigation={navigation}
+                  back={back}
+                  right={options.headerRight?.({ canGoBack: !!back })}
+                />
+              ),
+            }}
+          />
+          <Stack.Screen
+            name="blocked-users"
+            options={{
+              title: t("screens.blockedUsers"),
+              header: ({ navigation, route, options, back }) => (
                 <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
               ),
             }}
           />
           <Stack.Screen
             name="moderation"
+            options={{
+              headerShown: false,
+              presentation: "formSheet",
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+              sheetAllowedDetents: [0.65, 1],
+            }}
+          />
+          <Stack.Screen
+            name="report-profile"
             options={{
               headerShown: false,
               presentation: "formSheet",

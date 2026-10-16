@@ -16,6 +16,7 @@ import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
 import {
   PROFILE_HIDDEN_ERROR_CODE,
+  useBlockedUsers,
   useIsModerator,
   useMyProfile,
   useNotificationPermission,
@@ -87,6 +88,7 @@ const ProfileScreen = () => {
   // On only when this device can actually receive the reminder
   const remindersOn = !!notificationPermission?.granted && !!remindersEnabled
   const { data: isModerator } = useIsModerator(user?.id)
+  const { data: blockedUsers } = useBlockedUsers(user?.id)
   const { data: events } = useWearHistory(user?.id)
   const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
   // Once-per-month "your recap is ready" toast — fires at most once per
@@ -511,6 +513,20 @@ const ProfileScreen = () => {
           label={t("profile.exportData")}
           onPress={() => router.push("/export-data")}
         />
+        {(blockedUsers?.length ?? 0) > 0 && (
+          <Row
+            icon='account-cancel-outline'
+            label={t("profile.blockedUsersRow")}
+            testID='profile-blocked-users-row'
+            onPress={() => router.push("/blocked-users")}
+            trailing={
+              <View className='flex-row items-center' style={{ gap: 4 }}>
+                <Text className={`${mutedTextClass} text-base`}>{blockedUsers!.length}</Text>
+                <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
+              </View>
+            }
+          />
+        )}
         {isModerator && (
           <Row
             icon='shield-check-outline'

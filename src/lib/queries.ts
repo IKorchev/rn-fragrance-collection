@@ -3,6 +3,7 @@ import { supabase } from "./supabase"
 import type { Database, Tables } from "./database.types"
 import { reportError } from "./sentry"
 import { getNotificationPermission } from "./notifications"
+import { readBlockedUserLabels, type BlockedUserLabel } from "./blocked-user-labels"
 
 // The catalog is name/brand/image only — all other scraped Parfumo metadata
 // (ratings, votes, year, gender, notes, …) was dropped as untrustworthy
@@ -75,6 +76,31 @@ export type ReportReason = (typeof REPORT_REASONS)[number]["key"]
 
 export const reportReasonLabel = (reason: string) =>
   REPORT_REASONS.find((r) => r.key === reason)?.label ?? reason
+
+export type PendingProfileReport =
+  Database["public"]["Functions"]["list_profile_reports"]["Returns"][number]
+
+// Public-profile report reasons (src/app/report-profile.tsx). Kept in sync
+// with the profile_reports_reason_valid CHECK constraint in db/schema.sql.
+// labelKey is an i18n key (src/lib/i18n/locales/en.ts).
+export const PROFILE_REPORT_REASONS = [
+  { key: "offensive_name", labelKey: "reportProfile.reasons.offensiveName" },
+  { key: "offensive_photo", labelKey: "reportProfile.reasons.offensivePhoto" },
+  { key: "harassment_or_spam", labelKey: "reportProfile.reasons.harassmentOrSpam" },
+  { key: "other", labelKey: "reportProfile.reasons.other" },
+] as const
+
+export type ProfileReportReason = (typeof PROFILE_REPORT_REASONS)[number]["key"]
+
+export const profileReportReasonLabelKey = (reason: string) =>
+  PROFILE_REPORT_REASONS.find((r) => r.key === reason)?.labelKey
+
+// submit_profile_report's 20-pending cap (RAISE EXCEPTION text, no SQLSTATE)
+export const isTooManyReportsError = (error: unknown) =>
+  typeof (error as { message?: unknown })?.message === "string" &&
+  (error as { message: string }).message.includes("too many pending reports")
+
+export type BlockedUser = { blockedId: string; createdAt: string } & BlockedUserLabel
 
 
 
@@ -361,6 +387,45 @@ export const usePendingFragranceReports = (enabled: boolean) =>
       const { data, error } = await supabase.rpc("list_fragrance_reports")
       if (error) throw error
       return data ?? []
+    },
+  })
+
+// Pending public-profile reports (moderation screen's Profiles tab) — same
+// moderator-gated RPC read as usePendingFragranceReports.
+export const usePendingProfileReports = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["pending-profile-reports"],
+    enabled,
+    queryFn: async (): Promise<PendingProfileReport[]> => {
+      const { data, error } = await supabase.rpc("list_profile_reports")
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// The signed-in user's blocks, newest first, merged with the device-local
+// name snapshot from src/lib/blocked-user-labels.ts (RLS hides a blocked
+// user's profile row from the blocker, so it can't be joined server-side).
+export const useBlockedUsers = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["blocked-users", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<BlockedUser[]> => {
+      const [{ data, error }, labels] = await Promise.all([
+        supabase
+          .from("user_blocks")
+          .select("blocked_id, created_at")
+          .eq("blocker_id", userId!)
+          .order("created_at", { ascending: false }),
+        readBlockedUserLabels(),
+      ])
+      if (error) throw error
+      return (data ?? []).map((row) => ({
+        blockedId: row.blocked_id,
+        createdAt: row.created_at,
+        displayName: labels[row.blocked_id]?.displayName ?? null,
+        avatarUrl: labels[row.blocked_id]?.avatarUrl ?? null,
+      }))
     },
   })
 
