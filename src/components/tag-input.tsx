@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity, View } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { addTag, removeTag, MAX_TAGS_PER_FRAGRANCE, MAX_TAG_LENGTH } from "@/lib/utils/tags"
 
 interface TagInputProps {
@@ -18,6 +19,7 @@ const sameTags = (left: string[], right: string[]) =>
 // (lowercase/trim/dedupe/cap) mirrors the DB's valid_tag_array check.
 const TagInput = ({ tags, onChange }: TagInputProps) => {
   const { theme, mutedTextClass, accentColors, accentTintBg, mutedColors } = useTheme()
+  const { t } = useLocale()
   const [draft, setDraft] = useState("")
   const [localTags, setLocalTags] = useState(tags)
   const localTagsRef = useRef(tags)
@@ -101,7 +103,7 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
             <TouchableOpacity
               onPress={() => queueTags(removeTag(localTagsRef.current, tag))}
               hitSlop={8}
-              accessibilityLabel={`Remove tag ${tag}`}
+              accessibilityLabel={t("tags.removeLabel", { tag })}
               className='pl-1.5'>
               <MaterialCommunityIcons name='close' size={14} color={getColor(accentColors)} />
             </TouchableOpacity>
@@ -129,12 +131,12 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
       </View>
       {localTags.length === 0 && (
         <Text className={`${mutedTextClass} text-xs pt-2`}>
-          Tag it — "signature", "winter", "gift" — to filter the picker and your scent diary later.
+          {t("tags.hint")}
         </Text>
       )}
       {atLimit && (
         <Text className={`${mutedTextClass} text-xs pt-2`}>
-          Up to {MAX_TAGS_PER_FRAGRANCE} tags per fragrance.
+          {t("tags.limit", { count: MAX_TAGS_PER_FRAGRANCE })}
         </Text>
       )}
     </View>

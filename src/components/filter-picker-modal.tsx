@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { AntDesign } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import SearchField from "@/components/shared/ui/search-field"
 
 export interface FilterOption {
@@ -40,6 +41,7 @@ const FilterPickerModal = ({
 }: FilterPickerModalProps) => {
   const { modalColors, baseTextClass, mutedTextClass, accentTextClass, accentColors, baseBorderClass } =
     useTheme()
+  const { t } = useLocale()
 
   const handlePick = (value: string) => {
     onToggle(value)
@@ -59,7 +61,7 @@ const FilterPickerModal = ({
         <View className={`${baseBorderClass} flex-row items-center justify-between px-4 pt-4 pb-2`}>
           <Text className={`${baseTextClass} text-lg font-bold`}>{title}</Text>
           <TouchableOpacity onPress={onClose} hitSlop={8}>
-            <Text className={`${accentTextClass} text-base font-semibold`}>Done</Text>
+            <Text className={`${accentTextClass} text-base font-semibold`}>{t("common.done")}</Text>
           </TouchableOpacity>
         </View>
         <View className='px-4 pb-2'>
@@ -79,12 +81,12 @@ const FilterPickerModal = ({
             ListHeaderComponent={
               onClear && selected.length > 0 ? (
                 <TouchableOpacity className='px-5 py-3' onPress={onClear}>
-                  <Text className={`${accentTextClass} font-semibold`}>Clear selection</Text>
+                  <Text className={`${accentTextClass} font-semibold`}>{t("filterPicker.clearSelection")}</Text>
                 </TouchableOpacity>
               ) : null
             }
             ListEmptyComponent={
-              <Text className={`${mutedTextClass} text-center mt-12`}>No matches.</Text>
+              <Text className={`${mutedTextClass} text-center mt-12`}>{t("filterPicker.noMatches")}</Text>
             }
             renderItem={({ item }) => {
               const isSelected = selected.includes(item.value)

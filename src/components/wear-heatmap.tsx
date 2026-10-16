@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { getColor } from "@/lib/utils/colors"
 import type { WearEvent } from "@/lib/queries"
 
@@ -38,6 +39,7 @@ interface WearHeatmapProps {
 // touch, so a tap-to-reveal caption is the mobile equivalent).
 const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
   const { theme, accentColors, baseBorderClass, mutedTextClass } = useTheme()
+  const { t } = useLocale()
   const [selected, setSelected] = useState<{ date: Date; count: number } | null>(null)
 
   const countByDay = useMemo(() => {
@@ -85,7 +87,7 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
   return (
     <View className={`w-full rounded-2xl border ${baseBorderClass} p-4 ${className ?? ""}`}>
       <Text className={`${mutedTextClass} text-xs font-semibold uppercase pb-4`}>
-        Scent activity
+        {t("heatmap.title")}
       </Text>
 
       <View className='items-center'>
@@ -94,7 +96,7 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
           className='flex-row'
           style={{ paddingTop: 13 }}
           accessible
-          accessibilityLabel={`Last ${WEEKS} weeks: ${windowEntries} ${windowEntries === 1 ? "entry" : "entries"} across ${activeDays} ${activeDays === 1 ? "day" : "days"}`}>
+          accessibilityLabel={t("heatmap.summary", { weeks: WEEKS, entries: windowEntries, count: activeDays })}>
           {columns.map((col, w) => {
             const monthLabel =
               w === 0 || col[0].getMonth() !== columns[w - 1][0].getMonth()
@@ -144,7 +146,7 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
         </View>
 
         <View className='flex-row items-center pt-3' style={{ gap: 4 }}>
-          <Text className={`${mutedTextClass} text-xs`}>Less</Text>
+          <Text className={`${mutedTextClass} text-xs`}>{t("heatmap.less")}</Text>
           {LEVEL_OPACITIES.map((opacity, i) => (
             <View
               key={i}
@@ -156,7 +158,7 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
               }}
             />
           ))}
-          <Text className={`${mutedTextClass} text-xs`}>More</Text>
+          <Text className={`${mutedTextClass} text-xs`}>{t("heatmap.more")}</Text>
         </View>
 
         <Text className={`${mutedTextClass} text-xs pt-3`}>

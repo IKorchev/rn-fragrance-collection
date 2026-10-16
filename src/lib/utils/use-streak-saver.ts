@@ -4,14 +4,14 @@ import { useQueryClient } from "@tanstack/react-query"
 import useAuth from "@/contexts/auth-context"
 import useToast from "@/contexts/toast-context"
 import useLocale from "@/contexts/locale-context"
-import { useWearHistory, useStreakSaves } from "@/lib/queries"
+import { useWearSummary, useStreakSaves } from "@/lib/queries"
 import { computeStreak } from "@/lib/gamification"
+import { useWearStats } from "@/lib/utils/use-gamification"
 import { promptProUpsell, isStreakSaverMonthlyLimitError } from "@/lib/entitlements"
 import { toLocalDateString } from "@/lib/utils/worn-today"
 import { supabase } from "@/lib/supabase"
 import { reportError } from "@/lib/sentry"
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
 // Below this, "your streak just broke" isn't much of a loss — not worth an
 // interruption (auto-save RPC call or upsell prompt) for a 1-2 day streak.
 const MIN_STREAK_TO_SAVE = 3
@@ -34,7 +34,8 @@ export const useStreakSaver = () => {
   const { t } = useLocale()
   const queryClient = useQueryClient()
   const userId = user?.id
-  const { data: events } = useWearHistory(userId)
+  const { data: summary } = useWearSummary(userId)
+  const { wornDays } = useWearStats(userId)
   const { data: streakSaves } = useStreakSaves(userId)
   // One attempt per (user, specific missed date) per mount — the RPC/toast
   // itself is idempotent via the `alreadySaved` guard below once the saves
@@ -43,15 +44,19 @@ export const useStreakSaver = () => {
   const attemptedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!userId || !events || !streakSaves) return
+    if (!userId || !summary || !streakSaves) return
 
+    // Calendar-day arithmetic, not now - n*24h: across a DST change that can
+    // land on the wrong local day near midnight
     const now = new Date()
-    const yesterday = new Date(now.getTime() - ONE_DAY_MS)
-    const twoDaysAgo = new Date(now.getTime() - 2 * ONE_DAY_MS)
+    const yesterday = new Date(now)
+    yesterday.setDate(now.getDate() - 1)
+    const twoDaysAgo = new Date(now)
+    twoDaysAgo.setDate(now.getDate() - 2)
     const yesterdayKey = dateKey(yesterday)
     const twoDaysAgoKey = dateKey(twoDaysAgo)
 
-    const wornOn = (key: string) => events.some((e) => new Date(e.worn_at).toDateString() === key)
+    const wornOn = (key: string) => wornDays.has(key)
     const alreadySaved = streakSaves.some(
       (row) => new Date(`${row.saved_date}T00:00:00`).toDateString() === yesterdayKey
     )
@@ -64,7 +69,7 @@ export const useStreakSaver = () => {
 
     // Streak as it stood on the day before yesterday — the count that just
     // got cut short.
-    const priorStreak = computeStreak(events, twoDaysAgo)
+    const priorStreak = computeStreak(wornDays, twoDaysAgo)
     if (priorStreak < MIN_STREAK_TO_SAVE) return
 
     const attemptKey = `${userId}:${yesterdayKey}`
@@ -80,7 +85,7 @@ export const useStreakSaver = () => {
           if (error) throw error
           if (!saved) return // already saved server-side (idempotent) or lost a race
           queryClient.invalidateQueries({ queryKey: ["streak-saves", userId] })
-          const resultingStreak = computeStreak(events, now, {
+          const resultingStreak = computeStreak(wornDays, now, {
             freezeDates: new Set([yesterdayKey]),
           })
           showToast({ message: t("streakSaver.usedToast", { count: resultingStreak }) })
@@ -101,7 +106,7 @@ export const useStreakSaver = () => {
         )
       })
     }
-  }, [userId, isPro, events, streakSaves, queryClient, showToast, t])
+  }, [userId, isPro, summary, wornDays, streakSaves, queryClient, showToast, t])
 }
 
 export default useStreakSaver

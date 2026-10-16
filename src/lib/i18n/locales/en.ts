@@ -8,6 +8,8 @@ const en: Dictionary = {
     done: "Done",
     ok: "OK",
     loading: "Loading…",
+    back: "Back",
+    retry: "Retry",
   },
 
   screens: {
@@ -17,6 +19,333 @@ const en: Dictionary = {
     badges: "Badge Wall",
     userProfile: "Collector",
     blockedUsers: "Blocked users",
+    settings: "Settings",
+    wishlist: "Wishlist",
+  },
+
+  detail: {
+    timesWorn: "Times worn",
+    lastWorn: "Last worn",
+    never: "Never",
+    ratingCount_one: "{{count}} rating",
+    ratingCount_other: "{{count}} ratings",
+    yourRating: "Your rating",
+    ratingValue_one: "{{count}} of 5 stars",
+    ratingValue_other: "{{count}} of 5 stars",
+    notRated: "Not rated",
+    bottle: "Bottle",
+    bottleTypes: {
+      full: "Full bottle",
+      decant: "Decant",
+      sample: "Sample",
+    },
+    runningLow: "Running low",
+    tags: "Tags",
+    notes: "Notes",
+    notesPlaceholder: "Your impressions — occasions, seasons, projection…",
+    savedAutomatically: "Saved automatically",
+    reportListing: "Report an issue with this listing",
+  },
+
+  wishlist: {
+    row: "Wishlist",
+    add: "Add",
+    addLabel: "Add {{name}} to your collection",
+    remove: "Remove",
+    removeLabel: "Remove {{name}} from your wishlist",
+    errorTitle: "Couldn't load your wishlist",
+    emptyTitle: "Nothing on your wishlist",
+    emptyMessage: "Open any fragrance and tap Want to try to save it here.",
+    wantToTry: "Want to try",
+    onWishlist: "On your wishlist",
+    addToCollection: "Add to collection",
+    inCollection: "In your collection",
+  },
+
+  diary: {
+    today: "Today",
+    yesterday: "Yesterday",
+    upsellTitle: "Diary filters are a Pro feature",
+    upsellMessage: "Upgrade to Pro to filter your diary by tag/brand and see scent insights.",
+    loadErrorTitle: "Couldn't load your diary",
+    thisWeek: "This week",
+    uniqueScents: "Unique scents",
+    searchPlaceholder: "Search your diary",
+    clearSearch: "Clear search",
+    tagsCount: "Tags ({{count}})",
+    brand: "Brand",
+    brandCount: "Brand ({{count}})",
+    clear: "Clear",
+    insights: "Insights",
+    topBrands: "TOP BRANDS",
+    topTags: "TOP TAGS",
+    proRow: "Filter by tag/brand & see insights — Pro",
+    emptyTitle: "Nothing logged yet",
+    emptyMessage: "Tap Wear next time you wear something — that starts the diary.",
+    noMatchesTitle: "No entries match",
+    noMatchesMessage: "Try changing your search or filters.",
+  },
+
+  search: {
+    placeholder: "Search name or brand",
+    brandFilterActive: "Brand filter: {{brand}}",
+    filterByBrand: "Filter by brand",
+    clearBrandFilter: "Clear brand filter",
+    idleTitle: "Search the catalog",
+    idleMessage: "Type a name or brand, or filter by brand above.",
+    errorTitle: "Search failed",
+    noResultsTitle: "No results found",
+    noResultsMessage: "The catalog doesn't have everything — you can add it yourself.",
+    addManually: "Add manually",
+    cantFindIt: "Can't find it?",
+    recentSearches: "Recent searches",
+  },
+
+  reportFragrance: {
+    title: "Report an issue",
+    subtitle: "Flag a problem with this catalog listing for our moderators.",
+    reasons: {
+      wrongImage: "Wrong or missing photo",
+      duplicate: "Duplicate entry",
+      incorrectNameOrBrand: "Incorrect name or brand",
+      other: "Something else",
+    },
+    detailsPlaceholder: "Anything that helps us fix it…",
+    submit: "Submit report",
+    sending: "Sending…",
+    thanks: "Thanks — we'll take a look.",
+    failedTitle: "Couldn't send your report",
+    failedMessage: "Something went wrong, please try again.",
+  },
+
+  pickerFilters: {
+    title: "Filter picker",
+    clearAll: "Clear all filters",
+    unwornOnly: "Only fragrances I haven't worn yet",
+    tagsAnyOf: "Tags (any of)",
+    apply: "Apply",
+  },
+
+  actions: {
+    wear: "Wear",
+    wearLabel: "Wear {{name}}",
+    add: "Add",
+    addLabel: "Add {{name}}",
+    deleteLabel: "Delete {{name}}",
+    deleted: "{{name}} deleted",
+    undo: "Undo",
+  },
+
+  picker: {
+    empty: "No fragrances yet",
+    noMatches: "No fragrances match your picker filters",
+    clearFilters: "Clear filters",
+    spinLabel: "Spin the picker",
+    spinHint: "Picks a fragrance from your collection",
+  },
+
+  manualAdd: {
+    intro: "Can't find it in the catalog? Add it to your collection by hand.",
+    brandPlaceholder: "e.g. Dior",
+    titlePlaceholder: "e.g. Sauvage Elixir",
+    didYouMean: "Did you mean one of these?",
+    adding: "Adding…",
+  },
+
+  onboarding: {
+    title: "Getting started",
+    skip: "Skip",
+    skipLabel: "Skip getting started guide",
+    stepDone: "{{label}}, done",
+    addLabel: "Add your first fragrance",
+    addDescription: "Search the catalog, or add one by hand if we're missing it.",
+    wearLabel: "Log your first wear",
+    wearDescription: "Tap Wear next time you spritz something on.",
+    pickerLabel: "Try the picker",
+    pickerDescription: "Can't decide? Let the picker do the sniffing for you.",
+  },
+
+  tags: {
+    removeLabel: "Remove tag {{tag}}",
+    hint: "Tag it — \"signature\", \"winter\", \"gift\" — to filter the picker and your scent diary later.",
+    limit: "Up to {{count}} tags per fragrance.",
+  },
+
+  heatmap: {
+    title: "Scent activity",
+    summary_one: "Last {{weeks}} weeks: {{entries}} entries across {{count}} day",
+    summary_other: "Last {{weeks}} weeks: {{entries}} entries across {{count}} days",
+    less: "Less",
+    more: "More",
+  },
+
+  filterPicker: {
+    clearSelection: "Clear selection",
+    noMatches: "No matches.",
+  },
+
+  voting: {
+    title: "Community profile",
+    subtitle: "Share how it wears on you",
+    loading: "Loading community votes…",
+    unavailable: "Community votes are unavailable right now.",
+    basedOn_one: "Based on {{count}} vote",
+    basedOn_other: "Based on {{count}} votes",
+    noVotes: "No votes yet — how does it wear on you?",
+    vote: "Vote",
+    edit: "Edit your vote",
+    save: "Save vote",
+    update: "Update vote",
+    saving: "Saving…",
+    remove: "Remove my vote",
+    saved: "Vote saved",
+    removed: "Vote removed",
+    saveFailed: "Could not save your vote. Try again.",
+    errorSeasons: "Choose 1–2 seasons.",
+    errorGender: "Choose a gender impression.",
+    errorSillage: "Choose a sillage level.",
+    errorLongevity: "Choose a longevity level.",
+    season: "Season",
+    seasonsTitle: "Seasons",
+    pickOneOrTwo: "(pick 1–2)",
+    gender: "Gender",
+    sillageTitle: "Sillage",
+    longevityTitle: "Longevity",
+    seasons: {
+      spring: "Spring",
+      summer: "Summer",
+      autumn: "Autumn",
+      winter: "Winter",
+    },
+    genders: {
+      female: "Feminine",
+      unisex: "Unisex",
+      male: "Masculine",
+    },
+    sillage: {
+      "1": "Very intimate",
+      "2": "Intimate",
+      "3": "Moderate",
+      "4": "Strong",
+      "5": "Enormous",
+    },
+    longevity: {
+      "1": "Very weak",
+      "2": "Weak",
+      "3": "Moderate",
+      "4": "Long lasting",
+      "5": "Eternal",
+    },
+  },
+
+  export: {
+    title: "Export your data",
+    description:
+      "Exports your collection (brand, name, times worn, last worn, bottle, your rating and notes), your scent diary (most recent 2,000 entries), your wishlist, and your private fragrance votes as a file you control. Nothing is uploaded — you choose where it goes from the share sheet. Only your own data is included.",
+    format: "Format",
+    csv: "CSV (spreadsheet)",
+    offlineTitle: "You're offline",
+    offlineMessage: "Connect to the internet to prepare your data — this will retry automatically.",
+    preparing: "Preparing your data…",
+    preparingShort: "Preparing…",
+    loadError: "Couldn't load your data",
+    collectionCount_one: "{{count}} fragrance in your collection",
+    collectionCount_other: "{{count}} fragrances in your collection",
+    entriesCount_one: "{{count}} entry logged",
+    entriesCount_other: "{{count}} entries logged",
+    votesCount_one: "{{count}} vote submitted",
+    votesCount_other: "{{count}} votes submitted",
+    wishlistCount_one: "{{count}} fragrance on your wishlist",
+    wishlistCount_other: "{{count}} fragrances on your wishlist",
+    empty: "Nothing to export yet — this will produce an empty file.",
+    action: "Export",
+    dialogTitle: "Export your fragrance data",
+    sharingUnavailableTitle: "Sharing isn't available",
+    sharingUnavailableMessage: "This device can't open the share sheet right now, so the export can't be saved.",
+    failedTitle: "Export failed",
+    failedMessage: "Something went wrong, please try again.",
+  },
+
+  signIn: {
+    tagline: "Your nose knows. Build your collection, log every spritz, and let the picker decide what today smells like.",
+    google: "Continue with Google",
+    agreePrefix: "By continuing you agree to our",
+    and: "and",
+    footer: "Track · Discover · Wear",
+  },
+
+  startup: {
+    title: "Taking longer than usual to start",
+  },
+
+  upsell: {
+    notNow: "Not now",
+    upgrade: "Upgrade",
+  },
+
+  auth: {
+    signInFailed: "Sign in failed",
+    tryAgain: "Something went wrong, please try again.",
+    tryAgainLater: "Something went wrong, please try again later.",
+    nameTooShort: "The name must be 3 or more characters",
+    alreadyInCollection: "You already have {{name}} in your collection",
+    added: "{{name}} added to your collection",
+    proSyncing: "Your Pro access is syncing. Please try adding it again in a moment.",
+    limitTitle: "Collection limit reached",
+    limitMessage: "Free accounts can track up to {{count}} fragrances. Upgrade to Pro for unlimited tracking.",
+    addFailed: "Couldn't add that fragrance, please try again later",
+    reviewFailed: "Review failed",
+    deleteFailed: "Delete failed",
+    updateFailed: "Update failed",
+    oops: "Oops",
+    undoWearFailed: "Couldn't undo that wear.",
+    alreadyWorn: "{{name}} was already worn today",
+    alreadyWornGeneric: "This one was already worn today",
+    wearLogged: "Scent logged for {{name}}",
+    wearLoggedGeneric: "Scent logged for today",
+  },
+
+  quickActions: {
+    pick: "Pick for me",
+  },
+
+  discover: {
+    title: "Discover",
+    tabs: {
+      top: "Top",
+      forYou: "For You",
+      search: "Search",
+    },
+    forYou: {
+      errorTitle: "Couldn't load recommendations",
+      errorMessage: "Check your connection and try again.",
+      emptyTitle: "No recommendations yet",
+      emptyMessage: "Add a few fragrances to your collection, or check back as the community logs more scents.",
+      emptyAction: "Search the catalog",
+    },
+  },
+
+  collection: {
+    title: "Collection",
+    searchPlaceholder: "Search your collection",
+    count_one: "{{count}} fragrance",
+    count_other: "{{count}} fragrances",
+    sortTitle: "Sort by",
+    sort: {
+      leastWorn: "Least worn",
+      mostWorn: "Most worn",
+      name: "A–Z",
+      recent: "Recent",
+    },
+    loadErrorTitle: "Couldn't load your collection",
+    loadErrorMessage: "Check your connection and try again.",
+    tryAgain: "Try again",
+    noMatchesTitle: "No matches",
+    noMatchesMessage: "Nothing in your collection matches that search.",
+    emptyTitle: "Your collection is empty",
+    emptyMessage: "Search the catalog (or add one by hand) and give your shelf something to say.",
+    emptyAction: "Find fragrances",
+    openPicker: "Open the picker",
   },
 
   profile: {
@@ -75,7 +404,6 @@ const en: Dictionary = {
       permissionMessage:
         "Allow camera or photo access for Whiff in your device settings to add a collection photo.",
     },
-    shareRecap: "Share my recap",
     shareToday: "Share today's scent",
     signOut: "Sign out",
     deleteAccount: "Delete account",
@@ -91,7 +419,7 @@ const en: Dictionary = {
   collectors: {
     segmentFragrances: "Fragrances",
     segmentCollectors: "Collectors",
-    meta: "Level {{level}} · worn {{count}}×",
+    meta: "Worn {{count}}× · {{badges}} badges",
     emptyTitle: "No public collectors yet",
     emptyMessage: "Make your profile public to be the first one here.",
     errorTitle: "Couldn't load collectors",
@@ -174,25 +502,7 @@ const en: Dictionary = {
 
   gamification: {
     header: {
-      levelLabel: "Level {{level}}",
-      xpToNext: "{{current}}/{{target}} XP to next level",
-      maxLevelXp: "{{xp}} XP total · Max level",
-      streakLabel_one: "{{count}}-day streak",
-      streakLabel_other: "{{count}}-day streak",
       badgesEarned: "{{count}}/{{total}} badges",
-    },
-
-    levels: {
-      "1": "Rookie Sniffer",
-      "2": "Scent Scout",
-      "3": "Fragrance Apprentice",
-      "4": "Perfume Enthusiast",
-      "5": "Top-Note Tactician",
-      "6": "Sillage Connoisseur",
-      "7": "Master Blender",
-      "8": "Olfactory Sage",
-      "9": "Scent Virtuoso",
-      "10": "The Nose",
     },
 
     badgeWall: {
@@ -211,7 +521,6 @@ const en: Dictionary = {
     },
 
     toasts: {
-      levelUp: "Level up! You're now {{title}} 🎉",
       badgeUnlocked: "Badge unlocked: {{name}} 🏅",
     },
 
@@ -282,43 +591,6 @@ const en: Dictionary = {
       },
     },
 
-    quests: {
-      cardTitle: "Weekly quests",
-      doneCount: "{{done}}/{{total}} done",
-      toastComplete: "Quest complete: {{title}} +{{xp}} XP 🎉",
-      "days-3": {
-        title: "Three-Peat",
-        description: "Wear a fragrance on 3 different days this week.",
-      },
-      "days-5": {
-        title: "Nearly Every Day",
-        description: "Wear a fragrance on 5 different days this week.",
-      },
-      "scents-3": {
-        title: "Mix It Up",
-        description: "Wear 3 different fragrances this week.",
-      },
-      "brands-2": {
-        title: "Brand Hopper",
-        description: "Wear fragrances from 2 different brands this week.",
-      },
-      "wears-7": {
-        title: "Seven Spritzes",
-        description: "Wear something 7 times this week.",
-      },
-      "dust-off": {
-        title: "Dust Off",
-        description: "Re-wear something you haven't touched in 30+ days.",
-      },
-      "favorite-4": {
-        title: "Crowd Pleaser",
-        description: "Wear something you rated 4 stars or higher.",
-      },
-      "first-wear": {
-        title: "Fresh Debut",
-        description: "Wear a fragrance for the very first time.",
-      },
-    },
   },
 
   streakSaver: {
@@ -326,14 +598,12 @@ const en: Dictionary = {
     upsellTitle: "Your streak just broke",
     upsellMessage:
       "Your {{count}}-day streak just broke — Streak Saver (Pro) auto-fills a missed day so streaks like this survive.",
-    remainingThisMonth: "{{count}}/{{limit}} streak saves left this month",
   },
 
   share: {
     sheetTitleFragrance: "Share this fragrance",
     sheetTitleToday: "Share today's scent",
     sheetTitlePicker: "Share the pick",
-    sheetTitleRecap: "Share your recap",
     sheetTitleMonthlyRecap: "Share your Whiffs recap",
     previewLabel: "Preview",
     action: "Share",
@@ -344,12 +614,6 @@ const en: Dictionary = {
     todayEmptyTitle: "Nothing worn yet today",
     todayEmptyMessage: "Wear something today, then come back to share it.",
     pickerMessage: "The picker just chose {{name}} for me! 🎰",
-    recapIntro: "My Whiff recap 🌸",
-    wearsFragment_one: "Worn once this month",
-    wearsFragment_other: "Worn {{count}} times this month",
-    streakFragment: "{{count}}-day streak",
-    collectionFragment_one: "{{count}} fragrance in my collection",
-    collectionFragment_other: "{{count}} fragrances in my collection",
     timesWornFragment_one: "worn {{count}} time",
     timesWornFragment_other: "worn {{count}} times",
     ratingFragment: "rated {{stars}}/5",
@@ -369,9 +633,6 @@ const en: Dictionary = {
     bestStreakLabel_other: "Best streak: {{count}} days",
     newBadgesTitle: "New badges this month",
     noNewBadges: "No new badges this month — keep the streak alive.",
-    levelSectionTitle: "Where you landed",
-    levelLabel: "Level",
-    xpGainedLabel: "XP gained",
     emptyTitle: "Nothing logged in {{month}}",
     emptyMessage: "Nothing worn that month — wear something to fill next month's recap.",
     promptToast: "Your {{month}} recap is ready",
@@ -383,7 +644,6 @@ const en: Dictionary = {
     shareStreakFragment: "{{count}}-day streak",
     shareBadgesFragment_one: "{{count}} new badge earned",
     shareBadgesFragment_other: "{{count}} new badges earned",
-    shareLevelFragment: "Ended the month as {{title}}",
   },
 }
 

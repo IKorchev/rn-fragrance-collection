@@ -5,7 +5,7 @@ import { useMyRatings } from "@/lib/queries"
 // A bottle's personal rating lives in one of two places: catalog-linked
 // bottles are rated in fragrance_ratings (which also feeds the community
 // average), manual adds in user_fragrances.rating. This resolves `rating` the
-// same way the detail sheet's stars do, so quests and export see what the
+// same way the detail sheet's stars do, so badges and export see what the
 // user actually set.
 export const withMyRatings = (
   collection: UserFragrance[],

@@ -7,18 +7,12 @@ import { getColor } from "@/lib/utils/colors"
 import { reportError } from "@/lib/sentry"
 import { useBlockedUsers, usePublicProfile, useUserTopWorn } from "@/lib/queries"
 import { headerPhotoUrl } from "@/lib/profile-header-photo"
-import {
-  BADGE_DEFINITIONS,
-  levelForXp,
-  type EarnedBadge,
-  type GamificationState,
-} from "@/lib/gamification"
+import { BADGE_DEFINITIONS, type EarnedBadge } from "@/lib/gamification"
 import useTheme from "@/contexts/theme-context"
 import useLocale from "@/contexts/locale-context"
 import useAuth from "@/contexts/auth-context"
 import useToast from "@/contexts/toast-context"
 import ProfileHero from "@/components/profile-hero"
-import GamificationHeader from "@/components/gamification-header"
 import BadgeTile from "@/components/badge-tile"
 import Card from "@/components/card"
 import StatTile from "@/components/shared/ui/stat-tile"
@@ -28,7 +22,7 @@ import NativeMenu, { type NativeMenuItem } from "@/components/shared/ui/native-m
 import GlassCircle from "@/components/shared/ui/glass-circle"
 
 // Another collector's public profile, pushed from the Collectors leaderboard.
-// Everything shown is either their self-reported snapshot (level/XP/streak/
+// Everything shown is either their self-reported snapshot (streak/
 // badges/counts — see user_profiles in db/schema.sql) or real wear_events
 // aggregates via the user_top_worn RPC. Deliberately NOT shown: their
 // collection list, personal notes/ratings, or wear diary — is_public only
@@ -134,25 +128,18 @@ const UserProfileScreen = () => {
     />
   )
 
-  // The snapshot stores raw xp + earned badge ids; level/progress and the
-  // badge objects are re-derived with the same pure gamification core the
-  // owner's device used, so both ends always agree.
-  const state = useMemo<GamificationState | null>(() => {
-    if (!profile) return null
-    const badges: EarnedBadge[] = BADGE_DEFINITIONS.map((def) => {
-      const earned = profile.badge_ids.includes(def.id)
-      return { ...def, earned, progress: earned ? 1 : 0, current: earned ? def.target : 0 }
-    })
-    return {
-      xp: profile.xp,
-      streak: profile.streak,
-      badges,
-      earnedCount: badges.filter((b) => b.earned).length,
-      ...levelForXp(profile.xp),
-    }
-  }, [profile])
-
-  const earnedBadges = state?.badges.filter((b) => b.earned) ?? []
+  // The snapshot stores earned badge ids; the badge objects are re-derived
+  // from the same definitions the owner's device used
+  const earnedBadges = useMemo<EarnedBadge[]>(
+    () =>
+      BADGE_DEFINITIONS.filter((def) => profile?.badge_ids.includes(def.id)).map((def) => ({
+        ...def,
+        earned: true,
+        progress: 1,
+        current: def.target,
+      })),
+    [profile]
+  )
 
   if (isPending) {
     return (
@@ -178,7 +165,7 @@ const UserProfileScreen = () => {
     )
   }
 
-  if (!profile || !profile.is_public || !state) {
+  if (!profile || !profile.is_public) {
     return (
       <View className={`flex-1 ${modalColors.background}`}>
         {headerActions}
@@ -204,8 +191,6 @@ const UserProfileScreen = () => {
         name={displayName}
         className='mt-4'
       />
-
-      <GamificationHeader state={state} className='mt-4' />
 
       <StatTile
         className='mt-4'

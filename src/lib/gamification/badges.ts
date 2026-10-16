@@ -1,4 +1,5 @@
 import { brandOf } from "@/lib/utils/collection-facets"
+import type { WearStats } from "./index"
 
 export type BadgeTier = 1 | 2 | 3
 
@@ -55,56 +56,31 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 ]
 
 interface BadgeContext {
-  events: { worn_at: string; name: string }[]
+  wears: WearStats
   collection: { name: string; times_worn: number; rating: number | null }[]
   streak: number
 }
 
-// Distinct brands actually worn — derived from events (not the collection),
-// so a fragrance added but never worn doesn't count toward "explorer" badges.
-const distinctBrandsWorn = (events: { name: string }[]): number =>
-  new Set(events.map((e) => brandOf(e.name))).size
+// Distinct brands actually worn — derived from wear history (not the
+// collection), so a fragrance added but never worn doesn't count toward
+// "explorer" badges.
+const distinctBrandsWorn = (wearsByName: Map<string, number>): number =>
+  new Set(Array.from(wearsByName.keys(), brandOf)).size
 
 // Largest number of wears logged against any single fragrance name — powers
 // the "Loyalist" special badge.
-const maxSameFragranceWears = (events: { name: string }[]): number => {
-  const counts = new Map<string, number>()
-  for (const e of events) counts.set(e.name, (counts.get(e.name) ?? 0) + 1)
-  let max = 0
-  for (const count of counts.values()) if (count > max) max = count
-  return max
-}
-
-// "Dusted Off": true once any fragrance has been re-worn at least 30 days
-// after its previous wear — a signal the wearer rediscovered something
-// forgotten in the back of the drawer, not just a fast, recent repeat.
-const hasDustedOffMoment = (events: { worn_at: string; name: string }[]): boolean => {
-  const byName = new Map<string, number[]>()
-  for (const e of events) {
-    const list = byName.get(e.name)
-    const ts = new Date(e.worn_at).getTime()
-    if (list) list.push(ts)
-    else byName.set(e.name, [ts])
-  }
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
-  for (const timestamps of byName.values()) {
-    const sorted = [...timestamps].sort((a, b) => a - b)
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i] - sorted[i - 1] >= THIRTY_DAYS_MS) return true
-    }
-  }
-  return false
-}
+const maxSameFragranceWears = (wearsByName: Map<string, number>): number =>
+  Math.max(0, ...wearsByName.values())
 
 // Dispatches each badge id to its current progress count, based on the id
 // prefix convention established in BADGE_DEFINITIONS above.
 const metricFor = (id: string, ctx: BadgeContext): number => {
   if (id.startsWith("streak-")) return ctx.streak
-  if (id.startsWith("wears-")) return ctx.events.length
+  if (id.startsWith("wears-")) return ctx.wears.totalWears
   if (id.startsWith("collection-")) return ctx.collection.length
-  if (id.startsWith("explorer-")) return distinctBrandsWorn(ctx.events)
-  if (id === "special-dusted-off") return hasDustedOffMoment(ctx.events) ? 1 : 0
-  if (id === "special-loyalist") return maxSameFragranceWears(ctx.events)
+  if (id.startsWith("explorer-")) return distinctBrandsWorn(ctx.wears.wearsByName)
+  if (id === "special-dusted-off") return ctx.wears.dustedOff ? 1 : 0
+  if (id === "special-loyalist") return maxSameFragranceWears(ctx.wears.wearsByName)
   return 0
 }
 

@@ -1,8 +1,10 @@
 import React from "react"
 import { FlatList, RefreshControl, View } from "react-native"
+import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { useRecommendations } from "@/lib/queries"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
@@ -12,6 +14,8 @@ import SkeletonList from "@/components/shared/ui/skeleton-list"
 
 const RecommendationsScreen = () => {
   const insets = useSafeAreaInsets()
+  const router = useRouter()
+  const { t } = useLocale()
   const { user, collectionPending } = useAuth()
   const { viewColors, accentColors } = useTheme()
   const { data, isLoading, error, refetch } = useRecommendations(user?.id, !collectionPending)
@@ -24,9 +28,9 @@ const RecommendationsScreen = () => {
       ) : error ? (
         <EmptyState
           icon='cloud-alert'
-          title="Couldn't load recommendations"
-          message='Check your connection and try again.'
-          actionLabel='Try again'
+          title={t("discover.forYou.errorTitle")}
+          message={t("discover.forYou.errorMessage")}
+          actionLabel={t("collection.tryAgain")}
           onAction={() => refetch()}
         />
       ) : (
@@ -46,8 +50,10 @@ const RecommendationsScreen = () => {
           ListEmptyComponent={
             <EmptyState
               icon='compass-outline'
-              title='No recommendations yet'
-              message='Add a few fragrances to your collection, or check back as the community logs more scents.'
+              title={t("discover.forYou.emptyTitle")}
+              message={t("discover.forYou.emptyMessage")}
+              actionLabel={t("discover.forYou.emptyAction")}
+              onAction={() => router.navigate("/(tabs)/(discover)/(top-tabs)/search")}
             />
           }
         />

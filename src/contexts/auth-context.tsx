@@ -50,6 +50,8 @@ import {
   type BlockedUserLabel,
 } from "@/lib/blocked-user-labels"
 import { reportError } from "@/lib/sentry"
+// AuthProvider sits above LocaleContextProvider, so it can't use useLocale()
+import { translateDefault as t } from "@/lib/i18n/translate"
 import type { Tables } from "@/lib/database.types"
 
 WebBrowser.maybeCompleteAuthSession()
@@ -88,13 +90,14 @@ interface AuthContextValue {
   cancelDelete: (id: string) => void
   updateFragrance: (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags">>
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags" | "bottle_type" | "running_low">>
   ) => Promise<boolean>
   // Community rating for a catalog-linked fragrance (fragrance_ratings table,
   // separate from the manual-add-only rating column on updateFragrance above).
   // null clears the caller's rating (tap-to-clear on the detail sheet).
   rateFragrance: (fragranceId: string, rating: number | null) => Promise<void>
-  addFragranceToCollection: (object: FragranceInput) => Promise<void>
+  // Resolves true once the row is inserted (false after a toast/upsell)
+  addFragranceToCollection: (object: FragranceInput) => Promise<boolean>
   // Manual (non-catalog) add: one RPC inserts the collection row and queues
   // the catalog suggestion in the same transaction (fragrance_submissions —
   // pending until a moderator approves; see add_manual_fragrance /
@@ -379,20 +382,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .then(({ error }) => {
           if (error) {
             reportError(error, { flow: "google-sign-in" })
-            Alert.alert("Sign in failed", "Something went wrong, please try again.")
+            Alert.alert(t("auth.signInFailed"), t("auth.tryAgain"))
           }
         })
     }
   }, [response])
 
-  const addFragranceToCollection = async (object: FragranceInput) => {
+  const addFragranceToCollection = async (object: FragranceInput): Promise<boolean> => {
     if (object.name.length < 3) {
-      showToast({ message: "The name must be 3 or more characters" })
-      return
+      showToast({ message: t("auth.nameTooShort") })
+      return false
     }
     if (userCollection.find((el) => el.name === object.name)) {
-      showToast({ message: `You already have ${object.name} in your collection` })
-      return
+      showToast({ message: t("auth.alreadyInCollection", { name: object.name }) })
+      return false
     }
 
     try {
@@ -405,29 +408,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
       await invalidateCollectionAndRecommendations()
-      showToast({ message: `${object.name} added to your collection` })
+      showToast({ message: t("auth.added", { name: object.name }) })
+      return true
     } catch (error) {
       if (isFreeTierLimitError(error)) {
         reportError(error, { flow: "add-to-collection" })
         if (isPro) {
-          showToast({ message: "Your Pro access is syncing. Please try adding it again in a moment." })
-          return
+          showToast({ message: t("auth.proSyncing") })
+          return false
         }
         promptProUpsell(
-          "Collection limit reached",
-          `Free accounts can track up to ${FREE_COLLECTION_LIMIT} fragrances. Upgrade to Pro for unlimited tracking.`
+          t("auth.limitTitle"),
+          t("auth.limitMessage", { count: FREE_COLLECTION_LIMIT })
         )
-        return
+        return false
       }
-      showToast({ message: "Couldn't add that fragrance, please try again later" })
+      showToast({ message: t("auth.addFailed") })
       reportError(error, { flow: "add-to-collection" })
+      return false
     }
   }
 
   const addManualFragrance = async (input: { brand: string; title: string }) => {
     const name = `${input.brand} - ${input.title}`
     if (userCollection.find((el) => el.name === name)) {
-      showToast({ message: `You already have ${name} in your collection` })
+      showToast({ message: t("auth.alreadyInCollection", { name }) })
       return
     }
     try {
@@ -437,21 +442,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
       await invalidateCollectionAndRecommendations()
-      showToast({ message: `${name} added to your collection` })
+      showToast({ message: t("auth.added", { name }) })
     } catch (error) {
       if (isFreeTierLimitError(error)) {
         reportError(error, { flow: "add-manual-fragrance" })
         if (isPro) {
-          showToast({ message: "Your Pro access is syncing. Please try adding it again in a moment." })
+          showToast({ message: t("auth.proSyncing") })
           return
         }
         promptProUpsell(
-          "Collection limit reached",
-          `Free accounts can track up to ${FREE_COLLECTION_LIMIT} fragrances. Upgrade to Pro for unlimited tracking.`
+          t("auth.limitTitle"),
+          t("auth.limitMessage", { count: FREE_COLLECTION_LIMIT })
         )
         return
       }
-      showToast({ message: "Couldn't add that fragrance, please try again later" })
+      showToast({ message: t("auth.addFailed") })
       reportError(error, { flow: "add-manual-fragrance" })
     }
   }
@@ -472,7 +477,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error
       queryClient.invalidateQueries({ queryKey: ["pending-submissions"] })
     } catch (error) {
-      Alert.alert("Review failed", "Something went wrong, please try again later.")
+      Alert.alert(t("auth.reviewFailed"), t("auth.tryAgainLater"))
       reportError(error, { flow: "review-submission" })
     }
   }
@@ -504,7 +509,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error
       queryClient.invalidateQueries({ queryKey: ["pending-reports"] })
     } catch (error) {
-      Alert.alert("Review failed", "Something went wrong, please try again later.")
+      Alert.alert(t("auth.reviewFailed"), t("auth.tryAgainLater"))
       reportError(error, { flow: "review-fragrance-report" })
     }
   }
@@ -568,7 +573,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error
       await invalidateCollectionAndRecommendations()
     } catch (err) {
-      Alert.alert("Delete failed", "Something went wrong, please try again later.")
+      Alert.alert(t("auth.deleteFailed"), t("auth.tryAgainLater"))
       reportError(err, { flow: "delete-fragrance" })
     }
   }
@@ -595,7 +600,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateFragrance = async (
     object: { id: string },
-    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags">>
+    updates: Partial<Pick<UserFragrance, "name" | "image_url" | "rating" | "notes" | "tags" | "bottle_type" | "running_low">>
   ) => {
     try {
       const { error } = await supabase.from("user_fragrances").update(updates).eq("id", object.id)
@@ -604,7 +609,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if ("name" in updates || "rating" in updates) await invalidateRecommendations()
       return true
     } catch (error) {
-      Alert.alert("Update failed", "Something went wrong, please try again later.")
+      Alert.alert(t("auth.updateFailed"), t("auth.tryAgainLater"))
       // Only the error is reported — never `updates` itself, which can carry
       // user-entered notes/rating (see CLAUDE.md on personal per-item content).
       reportError(error, { flow: "update-fragrance" })
@@ -638,7 +643,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ["fragrance-ratings"] })
       queryClient.invalidateQueries({ queryKey: ["recommendations", user?.id] })
     } catch (error) {
-      Alert.alert("Update failed", "Something went wrong, please try again later.")
+      Alert.alert(t("auth.updateFailed"), t("auth.tryAgainLater"))
       reportError(error, { flow: "rate-fragrance" })
     }
   }
@@ -661,7 +666,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error
       if (undone) await invalidateWearQueries()
     } catch (error) {
-      Alert.alert("Oops", "Couldn't undo that wear.")
+      Alert.alert(t("auth.oops"), t("auth.undoWearFailed"))
       reportError(error, { flow: "undo-wear" })
     }
   }
@@ -683,20 +688,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
       if (!counted) {
-        showToast({ message: `${title ?? "This one"} was already worn today` })
+        showToast({ message: title ? t("auth.alreadyWorn", { name: title }) : t("auth.alreadyWornGeneric") })
         return
       }
       await invalidateWearQueries()
       // A mistap would otherwise cost the whole day (one wear per calendar
       // day) and permanently skew stats — always offer a short undo window.
       showToast({
-        message: `Scent logged for ${title ?? "today"}`,
-        actionLabel: "Undo",
+        message: title ? t("auth.wearLogged", { name: title }) : t("auth.wearLoggedGeneric"),
+        actionLabel: t("actions.undo"),
         onAction: () => undoWear(object),
       })
       offerDailyReminderOnce(user!.id, invalidateReminderQueries)
     } catch (error) {
-      Alert.alert("Oops", `Something went wrong!`)
+      Alert.alert(t("auth.oops"), t("auth.tryAgain"))
       reportError(error, { flow: "increment-wear" })
     }
   }
@@ -766,7 +771,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // User dismissed the native sheet — not an error
       if ((error as { code?: string })?.code === "ERR_REQUEST_CANCELED") return
       reportError(error, { flow: "apple-sign-in" })
-      Alert.alert("Sign in failed", "Something went wrong, please try again.")
+      Alert.alert(t("auth.signInFailed"), t("auth.tryAgain"))
     }
   }
 

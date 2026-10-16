@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 
 interface HeaderProps {
   title: string
@@ -19,6 +20,7 @@ interface HeaderProps {
 
 export default function Header({ title, navigation, back, right }: HeaderProps) {
   const { headerColors, cardBorderColors, theme } = useTheme()
+  const { t } = useLocale()
 
   return (
     // Background/border via explicit style, not className — the navigator's
@@ -39,7 +41,7 @@ export default function Header({ title, navigation, back, right }: HeaderProps) 
             onPress={() => navigation?.goBack()}
             hitSlop={8}
             accessibilityRole='button'
-            accessibilityLabel='Back'
+            accessibilityLabel={t("common.back")}
             className='mr-2 -ml-1'>
             <Ionicons
               name='chevron-back'

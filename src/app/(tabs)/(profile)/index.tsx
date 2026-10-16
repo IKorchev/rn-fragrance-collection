@@ -1,30 +1,11 @@
 import React, { useMemo, useState } from "react"
-import {
-  ScrollView,
-  View,
-  Text,
-  TouchableOpacity,
-  Switch,
-  Alert,
-  ActivityIndicator,
-  Linking,
-} from "react-native"
+import { ScrollView, View, Text, Alert, ActivityIndicator } from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
-import {
-  PROFILE_HIDDEN_ERROR_CODE,
-  useBlockedUsers,
-  useIsModerator,
-  useMyProfile,
-  useNotificationPermission,
-  useRemindersEnabled,
-  useWearHistory,
-  type UserProfile,
-} from "@/lib/queries"
-import { enableDailyReminders } from "@/lib/notifications"
+import { useMyProfile, useWearHistory, useWishlist, type UserProfile } from "@/lib/queries"
 import {
   pickHeaderPhoto,
   uploadHeaderPhoto,
@@ -32,13 +13,12 @@ import {
   headerPhotoUrl,
   type HeaderPhotoSource,
 } from "@/lib/profile-header-photo"
-import { buildProfileSnapshot } from "@/lib/utils/use-profile-sync"
 import { useOnboarding } from "@/lib/utils/use-onboarding"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
 import { FREE_COLLECTION_LIMIT } from "@/lib/entitlements"
 import { isWornToday } from "@/lib/utils/worn-today"
-import { buildRecapShareText, buildTodaysScentShareText } from "@/lib/share"
-import useTheme, { type ThemePreference } from "@/contexts/theme-context"
+import { buildTodaysScentShareText } from "@/lib/share"
+import useTheme from "@/contexts/theme-context"
 import useToast from "@/contexts/toast-context"
 import useAuth from "@/contexts/auth-context"
 import useLocale from "@/contexts/locale-context"
@@ -50,53 +30,26 @@ import Badge from "@/components/shared/ui/badge"
 import NativeMenu, { type NativeMenuItem } from "@/components/shared/ui/native-menu"
 import GlassCircle from "@/components/shared/ui/glass-circle"
 import ProfileHero from "@/components/profile-hero"
-import Dialog from "@/components/shared/ui/dialog"
 import Row from "@/components/shared/ui/row"
 import RowGroup from "@/components/shared/ui/row-group"
 import StatTile from "@/components/shared/ui/stat-tile"
-import Button from "@/components/shared/ui/button"
 import ShareSheetModal from "@/components/share-sheet-modal"
 import WearHeatmap from "@/components/wear-heatmap"
-import GamificationHeader from "@/components/gamification-header"
 import BadgeTile from "@/components/badge-tile"
-
-const APPEARANCE_OPTIONS: { key: ThemePreference; labelKey: string }[] = [
-  { key: "system", labelKey: "profile.appearanceSystem" },
-  { key: "light", labelKey: "profile.appearanceLight" },
-  { key: "dark", labelKey: "profile.appearanceDark" },
-]
 
 const ProfileScreen = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const {
-    modalColors,
-    baseTextClass,
-    mutedTextClass,
-    accentTextClass,
-    accentColors,
-    mutedColors,
-    theme,
-    themePreference,
-    setThemePreference,
-  } = useTheme()
-  const { user, logOut, deleteAccount, userCollection, isPro } = useAuth()
+  const { modalColors, baseTextClass, mutedTextClass, mutedColors, theme } = useTheme()
+  const { user, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
   const { t, formatDate } = useLocale()
-  const { data: remindersEnabled } = useRemindersEnabled(user?.id)
-  const { data: notificationPermission } = useNotificationPermission()
-  // On only when this device can actually receive the reminder
-  const remindersOn = !!notificationPermission?.granted && !!remindersEnabled
-  const { data: isModerator } = useIsModerator(user?.id)
-  const { data: blockedUsers } = useBlockedUsers(user?.id)
   const { data: events } = useWearHistory(user?.id)
+  const { data: wishlist } = useWishlist(user?.id)
   const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
   // Once-per-month "your recap is ready" toast — fires at most once per
   // calendar month, see use-monthly-recap-prompt.ts for the AsyncStorage marker.
   useMonthlyRecapPrompt()
-  const [deleting, setDeleting] = useState(false)
-  const [appearancePickerOpen, setAppearancePickerOpen] = useState(false)
-  const [recapShareVisible, setRecapShareVisible] = useState(false)
   const [todayShareVisible, setTodayShareVisible] = useState(false)
   const [headerBusy, setHeaderBusy] = useState(false)
   // Optimistic local render of a just-picked photo — the remote public URL
@@ -112,8 +65,7 @@ const ProfileScreen = () => {
     ? formatDate(new Date(user.created_at), { month: "long", year: "numeric" })
     : null
 
-  // Streak, XP, level, and badges all come from the shared gamification core
-  // (src/lib/gamification) — this used to be computed inline here.
+  // Streak and badges come from the shared gamification core (src/lib/gamification)
   const gamification = useGamification()
   const streak = gamification.streak
   const highlightBadges = useMemo(() => pickHighlightBadges(gamification.badges), [gamification.badges])
@@ -145,10 +97,6 @@ const ProfileScreen = () => {
     )
   }, [userCollection])
 
-  const recapMessage = useMemo(
-    () => buildRecapShareText(t, { monthWears, streak, collectionSize: userCollection.length }),
-    [t, monthWears, streak, userCollection.length]
-  )
   const todayMessage = useMemo(
     () => (todayFragrance ? buildTodaysScentShareText(t, { name: todayFragrance.name }) : ""),
     [t, todayFragrance]
@@ -166,43 +114,14 @@ const ProfileScreen = () => {
     }
   }
 
-  // Upsert so the first-ever write creates the row (is_public defaults false;
-  // PostgREST merge-duplicates only touches the provided columns on conflict)
+  // Upsert so the first-ever write creates the row (PostgREST
+  // merge-duplicates only touches the provided columns on conflict)
   const upsertProfilePatch = async (patch: Partial<UserProfile>) => {
     const { error } = await supabase
       .from("user_profiles")
       .upsert({ user_id: user!.id, ...patch }, { onConflict: "user_id" })
     if (error) throw error
     await queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
-  }
-
-  // Publishing writes the full snapshot eagerly — without it a just-published
-  // profile would sit at level 1 / 0 XP until use-profile-sync's next pass
-  const togglePublicProfile = async (value: boolean) => {
-    const showHiddenAlert = () =>
-      Alert.alert(t("profile.publicHiddenTitle"), t("profile.publicHiddenMessage"))
-    if (value && myProfile?.moderation_hidden_at) {
-      showHiddenAlert()
-      return
-    }
-    queryClient.setQueryData(["my-profile", user?.id], (old: UserProfile | null | undefined) =>
-      old ? { ...old, is_public: value } : old
-    )
-    try {
-      await upsertProfilePatch({
-        is_public: value,
-        ...buildProfileSnapshot(user!, gamification, userCollection),
-      })
-      queryClient.invalidateQueries({ queryKey: ["top-collectors"] })
-    } catch (error) {
-      queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
-      if ((error as { code?: string }).code === PROFILE_HIDDEN_ERROR_CODE) {
-        showHiddenAlert()
-        return
-      }
-      reportError(error, { flow: "public-profile-toggle" })
-      Alert.alert(t("profile.publicUpdateFailedTitle"), t("profile.publicUpdateFailedMessage"))
-    }
   }
 
   const applyHeaderPhoto = async (source: HeaderPhotoSource) => {
@@ -277,61 +196,6 @@ const ProfileScreen = () => {
       : []),
   ]
 
-  const toggleReminders = async (value: boolean) => {
-    if (value) {
-      const result = await enableDailyReminders(user!.id)
-      queryClient.invalidateQueries({ queryKey: ["notification-permission"] })
-      if (result === "blocked") {
-        Alert.alert(t("profile.reminderBlockedTitle"), t("profile.reminderBlockedMessage"), [
-          { text: t("common.cancel"), style: "cancel" },
-          { text: t("profile.openSettings"), onPress: () => Linking.openSettings() },
-        ])
-        return
-      }
-      if (result === "failed") {
-        Alert.alert(t("profile.reminderUpdateFailedTitle"), t("profile.reminderUpdateFailedMessage"))
-        return
-      }
-    }
-    // Optimistic — the switch flips immediately, reverts if the write fails
-    queryClient.setQueryData(["reminder-prefs", user?.id], value)
-    const { error } = await supabase
-      .from("user_push_tokens")
-      .update({ reminders_enabled: value })
-      .eq("user_id", user!.id)
-    if (error) {
-      queryClient.setQueryData(["reminder-prefs", user?.id], !value)
-      Alert.alert(t("profile.reminderUpdateFailedTitle"), t("profile.reminderUpdateFailedMessage"))
-    }
-  }
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      t("profile.deleteConfirmTitle"),
-      t("profile.deleteConfirmMessage"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("profile.deleteConfirmConfirm"),
-          style: "destructive",
-          onPress: async () => {
-            setDeleting(true)
-            try {
-              await deleteAccount()
-              // Auth state flips to signed-out and the Protected stack swaps
-              // to the sign-in screen — nothing left to dismiss here.
-            } catch (error) {
-              reportError(error, { flow: "delete-account" })
-              Alert.alert(t("profile.deleteFailedTitle"), t("profile.deleteFailedMessage"))
-            } finally {
-              setDeleting(false)
-            }
-          },
-        },
-      ]
-    )
-  }
-
   return (
     <ScrollView
       className={`flex-1 ${modalColors.background}`}
@@ -369,9 +233,7 @@ const ProfileScreen = () => {
         }
       />
 
-      <GamificationHeader state={gamification} className='mt-6' />
-
-      <View className='w-full mt-4'>
+      <View className='w-full mt-6'>
         <View className='flex-row' style={{ gap: 10 }}>
           {highlightBadges.map((badge) => (
             <BadgeTile key={badge.id} badge={badge} size='sm' />
@@ -444,16 +306,24 @@ const ProfileScreen = () => {
           onPress={() => router.push("/wear-history")}
         />
         <Row
+          icon='bookmark-outline'
+          label={t("wishlist.row")}
+          testID='profile-wishlist-row'
+          onPress={() => router.push("/wishlist")}
+          trailing={
+            wishlist?.length ? (
+              <View className='flex-row items-center' style={{ gap: 4 }}>
+                <Text className={`${mutedTextClass} text-base`}>{wishlist.length}</Text>
+                <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
+              </View>
+            ) : undefined
+          }
+        />
+        <Row
           icon='calendar-star'
           label={t("recap.entryRow")}
           testID='profile-monthly-recap-row'
           onPress={() => router.push("/monthly-recap")}
-        />
-        <Row
-          icon='chart-timeline-variant'
-          label={t("profile.shareRecap")}
-          testID='profile-share-recap-row'
-          onPress={() => setRecapShareVisible(true)}
         />
         {todayFragrance && (
           <Row
@@ -464,129 +334,6 @@ const ProfileScreen = () => {
           />
         )}
       </RowGroup>
-
-      <RowGroup title={t("profile.sectionPreferences")} className='mt-6'>
-        {/* Theme moved here from the header — appearance is a settings concern */}
-        <Row
-          icon='theme-light-dark'
-          label={t("profile.appearance")}
-          onPress={() => setAppearancePickerOpen(true)}
-          trailing={
-            <View className='flex-row items-center' style={{ gap: 4 }}>
-              <Text className={`${mutedTextClass} text-base`}>
-                {t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey)}
-              </Text>
-              <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
-            </View>
-          }
-        />
-        <Row
-          icon='bell-outline'
-          label={t("profile.dailyReminder")}
-          trailing={
-            <Switch
-              value={remindersOn}
-              onValueChange={toggleReminders}
-              accessibilityLabel={t("profile.dailyReminder")}
-              trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
-            />
-          }
-        />
-        <Row
-          icon='earth'
-          label={t("profile.publicProfile")}
-          testID='profile-public-toggle-row'
-          trailing={
-            <Switch
-              value={myProfile?.is_public ?? false}
-              onValueChange={togglePublicProfile}
-              accessibilityLabel={t("profile.publicProfile")}
-              trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
-            />
-          }
-        />
-      </RowGroup>
-
-      <RowGroup title={t("profile.sectionAccount")} className='mt-6'>
-        <Row
-          icon='export-variant'
-          label={t("profile.exportData")}
-          onPress={() => router.push("/export-data")}
-        />
-        {(blockedUsers?.length ?? 0) > 0 && (
-          <Row
-            icon='account-cancel-outline'
-            label={t("profile.blockedUsersRow")}
-            testID='profile-blocked-users-row'
-            onPress={() => router.push("/blocked-users")}
-            trailing={
-              <View className='flex-row items-center' style={{ gap: 4 }}>
-                <Text className={`${mutedTextClass} text-base`}>{blockedUsers!.length}</Text>
-                <MaterialCommunityIcons name='chevron-right' size={20} color={getColor(mutedColors)} />
-              </View>
-            }
-          />
-        )}
-        {isModerator && (
-          <Row
-            icon='shield-check-outline'
-            label={t("profile.moderationQueue")}
-            onPress={() => router.push("/moderation")}
-          />
-        )}
-        <Row
-          icon='shield-lock-outline'
-          label={t("screens.privacyPolicy")}
-          onPress={() => router.push("/privacy-policy")}
-        />
-        <Row
-          icon='file-document-outline'
-          label={t("screens.terms")}
-          onPress={() => router.push("/terms")}
-        />
-        <Row icon='logout' tone='danger' label={t("profile.signOut")} onPress={logOut} />
-      </RowGroup>
-
-      {/* App Store 5.1.1(v) / Play policy: account deletion must be in-app */}
-      <Button
-        variant='ghost'
-        tone='danger'
-        size='sm'
-        className='mt-6'
-        label={t("profile.deleteAccount")}
-        loading={deleting}
-        loadingLabel={t("profile.deletingAccount")}
-        onPress={handleDeleteAccount}
-      />
-
-      <Dialog
-        visible={appearancePickerOpen}
-        title={t("profile.appearance")}
-        onClose={() => setAppearancePickerOpen(false)}>
-        {APPEARANCE_OPTIONS.map(({ key, labelKey }) => (
-          <TouchableOpacity
-            key={key}
-            className='flex-row items-center justify-between py-3'
-            onPress={() => {
-              setThemePreference(key)
-              setAppearancePickerOpen(false)
-            }}>
-            <Text className={key === themePreference ? `${accentTextClass} font-semibold` : baseTextClass}>
-              {t(labelKey)}
-            </Text>
-            {key === themePreference && (
-              <MaterialCommunityIcons name='check' size={18} color={getColor(accentColors)} />
-            )}
-          </TouchableOpacity>
-        ))}
-      </Dialog>
-
-      <ShareSheetModal
-        visible={recapShareVisible}
-        title={t("share.sheetTitleRecap")}
-        message={recapMessage}
-        onClose={() => setRecapShareVisible(false)}
-      />
 
       {todayFragrance && (
         <ShareSheetModal

@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from "react-native"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import { EmptyState } from "@/components/shared/ui"
+import { translateDefault as t } from "@/lib/i18n/translate"
 
 interface StartupRecoveryProps {
   retrying: boolean
@@ -26,9 +27,9 @@ const StartupRecovery = ({ retrying, onRetry }: StartupRecoveryProps) => {
       ) : (
         <EmptyState
           icon='wifi-off'
-          title='Taking longer than usual to start'
-          message='Check your connection and try again.'
-          actionLabel='Retry'
+          title={t("startup.title")}
+          message={t("collection.loadErrorMessage")}
+          actionLabel={t("common.retry")}
           onAction={onRetry}
         />
       )}

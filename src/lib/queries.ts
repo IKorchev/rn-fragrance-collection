@@ -1,9 +1,16 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { supabase } from "./supabase"
 import type { Database, Tables } from "./database.types"
 import { reportError } from "./sentry"
 import { getNotificationPermission } from "./notifications"
 import { readBlockedUserLabels, type BlockedUserLabel } from "./blocked-user-labels"
+import { deviceTimeZone } from "./utils/worn-today"
 
 // The catalog is name/brand/image only — all other scraped Parfumo metadata
 // (ratings, votes, year, gender, notes, …) was dropped as untrustworthy
@@ -66,16 +73,16 @@ export type PendingFragranceReport =
 // Catalog feedback reasons (src/app/report-fragrance.tsx). Kept in sync with
 // the fragrance_reports_reason_valid CHECK constraint in db/schema.sql.
 export const REPORT_REASONS = [
-  { key: "wrong_image", label: "Wrong or missing photo" },
-  { key: "duplicate", label: "Duplicate entry" },
-  { key: "incorrect_name_or_brand", label: "Incorrect name or brand" },
-  { key: "other", label: "Something else" },
+  { key: "wrong_image", labelKey: "reportFragrance.reasons.wrongImage" },
+  { key: "duplicate", labelKey: "reportFragrance.reasons.duplicate" },
+  { key: "incorrect_name_or_brand", labelKey: "reportFragrance.reasons.incorrectNameOrBrand" },
+  { key: "other", labelKey: "reportFragrance.reasons.other" },
 ] as const
 
 export type ReportReason = (typeof REPORT_REASONS)[number]["key"]
 
-export const reportReasonLabel = (reason: string) =>
-  REPORT_REASONS.find((r) => r.key === reason)?.label ?? reason
+export const reportReasonLabelKey = (reason: string) =>
+  REPORT_REASONS.find((r) => r.key === reason)?.labelKey
 
 export type PendingProfileReport =
   Database["public"]["Functions"]["list_profile_reports"]["Returns"][number]
@@ -217,10 +224,13 @@ export const useRecommendations = (userId: string | undefined, collectionReady: 
     },
   })
 
-// Personal wear diary (name/image are per-event snapshots, so history survives
-// collection-row deletion). RLS already scopes reads to own rows; the explicit
-// user_id filter just keeps the query honest and the cache keyed per user.
-// Newest first — the history screen groups these by calendar day.
+// Most recent raw wear events (name/image are per-event snapshots, so history
+// survives collection-row deletion), capped at 500 — fine for the
+// recent-window readers (heatmap, this-month stat, monthly recap), but never
+// a source of all-time totals: badges/streaks read useWearSummary and the
+// diary pages through useWearDiary. RLS already scopes reads to own rows; the
+// explicit user_id filter just keeps the query honest and the cache keyed per
+// user. Newest first.
 export const useWearHistory = (userId: string | undefined) =>
   useQuery({
     queryKey: ["wear-history", userId],
@@ -235,6 +245,73 @@ export const useWearHistory = (userId: string | undefined) =>
       if (error) throw error
       return data ?? []
     },
+  })
+
+// The generated type calls user_fragrance_id non-null; it's NULL once the
+// collection row is deleted (ON DELETE SET NULL)
+export type WearSummaryRow = Omit<
+  Database["public"]["Functions"]["wear_summary"]["Returns"][number],
+  "user_fragrance_id"
+> & { user_fragrance_id: string | null }
+
+// Uncapped per-scent aggregate of the user's whole wear history (the
+// wear_summary RPC) — feeds badges/streaks (wearStatsFromSummary in
+// src/lib/gamification) and the diary's header stats + filter facets. Keyed
+// under "wear-history" so the existing wear/undo invalidation covers it.
+export const useWearSummary = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["wear-history", "summary", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<WearSummaryRow[]> => {
+      const { data, error } = await supabase.rpc("wear_summary", { p_tz: deviceTimeZone })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+export interface WearDiaryFilters {
+  search: string
+  // null = no filter; [] = filter that matches nothing
+  names: string[] | null
+  userFragranceIds: string[] | null
+}
+
+const WEAR_DIARY_PAGE_SIZE = 50
+
+const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&")
+// PostgREST list literal with every value double-quoted, so names containing
+// commas, parentheses, quotes or backslashes survive (postgrest-js's own
+// .in() only quotes the first three)
+const postgrestList = (values: string[]) =>
+  `(${values.map((v) => `"${v.replace(/["\\]/g, "\\$&")}"`).join(",")})`
+
+// The wear diary, newest first, paged by worn_at keyset (stable while new
+// wears land mid-scroll). Filters run server-side so a filtered diary still
+// reaches every matching entry, not just the loaded pages.
+export const useWearDiary = (userId: string | undefined, filters: WearDiaryFilters) =>
+  useInfiniteQuery({
+    queryKey: ["wear-history", "diary", userId, filters],
+    enabled: !!userId,
+    placeholderData: keepPreviousData, // filter changes don't blank the list/header
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }): Promise<WearEvent[]> => {
+      if (filters.names?.length === 0 || filters.userFragranceIds?.length === 0) return []
+      let query = supabase.from("wear_events").select("*").eq("user_id", userId!)
+      if (pageParam) query = query.lt("worn_at", pageParam)
+      const needle = filters.search.trim()
+      if (needle) query = query.ilike("name", `%${escapeLike(needle)}%`)
+      if (filters.names) query = query.filter("name", "in", postgrestList(filters.names))
+      if (filters.userFragranceIds) {
+        query = query.filter("user_fragrance_id", "in", postgrestList(filters.userFragranceIds))
+      }
+      const { data, error } = await query
+        .order("worn_at", { ascending: false })
+        .limit(WEAR_DIARY_PAGE_SIZE)
+      if (error) throw error
+      return data ?? []
+    },
+    getNextPageParam: (lastPage) =>
+      lastPage.length < WEAR_DIARY_PAGE_SIZE ? undefined : lastPage[lastPage.length - 1].worn_at,
   })
 
 // Community rating average + count for a batch of catalog fragrance ids —
@@ -430,7 +507,7 @@ export const useBlockedUsers = (userId: string | undefined) =>
   })
 
 // Complete wear history for the data-export screen (src/app/export-data.tsx)
-// — no 500-row cap like useWearHistory's diary view, since export should be
+// — no 500-row cap like useWearHistory's recent-window list, since export should be
 // as complete as practical; capped at 2000 as a disclosed ceiling (keeps the
 // shared-as-text payload well under Android's binder transaction limit).
 // A separate query key from useWearHistory's so the diary view's cache
@@ -517,7 +594,7 @@ export const useTopCollectors = () =>
         .from("user_profiles")
         .select("*")
         .eq("is_public", true)
-        .order("xp", { ascending: false })
+        .order("total_wears", { ascending: false })
         .limit(50)
       if (error) throw error
       return data ?? []
@@ -552,3 +629,91 @@ export const useBrands = () =>
       return data ?? []
     },
   })
+
+// "Want to try" list — catalog-only, name/image read through the fragrances
+// embed. Names are composed to the same "Brand - Title" shape as collection rows
+export interface WishlistItem {
+  id: string
+  fragrance_id: string
+  created_at: string
+  name: string
+  image_url: string | null
+}
+
+export const useWishlist = (userId: string | undefined) =>
+  useQuery({
+    queryKey: ["wishlist", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<WishlistItem[]> => {
+      const { data, error } = await supabase
+        .from("wishlist_items")
+        .select("id, fragrance_id, created_at, fragrances(name, brand, image_url)")
+        .eq("user_id", userId!)
+        .order("created_at", { ascending: false })
+      if (error) throw error
+      return (data ?? []).map((row) => ({
+        id: row.id,
+        fragrance_id: row.fragrance_id,
+        created_at: row.created_at,
+        name: row.fragrances ? `${row.fragrances.brand} - ${row.fragrances.name}` : "",
+        image_url: row.fragrances?.image_url ?? null,
+      }))
+    },
+  })
+
+// name/imageUrl only feed the optimistic row
+export interface WishlistToggleInput {
+  fragranceId: string
+  on: boolean
+  name?: string
+  imageUrl?: string | null
+}
+
+// Adds or removes one catalog fragrance; optimistic so the detail sheet's
+// toggle flips instantly, rolled back if the write fails
+export const useWishlistToggle = (userId: string | undefined) => {
+  const queryClient = useQueryClient()
+  const queryKey = ["wishlist", userId]
+  return useMutation({
+    mutationFn: async (input: WishlistToggleInput) => {
+      if (!userId) throw new Error("Signed-in user required")
+      const { error } = input.on
+        ? await supabase
+            .from("wishlist_items")
+            .upsert(
+              { user_id: userId, fragrance_id: input.fragranceId },
+              { onConflict: "user_id,fragrance_id", ignoreDuplicates: true }
+            )
+        : await supabase
+            .from("wishlist_items")
+            .delete()
+            .eq("user_id", userId)
+            .eq("fragrance_id", input.fragranceId)
+      if (error) throw error
+    },
+    onMutate: async (input: WishlistToggleInput) => {
+      await queryClient.cancelQueries({ queryKey })
+      const previous = queryClient.getQueryData<WishlistItem[]>(queryKey)
+      queryClient.setQueryData<WishlistItem[]>(queryKey, (old = []) =>
+        input.on
+          ? [
+              {
+                id: `optimistic-${input.fragranceId}`,
+                fragrance_id: input.fragranceId,
+                created_at: new Date().toISOString(),
+                name: input.name ?? "",
+                image_url: input.imageUrl ?? null,
+              },
+              ...old.filter((item) => item.fragrance_id !== input.fragranceId),
+            ]
+          : old.filter((item) => item.fragrance_id !== input.fragranceId)
+      )
+      return { previous }
+    },
+    onError: (error, _input, context) => {
+      queryClient.setQueryData(queryKey, context?.previous)
+      reportError(error, { flow: "wishlist-toggle" })
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+  })
+}

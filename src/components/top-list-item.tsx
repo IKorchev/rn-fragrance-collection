@@ -1,6 +1,7 @@
 import React from "react"
 import { useRouter } from "expo-router"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 import Card from "./card"
 
 interface TopListItemProps {
@@ -27,6 +28,7 @@ const TopListItem = ({
 }: TopListItemProps) => {
   const router = useRouter()
   const { addFragranceToCollection } = useAuth()
+  const { t } = useLocale()
   const [brand, title] = name.split(" - ")
 
   const handleAddFragrance = () =>
@@ -63,9 +65,9 @@ const TopListItem = ({
         />
       </Card.Content>
       <Card.ActionPill
-        label='Add'
+        label={t("actions.add")}
         className='mr-3'
-        accessibilityLabel={`Add ${title ?? name}`}
+        accessibilityLabel={t("actions.addLabel", { name: title ?? name })}
         onPress={handleAddFragrance}
       />
     </Card.Root>

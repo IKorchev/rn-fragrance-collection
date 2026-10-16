@@ -2,6 +2,7 @@ import React from "react"
 import { Text } from "react-native"
 import { useRouter } from "expo-router"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 import useTheme from "@/contexts/theme-context"
 import type { FragranceRecommendation } from "@/lib/queries"
 import Card from "./card"
@@ -9,6 +10,7 @@ import Card from "./card"
 const RecommendationListItem = ({ item }: { item: FragranceRecommendation }) => {
   const router = useRouter()
   const { addFragranceToCollection } = useAuth()
+  const { t } = useLocale()
   const { accentTextClass } = useTheme()
   const name = `${item.brand} - ${item.title}`
 
@@ -40,9 +42,9 @@ const RecommendationListItem = ({ item }: { item: FragranceRecommendation }) => 
         </Text>
       </Card.Content>
       <Card.ActionPill
-        label='Add'
+        label={t("actions.add")}
         className='mr-3'
-        accessibilityLabel={`Add ${item.title}`}
+        accessibilityLabel={t("actions.addLabel", { name: item.title })}
         onPress={add}
       />
     </Card.Root>

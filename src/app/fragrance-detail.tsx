@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   StyleSheet,
+  Switch,
   type AccessibilityActionEvent,
 } from "react-native"
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg"
@@ -16,11 +17,13 @@ import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import useLocale from "@/contexts/locale-context"
-import { useFragranceRatings, useMyRating } from "@/lib/queries"
+import { useFragranceRatings, useMyRating, useWishlist, useWishlistToggle } from "@/lib/queries"
 import { formatRelativeDay } from "@/lib/utils/relative-time"
 import { buildFragranceShareText } from "@/lib/share"
 import Card from "@/components/card"
+import Button from "@/components/shared/ui/button"
 import PressableScale from "@/components/shared/ui/pressable-scale"
+import SegmentedControl from "@/components/shared/ui/segmented-control"
 import StatTile from "@/components/shared/ui/stat-tile"
 import TextField from "@/components/shared/ui/text-field"
 import TagInput from "@/components/tag-input"
@@ -58,6 +61,9 @@ const HeroGlow = () => {
 // fetch. Collection rows additionally pass their `id`, which resolves the live
 // row from the collection query — that unlocks the editable personal
 // rating/notes below and keeps wear stats fresh after a wear.
+const BOTTLE_TYPES = ["full", "decant", "sample"] as const
+type BottleType = (typeof BOTTLE_TYPES)[number]
+
 const FragranceDetailScreen = () => {
   const router = useRouter()
   const params = useLocalSearchParams<{
@@ -68,8 +74,8 @@ const FragranceDetailScreen = () => {
     lastWorn?: string
     fragranceId?: string
   }>()
-  const { modalColors, mutedColors, baseBorderClass, baseTextClass, mutedTextClass } = useTheme()
-  const { user, userCollection, updateFragrance, rateFragrance } = useAuth()
+  const { modalColors, mutedColors, baseBorderClass, baseTextClass, mutedTextClass, theme } = useTheme()
+  const { user, userCollection, updateFragrance, rateFragrance, addFragranceToCollection } = useAuth()
   const { t } = useLocale()
 
   const collectionItem = params.id
@@ -98,6 +104,47 @@ const FragranceDetailScreen = () => {
   const currentRating = isManual ? (collectionItem?.rating ?? null) : (myRating ?? null)
 
   const [notes, setNotes] = useState(collectionItem?.notes ?? "")
+  // Local mirrors so the bottle controls respond before the collection refetch lands
+  const [bottleType, setBottleType] = useState<BottleType | null>(
+    (collectionItem?.bottle_type as BottleType | null | undefined) ?? null
+  )
+  const [runningLow, setRunningLow] = useState(collectionItem?.running_low ?? false)
+
+  // Catalog fragrance opened from search/leaderboard/wishlist (no collection row)
+  const ownedCatalogRow = fragranceId
+    ? userCollection.some((el) => el.fragrance_id === fragranceId)
+    : false
+  const { data: wishlist } = useWishlist(user?.id)
+  const wishlistToggle = useWishlistToggle(user?.id)
+  const onWishlist = !!fragranceId && !!wishlist?.some((item) => item.fragrance_id === fragranceId)
+  const [adding, setAdding] = useState(false)
+
+  const addToCollection = async () => {
+    if (!fragranceId) return
+    setAdding(true)
+    const added = await addFragranceToCollection({ name, image_url: imageUrl ?? null, fragrance_id: fragranceId })
+    setAdding(false)
+    if (added && onWishlist) wishlistToggle.mutate({ fragranceId, on: false })
+  }
+
+  const toggleWishlist = () => {
+    if (!fragranceId) return
+    wishlistToggle.mutate({ fragranceId, on: !onWishlist, name, imageUrl: imageUrl ?? null })
+  }
+
+  // Tapping the selected type again clears it
+  const changeBottleType = (type: BottleType) => {
+    if (!collectionItem) return
+    const next = bottleType === type ? null : type
+    setBottleType(next)
+    updateFragrance({ id: collectionItem.id }, { bottle_type: next })
+  }
+
+  const changeRunningLow = (value: boolean) => {
+    if (!collectionItem) return
+    setRunningLow(value)
+    updateFragrance({ id: collectionItem.id }, { running_low: value })
+  }
 
   // Share sheet: privacy-safe by default (name only) — times-worn/rating are
   // the user's own personal data and only ride along once they flip the
@@ -205,18 +252,18 @@ const FragranceDetailScreen = () => {
           <StatTile
             className='mt-5'
             items={[
-              { value: timesWorn, label: "Times worn" },
+              { value: timesWorn, label: t("detail.timesWorn") },
               {
                 value: lastWorn
                   ? formatRelativeDay(lastWorn).replace(/^./, (c) => c.toUpperCase())
-                  : "Never",
-                label: "Last worn",
+                  : t("detail.never"),
+                label: t("detail.lastWorn"),
               },
               ...(community?.avg != null && community.count
                 ? [
                     {
                       value: `★ ${community.avg.toFixed(1)}`,
-                      label: `${community.count} rating${community.count === 1 ? "" : "s"}`,
+                      label: t("detail.ratingCount", { count: community.count }),
                     },
                   ]
                 : []),
@@ -232,18 +279,45 @@ const FragranceDetailScreen = () => {
           />
         )}
 
+        {!collectionItem && fragranceId && (
+          <View className='flex-row pt-5' style={{ gap: 10 }}>
+            <View className='flex-1'>
+              <Button
+                fullWidth
+                label={ownedCatalogRow ? t("wishlist.inCollection") : t("wishlist.addToCollection")}
+                disabled={ownedCatalogRow}
+                loading={adding}
+                onPress={addToCollection}
+                testID='detail-add-button'
+              />
+            </View>
+            {!ownedCatalogRow && (
+              <View className='flex-1'>
+                <Button
+                  fullWidth
+                  variant='secondary'
+                  tone={onWishlist ? "accent" : "base"}
+                  label={onWishlist ? t("wishlist.onWishlist") : t("wishlist.wantToTry")}
+                  onPress={toggleWishlist}
+                  testID='detail-wishlist-button'
+                />
+              </View>
+            )}
+          </View>
+        )}
+
         {collectionItem && (
           <>
             <View
               className='items-center pt-5'
               accessible
               accessibilityRole='adjustable'
-              accessibilityLabel='Your rating'
+              accessibilityLabel={t("detail.yourRating")}
               accessibilityValue={{
                 min: 0,
                 max: 5,
                 now: currentRating ?? 0,
-                text: currentRating ? `${currentRating} of 5 stars` : "Not rated",
+                text: currentRating ? t("detail.ratingValue", { count: currentRating }) : t("detail.notRated"),
               }}
               // "activate" is declared and ignored: otherwise a double-tap is
               // replayed as a touch on the middle star, rating it 3
@@ -274,13 +348,33 @@ const FragranceDetailScreen = () => {
               </View>
             </View>
 
-            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Tags</Text>
+            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.bottle")}</Text>
+            <SegmentedControl
+              options={BOTTLE_TYPES.map((type) => ({
+                value: type,
+                label: t(`detail.bottleTypes.${type}`),
+                testID: `detail-bottle-${type}`,
+              }))}
+              value={bottleType}
+              onChange={changeBottleType}
+            />
+            <View className='flex-row items-center justify-between pt-3'>
+              <Text className={`${baseTextClass} text-sm`}>{t("detail.runningLow")}</Text>
+              <Switch
+                value={runningLow}
+                onValueChange={changeRunningLow}
+                accessibilityLabel={t("detail.runningLow")}
+                trackColor={{ true: getColor(theme === "dark" ? "amber-500" : "amber-600") }}
+              />
+            </View>
+
+            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.tags")}</Text>
             <TagInput
               tags={collectionItem.tags}
               onChange={(tags) => updateFragrance({ id: collectionItem.id }, { tags })}
             />
 
-            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Notes</Text>
+            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.notes")}</Text>
             <TextField
               value={notes}
               onChangeText={setNotes}
@@ -289,10 +383,10 @@ const FragranceDetailScreen = () => {
               multiline
               maxLength={2000}
               minHeightClass='min-h-[96px]'
-              placeholder='Your impressions — occasions, seasons, projection…'
+              placeholder={t("detail.notesPlaceholder")}
             />
             <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
-              Saved automatically
+              {t("detail.savedAutomatically")}
             </Text>
           </>
         )}
@@ -306,7 +400,7 @@ const FragranceDetailScreen = () => {
             className='flex-row items-center justify-center pt-8'
             hitSlop={8}
             accessibilityRole='button'
-            accessibilityLabel='Report an issue with this listing'
+            accessibilityLabel={t("detail.reportListing")}
             onPress={() =>
               router.push({
                 pathname: "/report-fragrance",
@@ -318,7 +412,7 @@ const FragranceDetailScreen = () => {
               })
             }>
             <MaterialCommunityIcons name='flag-outline' size={15} color={getColor(mutedColors)} />
-            <Text className={`${mutedTextClass} text-xs pl-1.5`}>Report an issue with this listing</Text>
+            <Text className={`${mutedTextClass} text-xs pl-1.5`}>{t("detail.reportListing")}</Text>
           </TouchableOpacity>
         )}
       </ScrollView>

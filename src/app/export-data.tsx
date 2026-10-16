@@ -7,9 +7,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
 import { supabase } from "@/lib/supabase"
-import { useMyRatings, useWearHistoryExport, type WearEvent } from "@/lib/queries"
+import { useMyRatings, useWearHistoryExport, useWishlist, type WearEvent, type WishlistItem } from "@/lib/queries"
 import { withMyRatings } from "@/lib/utils/use-rated-collection"
 import type { Tables } from "@/lib/database.types"
 import type { UserFragrance } from "@/contexts/auth-context"
@@ -68,22 +69,55 @@ const csvSection = (title: string, header: string[], rows: (string | number | nu
 // NOTE: deliberately omits bottle_price / bottle_size_ml — this app doesn't
 // surface bottle cost or value anywhere, and export shouldn't be the one
 // place that does.
-const buildCsv = (collection: UserFragrance[], wearEvents: WearEvent[], votes: VoteExportRow[]) => {
+const buildCsv = (
+  collection: UserFragrance[],
+  wearEvents: WearEvent[],
+  votes: VoteExportRow[],
+  wishlist: WishlistItem[]
+) => {
   const collectionRows = collection.map((f) => {
     const brand = f.name.split(" - ")[0]
     const title = f.name.split(" - ").slice(1).join(" - ")
-    return [brand, title, f.times_worn, f.last_worn, f.rating, f.notes, f.created_at, f.fragrance_id ? "Yes" : "No"]
+    return [
+      brand,
+      title,
+      f.times_worn,
+      f.last_worn,
+      f.rating,
+      f.notes,
+      f.bottle_type,
+      f.running_low ? "Yes" : "No",
+      f.created_at,
+      f.fragrance_id ? "Yes" : "No",
+    ]
   })
   const wearRows = wearEvents.map((e) => [e.name, e.worn_at])
 
   return (
     csvSection(
       "My Collection",
-      ["Brand", "Title", "Times Worn", "Last Worn", "My Rating", "My Notes", "Added On", "Catalog Linked"],
+      [
+        "Brand",
+        "Title",
+        "Times Worn",
+        "Last Worn",
+        "My Rating",
+        "My Notes",
+        "Bottle",
+        "Running Low",
+        "Added On",
+        "Catalog Linked",
+      ],
       collectionRows
     ) +
     "\n\n" +
     csvSection("Scent Diary", ["Fragrance", "Worn At"], wearRows) +
+    "\n\n" +
+    csvSection(
+      "Wishlist",
+      ["Fragrance", "Added On"],
+      wishlist.map((item) => [item.name, item.created_at])
+    ) +
     "\n\n" +
     csvSection(
       "My Fragrance Votes",
@@ -100,7 +134,12 @@ const buildCsv = (collection: UserFragrance[], wearEvents: WearEvent[], votes: V
   )
 }
 
-const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[], votes: VoteExportRow[]) =>
+const buildJson = (
+  collection: UserFragrance[],
+  wearEvents: WearEvent[],
+  votes: VoteExportRow[],
+  wishlist: WishlistItem[]
+) =>
   JSON.stringify(
     {
       exported_at: new Date().toISOString(),
@@ -111,10 +150,13 @@ const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[], votes: 
         last_worn: f.last_worn,
         my_rating: f.rating,
         my_notes: f.notes,
+        bottle: f.bottle_type,
+        running_low: f.running_low,
         added_on: f.created_at,
         catalog_linked: !!f.fragrance_id,
       })),
       wear_history: wearEvents.map((e) => ({ fragrance: e.name, worn_at: e.worn_at })),
+      wishlist: wishlist.map((item) => ({ fragrance: item.name, added_on: item.created_at })),
       votes,
     },
     null,
@@ -132,6 +174,7 @@ const buildJson = (collection: UserFragrance[], wearEvents: WearEvent[], votes: 
 const ExportDataScreen = () => {
   const { modalColors, baseTextClass, mutedTextClass, baseBorderClass, accentColors, mutedColors } = useTheme()
   const { user, userCollection } = useAuth()
+  const { t } = useLocale()
   const {
     data: wearEvents,
     isPending: wearPending,
@@ -168,6 +211,13 @@ const ExportDataScreen = () => {
     fetchStatus: ratingsFetchStatus,
     refetch: refetchRatings,
   } = useMyRatings(user?.id)
+  const {
+    data: wishlist,
+    isPending: wishlistPending,
+    isError: wishlistError,
+    fetchStatus: wishlistFetchStatus,
+    refetch: refetchWishlist,
+  } = useWishlist(user?.id)
   // Catalog-linked bottles keep their rating in fragrance_ratings, not on the
   // collection row — without this their "My Rating" column would be empty
   const ratedCollection = useMemo(
@@ -180,15 +230,22 @@ const ExportDataScreen = () => {
   // react-query pauses queries while offline (see src/lib/query-client.ts) —
   // fetchStatus stays "paused" instead of settling into error, so this is
   // distinguishable from a real fetch failure.
-  const loading = wearPending || votesPending || ratingsPending
-  const error = wearError || votesError || ratingsError
+  const loading = wearPending || votesPending || ratingsPending || wishlistPending
+  const error = wearError || votesError || ratingsError || wishlistError
   const offline =
     (wearPending && wearFetchStatus === "paused") ||
     (votesPending && votesFetchStatus === "paused") ||
-    (ratingsPending && ratingsFetchStatus === "paused")
+    (ratingsPending && ratingsFetchStatus === "paused") ||
+    (wishlistPending && wishlistFetchStatus === "paused")
   const ready =
-    !loading && !error && wearEvents !== undefined && votes !== undefined && myRatings !== undefined
-  const isEmpty = ready && userCollection.length === 0 && wearEvents.length === 0 && votes.length === 0
+    !loading &&
+    !error &&
+    wearEvents !== undefined &&
+    votes !== undefined &&
+    myRatings !== undefined &&
+    wishlist !== undefined
+  const isEmpty =
+    ready && userCollection.length === 0 && wearEvents.length === 0 && votes.length === 0 && wishlist.length === 0
 
   const handleExport = async () => {
     if (!ready) return
@@ -197,16 +254,16 @@ const ExportDataScreen = () => {
       const canShare = await Sharing.isAvailableAsync()
       if (!canShare) {
         Alert.alert(
-          "Sharing isn't available",
-          "This device can't open the share sheet right now, so the export can't be saved."
+          t("export.sharingUnavailableTitle"),
+          t("export.sharingUnavailableMessage")
         )
         return
       }
 
       const content =
         format === "csv"
-          ? buildCsv(ratedCollection, wearEvents, votes)
-          : buildJson(ratedCollection, wearEvents, votes)
+          ? buildCsv(ratedCollection, wearEvents, votes, wishlist)
+          : buildJson(ratedCollection, wearEvents, votes, wishlist)
       const dateStamp = new Date().toISOString().slice(0, 10)
       const filename = `fragrance-collection-export-${dateStamp}.${format}`
 
@@ -219,11 +276,11 @@ const ExportDataScreen = () => {
       await Sharing.shareAsync(file.uri, {
         mimeType: MIME_TYPES[format],
         UTI: UTIS[format],
-        dialogTitle: "Export your fragrance data",
+        dialogTitle: t("export.dialogTitle"),
       })
     } catch (error) {
       reportError(error, { flow: "export-data" })
-      Alert.alert("Export failed", "Something went wrong, please try again.")
+      Alert.alert(t("export.failedTitle"), t("export.failedMessage"))
     } finally {
       setSharing(false)
     }
@@ -234,17 +291,14 @@ const ExportDataScreen = () => {
       className={`flex-1 ${modalColors.background}`}
       contentContainerClassName='px-5 pt-6 pb-12'
       showsVerticalScrollIndicator={false}>
-      <Text className={`${baseTextClass} text-xl font-bold text-center`}>Export your data</Text>
+      <Text className={`${baseTextClass} text-xl font-bold text-center`}>{t("export.title")}</Text>
       <Text className={`${mutedTextClass} text-sm text-center pt-2`}>
-        Exports your collection (brand, name, times worn, last worn, your rating and notes), your
-        scent diary (most recent 2,000 entries), and your private fragrance votes as a file you
-        control. Nothing is uploaded — you choose where it goes from the share sheet. Only your own
-        data is included.
+        {t("export.description")}
       </Text>
 
-      <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>Format</Text>
+      <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("export.format")}</Text>
       <View className='flex-row' style={{ gap: 8 }}>
-        <FilterChip label='CSV (spreadsheet)' selected={format === "csv"} onPress={() => setFormat("csv")} />
+        <FilterChip label={t("export.csv")} selected={format === "csv"} onPress={() => setFormat("csv")} />
         <FilterChip label='JSON' selected={format === "json"} onPress={() => setFormat("json")} />
       </View>
 
@@ -252,44 +306,47 @@ const ExportDataScreen = () => {
         {offline ? (
           <View className='items-center py-4'>
             <MaterialCommunityIcons name='wifi-off' size={28} color={getColor(mutedColors)} />
-            <Text className={`${baseTextClass} text-sm font-semibold text-center pt-3`}>You're offline</Text>
+            <Text className={`${baseTextClass} text-sm font-semibold text-center pt-3`}>{t("export.offlineTitle")}</Text>
             <Text className={`${mutedTextClass} text-xs text-center pt-1`}>
-              Connect to the internet to prepare your data — this will retry automatically.
+              {t("export.offlineMessage")}
             </Text>
           </View>
         ) : loading ? (
           <View className='items-center py-4'>
             <ActivityIndicator color={getColor(accentColors)} />
-            <Text className={`${mutedTextClass} text-xs pt-3`}>Preparing your data…</Text>
+            <Text className={`${mutedTextClass} text-xs pt-3`}>{t("export.preparing")}</Text>
           </View>
         ) : error ? (
           <View className='items-center py-4'>
             <MaterialCommunityIcons name='cloud-alert' size={28} color={getColor(mutedColors)} />
             <Text className={`${baseTextClass} text-sm font-semibold text-center pt-3`}>
-              Couldn't load your data
+              {t("export.loadError")}
             </Text>
             <Button
               variant='secondary'
               fullWidth={false}
-              label='Try again'
-              onPress={() => Promise.all([refetchWearEvents(), refetchVotes(), refetchRatings()])}
+              label={t("collection.tryAgain")}
+              onPress={() => Promise.all([refetchWearEvents(), refetchVotes(), refetchRatings(), refetchWishlist()])}
               className='mt-3 px-6'
             />
           </View>
         ) : (
           <>
             <Text className={`${mutedTextClass} text-sm`}>
-              {userCollection.length} fragrance{userCollection.length === 1 ? "" : "s"} in your collection
+              {t("export.collectionCount", { count: userCollection.length })}
             </Text>
             <Text className={`${mutedTextClass} text-sm pt-1`}>
-              {wearEvents.length} entr{wearEvents.length === 1 ? "y" : "ies"} logged
+              {t("export.entriesCount", { count: wearEvents.length })}
             </Text>
             <Text className={`${mutedTextClass} text-sm pt-1`}>
-              {votes.length} vote{votes.length === 1 ? "" : "s"} submitted
+              {t("export.votesCount", { count: votes.length })}
+            </Text>
+            <Text className={`${mutedTextClass} text-sm pt-1`}>
+              {t("export.wishlistCount", { count: wishlist.length })}
             </Text>
             {isEmpty && (
               <Text className={`${mutedTextClass} text-xs pt-2`}>
-                Nothing to export yet — this will produce an empty file.
+                {t("export.empty")}
               </Text>
             )}
           </>
@@ -297,11 +354,11 @@ const ExportDataScreen = () => {
       </View>
 
       <Button
-        label='Export'
+        label={t("export.action")}
         onPress={handleExport}
         disabled={!ready}
         loading={sharing}
-        loadingLabel='Preparing…'
+        loadingLabel={t("export.preparingShort")}
         className='mt-6'
         testID='export-data-submit'
       />

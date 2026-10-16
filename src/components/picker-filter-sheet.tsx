@@ -2,6 +2,7 @@ import React from "react"
 import { Modal, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { type PickerFilters, pickerFiltersActive } from "@/lib/utils/picker-filters"
 import type { Facet } from "@/lib/utils/collection-facets"
 import FilterChip from "@/components/shared/ui/filter-chip"
@@ -34,15 +35,16 @@ const PickerFilterSheet = ({
   const { modalColors, baseTextClass, mutedTextClass, accentTextClass, baseBorderClass, theme } =
     useTheme()
 
+  const { t } = useLocale()
   const setFilters = (next: Partial<PickerFilters>) => onChange({ ...filters, ...next })
 
   return (
     <Modal visible={visible} animationType='slide' presentationStyle='pageSheet' onRequestClose={onClose}>
       <View className={`${modalColors.background} flex-1`}>
         <View className={`${baseBorderClass} flex-row items-center justify-between px-4 pt-4 pb-2 border-b`}>
-          <Text className={`${baseTextClass} text-lg font-bold`}>Filter picker</Text>
+          <Text className={`${baseTextClass} text-lg font-bold`}>{t("pickerFilters.title")}</Text>
           <TouchableOpacity onPress={onClose} hitSlop={8} testID='picker-filter-done'>
-            <Text className={`${accentTextClass} text-base font-semibold`}>Done</Text>
+            <Text className={`${accentTextClass} text-base font-semibold`}>{t("common.done")}</Text>
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerClassName='px-4 pt-4 pb-10' showsVerticalScrollIndicator={false}>
@@ -50,14 +52,14 @@ const PickerFilterSheet = ({
             <TouchableOpacity
               className='pb-3'
               onPress={() => onChange({ tags: [], brands: [], unwornOnly: false })}>
-              <Text className={`${accentTextClass} font-semibold`}>Clear all filters</Text>
+              <Text className={`${accentTextClass} font-semibold`}>{t("pickerFilters.clearAll")}</Text>
             </TouchableOpacity>
           )}
 
           <View
             className={`flex-row items-center justify-between rounded-2xl border ${baseBorderClass} px-4 py-3`}>
             <Text className={`${baseTextClass} text-base font-semibold flex-1 pr-3`}>
-              Only fragrances I haven't worn yet
+              {t("pickerFilters.unwornOnly")}
             </Text>
             <Switch
               value={filters.unwornOnly}
@@ -70,7 +72,7 @@ const PickerFilterSheet = ({
           {tagFacets.length > 0 && (
             <>
               <Text className={`${mutedTextClass} text-sm font-semibold pt-6 pb-2`}>
-                Tags (any of)
+                {t("pickerFilters.tagsAnyOf")}
               </Text>
               <View className='flex-row flex-wrap' style={{ gap: 8 }}>
                 {tagFacets.map((facet) => (
@@ -87,7 +89,7 @@ const PickerFilterSheet = ({
 
           {brandFacets.length > 0 && (
             <>
-              <Text className={`${mutedTextClass} text-sm font-semibold pt-6 pb-2`}>Brand</Text>
+              <Text className={`${mutedTextClass} text-sm font-semibold pt-6 pb-2`}>{t("diary.brand")}</Text>
               <View className='flex-row flex-wrap' style={{ gap: 8 }}>
                 {brandFacets.map((facet) => (
                   <FilterChip
@@ -101,7 +103,7 @@ const PickerFilterSheet = ({
             </>
           )}
 
-          <Button label='Apply' onPress={onClose} className='mt-8' />
+          <Button label={t("pickerFilters.apply")} onPress={onClose} className='mt-8' />
         </ScrollView>
       </View>
     </Modal>

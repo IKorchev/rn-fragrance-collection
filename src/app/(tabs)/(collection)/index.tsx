@@ -1,30 +1,30 @@
 import React, { useMemo, useState } from "react"
-import { View, Text, TouchableOpacity, RefreshControl, ScrollView } from "react-native"
+import { View, Text, RefreshControl, ScrollView } from "react-native"
 import Animated, { LinearTransition } from "react-native-reanimated"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import { tagFacets } from "@/lib/utils/collection-facets"
 import CollectionListItem from "@/components/collection-list-item"
 import OnboardingChecklist from "@/components/onboarding-checklist"
-import Dialog from "@/components/shared/ui/dialog"
 import EmptyState from "@/components/shared/ui/empty-state"
 import { EmptyCollectionIllustration, NoResultsIllustration } from "@/components/empty-illustrations"
 import FilterChip from "@/components/shared/ui/filter-chip"
 import IconButton from "@/components/shared/ui/icon-button"
+import NativeMenu from "@/components/shared/ui/native-menu"
 import SearchField from "@/components/shared/ui/search-field"
 import SkeletonList from "@/components/shared/ui/skeleton-list"
-import WeeklyQuestsCard from "@/components/weekly-quests-card"
 
 const SORT_OPTIONS = [
-  { key: "least-worn", label: "Least worn" },
-  { key: "most-worn", label: "Most worn" },
-  { key: "name", label: "A–Z" },
-  { key: "recent", label: "Recent" },
+  { key: "least-worn", labelKey: "collection.sort.leastWorn" },
+  { key: "most-worn", labelKey: "collection.sort.mostWorn" },
+  { key: "name", labelKey: "collection.sort.name" },
+  { key: "recent", labelKey: "collection.sort.recent" },
 ] as const
 
 type SortKey = (typeof SORT_OPTIONS)[number]["key"]
@@ -34,20 +34,13 @@ const CollectionScreen = () => {
   const insets = useSafeAreaInsets()
   const { visibleSortedCollection, collectionPending, collectionError, refetchCollection } =
     useAuth()
-  const {
-    viewColors,
-    accentColors,
-    mutedColors,
-    baseTextClass,
-    accentTextClass,
-    mutedTextClass,
-    primaryBg,
-  } = useTheme()
+  const { viewColors, accentColors, mutedColors, highlightColors, highlightTintBg, cardBorderColors, mutedTextClass, primaryBg } =
+    useTheme()
+  const { t } = useLocale()
   const { refreshing, onRefresh } = usePullToRefresh(refetchCollection)
   const [filter, setFilter] = useState("")
   const [sort, setSort] = useState<SortKey>("least-worn")
   const [tagFilter, setTagFilter] = useState<string[]>([])
-  const [sortPickerOpen, setSortPickerOpen] = useState(false)
 
   const hasCollection = visibleSortedCollection.length > 0
   const tagOptions = useMemo(() => tagFacets(visibleSortedCollection), [visibleSortedCollection])
@@ -91,9 +84,9 @@ const CollectionScreen = () => {
       <View className={`flex-1 ${viewColors.background}`}>
         <EmptyState
           icon='cloud-alert'
-          title="Couldn't load your collection"
-          message='Check your connection and try again.'
-          actionLabel='Try again'
+          title={t("collection.loadErrorTitle")}
+          message={t("collection.loadErrorMessage")}
+          actionLabel={t("collection.tryAgain")}
           onAction={() => refetchCollection()}
         />
       </View>
@@ -102,25 +95,53 @@ const CollectionScreen = () => {
 
   return (
     <View className={`flex-1 ${viewColors.background}`}>
-      <View className='px-3 pt-3'>
-        <WeeklyQuestsCard />
-      </View>
       {hasCollection && (
         <View className='px-3 pt-3 pb-1'>
           <SearchField
             value={filter}
             onChangeText={setFilter}
-            placeholder='Search your collection'
+            placeholder={t("collection.searchPlaceholder")}
           />
           <View className='flex-row items-center justify-between pt-2.5 px-1'>
             <Text className={`${mutedTextClass} text-sm`}>
-              {shownCollection.length} {shownCollection.length === 1 ? "fragrance" : "fragrances"}
+              {t("collection.count", { count: shownCollection.length })}
             </Text>
-            <FilterChip
-              label={SORT_OPTIONS.find(({ key }) => key === sort)!.label}
-              selected={sort !== "least-worn"}
-              onPress={() => setSortPickerOpen(true)}
-            />
+            {/* Native pop-up menu, so the trigger is a plain View styled like a FilterChip */}
+            <NativeMenu
+              title={t("collection.sortTitle")}
+              testID='collection-sort-menu'
+              items={SORT_OPTIONS.map(({ key, labelKey }) => ({
+                id: key,
+                title: t(labelKey),
+                checked: key === sort,
+                onPress: () => setSort(key),
+              }))}>
+              <View
+                accessible
+                accessibilityRole='button'
+                accessibilityLabel={t("collection.sortTitle")}
+                className='flex-row items-center rounded-full px-3 py-1.5'
+                style={{
+                  gap: 2,
+                  borderWidth: 1,
+                  borderColor: getColor(sort === "least-worn" ? cardBorderColors : highlightColors),
+                  backgroundColor: sort === "least-worn" ? undefined : highlightTintBg,
+                }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: getColor(sort === "least-worn" ? mutedColors : highlightColors),
+                  }}>
+                  {t(SORT_OPTIONS.find(({ key }) => key === sort)!.labelKey)}
+                </Text>
+                <MaterialCommunityIcons
+                  name='chevron-down'
+                  size={16}
+                  color={getColor(sort === "least-worn" ? mutedColors : highlightColors)}
+                />
+              </View>
+            </NativeMenu>
           </View>
           {tagOptions.length > 0 && (
             <ScrollView
@@ -145,24 +166,6 @@ const CollectionScreen = () => {
           )}
         </View>
       )}
-      <Dialog visible={sortPickerOpen} title='Sort by' onClose={() => setSortPickerOpen(false)}>
-        {SORT_OPTIONS.map(({ key, label }) => (
-          <TouchableOpacity
-            key={key}
-            className='flex-row items-center justify-between py-3'
-            onPress={() => {
-              setSort(key)
-              setSortPickerOpen(false)
-            }}>
-            <Text className={key === sort ? `${accentTextClass} font-semibold` : baseTextClass}>
-              {label}
-            </Text>
-            {key === sort && (
-              <MaterialCommunityIcons name='check' size={18} color={getColor(accentColors)} />
-            )}
-          </TouchableOpacity>
-        ))}
-      </Dialog>
       {/* Animated.FlatList: deletes, undo re-inserts, and sort changes slide
           rows into place instead of snapping */}
       <Animated.FlatList
@@ -185,16 +188,16 @@ const CollectionScreen = () => {
             <EmptyState
               icon='magnify-close'
               illustration={<NoResultsIllustration />}
-              title='No matches'
-              message='Nothing in your collection matches that search.'
+              title={t("collection.noMatchesTitle")}
+              message={t("collection.noMatchesMessage")}
             />
           ) : (
             <EmptyState
               icon='bottle-tonic-outline'
               illustration={<EmptyCollectionIllustration />}
-              title='Your collection is empty'
-              message="Search the catalog (or add one by hand) and give your shelf something to say."
-              actionLabel='Find fragrances'
+              title={t("collection.emptyTitle")}
+              message={t("collection.emptyMessage")}
+              actionLabel={t("collection.emptyAction")}
               onAction={goToSearch}
             />
           )
@@ -208,6 +211,8 @@ const CollectionScreen = () => {
               imageUrl={item.image_url}
               timesWorn={item.times_worn}
               lastWorn={item.last_worn}
+              bottleType={item.bottle_type}
+              runningLow={item.running_low}
             />
           )
         }}
@@ -219,7 +224,7 @@ const CollectionScreen = () => {
           size='xl'
           onPress={() => router.push("/picker")}
           testID='picker-fab'
-          accessibilityLabel='Open the picker'
+          accessibilityLabel={t("collection.openPicker")}
           className='absolute right-5'
           style={{
             bottom: insets.bottom + 64,

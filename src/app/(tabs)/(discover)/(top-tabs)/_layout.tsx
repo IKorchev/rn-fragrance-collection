@@ -4,12 +4,14 @@ import { createMaterialTopTabNavigator } from "expo-router/js-top-tabs"
 import { View } from "react-native"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 
 const { Navigator } = createMaterialTopTabNavigator()
 export const MaterialTopTabs = withLayoutContext(Navigator)
 
 export default function TopTabsLayout() {
   const { mutedColors, highlightColors, theme } = useTheme()
+  const { t } = useLocale()
   return (
     <View className='flex-1'>
       <MaterialTopTabs
@@ -29,9 +31,11 @@ export default function TopTabsLayout() {
             backgroundColor: theme === "dark" ? getColor("zinc-950") : "white",
           },
         }}>
-        <MaterialTopTabs.Screen name="recommendations" options={{ title: "For You" }} />
-        <MaterialTopTabs.Screen name="index" options={{ title: "Top" }} />
-        <MaterialTopTabs.Screen name="search" options={{ title: "Search" }} />
+        {/* Top leads: it's populated for everyone, while For You stays empty
+            until the user has a collection to base recommendations on */}
+        <MaterialTopTabs.Screen name="index" options={{ title: t("discover.tabs.top") }} />
+        <MaterialTopTabs.Screen name="recommendations" options={{ title: t("discover.tabs.forYou") }} />
+        <MaterialTopTabs.Screen name="search" options={{ title: t("discover.tabs.search") }} />
       </MaterialTopTabs>
     </View>
   )

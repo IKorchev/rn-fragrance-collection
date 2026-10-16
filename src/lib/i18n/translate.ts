@@ -87,3 +87,9 @@ export const formatDate = (
     return date.toDateString()
   }
 }
+
+// For code that runs outside LocaleContextProvider: AuthContext sits above it
+// in the provider tree, and plain helpers (entitlements, notifications) have no
+// React context at all. Screens should keep using useLocale().t
+export const translateDefault = (key: string, params?: Record<string, string | number>): string =>
+  translate(DEFAULT_LOCALE, key, params)

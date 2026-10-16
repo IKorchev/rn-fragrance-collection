@@ -6,7 +6,7 @@ import {
   usePendingSubmissions,
   usePendingFragranceReports,
   usePendingProfileReports,
-  reportReasonLabel,
+  reportReasonLabelKey,
   profileReportReasonLabelKey,
   type PendingSubmission,
   type PendingFragranceReport,
@@ -147,6 +147,8 @@ interface ReportRowProps {
 
 const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
   const { theme, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
+  const { t } = useLocale()
+  const reasonKey = reportReasonLabelKey(report.reason)
   const [dismissing, setDismissing] = useState(false)
   const [note, setNote] = useState("")
   const busy = busyAction !== null
@@ -167,7 +169,7 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
       </View>
 
       <Text className={`${baseTextClass} text-sm font-semibold pt-3`}>
-        {reportReasonLabel(report.reason)}
+        {reasonKey ? t(reasonKey) : report.reason}
       </Text>
       {report.details && (
         <Text className={`${mutedTextClass} text-sm pt-1`}>{report.details}</Text>

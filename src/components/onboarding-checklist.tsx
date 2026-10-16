@@ -4,6 +4,7 @@ import { useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { useOnboarding, type OnboardingStep } from "@/lib/utils/use-onboarding"
 
 // Inline "Getting started" card — Collection tab's FlatList header, not a
@@ -15,6 +16,7 @@ const OnboardingChecklist = () => {
   const router = useRouter()
   const { theme, baseTextClass, mutedTextClass, accentColors, accentTintBg, baseBorderClass } = useTheme()
   const { loaded, dismissed, dismiss, steps, allDone } = useOnboarding()
+  const { t } = useLocale()
 
   if (!loaded || dismissed || allDone) return null
 
@@ -28,15 +30,15 @@ const OnboardingChecklist = () => {
     <View
       className={`mx-3 mt-3 mb-1 rounded-2xl border ${baseBorderClass} p-4`}
       accessibilityRole='summary'
-      accessibilityLabel='Getting started guide'>
+      accessibilityLabel={t("onboarding.title")}>
       <View className='flex-row items-center justify-between'>
-        <Text className={`${baseTextClass} text-base font-bold`}>Getting started</Text>
+        <Text className={`${baseTextClass} text-base font-bold`}>{t("onboarding.title")}</Text>
         <TouchableOpacity
           onPress={dismiss}
           hitSlop={8}
           accessibilityRole='button'
-          accessibilityLabel='Skip getting started guide'>
-          <Text className={`${mutedTextClass} text-sm font-semibold`}>Skip</Text>
+          accessibilityLabel={t("onboarding.skipLabel")}>
+          <Text className={`${mutedTextClass} text-sm font-semibold`}>{t("onboarding.skip")}</Text>
         </TouchableOpacity>
       </View>
       {steps.map((step) => (
@@ -47,7 +49,7 @@ const OnboardingChecklist = () => {
           className='flex-row items-center pt-3'
           accessibilityRole='button'
           accessibilityState={{ disabled: step.done || !step.enabled }}
-          accessibilityLabel={`${step.label}${step.done ? ", done" : ""}`}>
+          accessibilityLabel={step.done ? t("onboarding.stepDone", { label: step.label }) : step.label}>
           <MaterialCommunityIcons
             name={step.done ? "check-circle" : "circle-outline"}
             size={22}
