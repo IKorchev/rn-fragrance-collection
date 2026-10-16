@@ -100,7 +100,9 @@ const Rank = ({ place }: { place: number }) => {
           : getColor(mutedColors)
 
   return (
-    <View className='w-10 h-full justify-center items-center pl-2'>
+    // self-stretch, not h-full: Root only has a minHeight, and a percentage
+    // height against an unresolved parent height blows the row up on Android
+    <View className='w-10 self-stretch justify-center items-center pl-2'>
       <Text
         className={`text-center font-bold ${place <= 3 ? "text-lg" : "text-base"}`}
         style={{ color: medalColor }}>
