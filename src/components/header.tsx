@@ -1,4 +1,4 @@
-import React from "react"
+import React, { type ReactNode } from "react"
 import { Text, TouchableOpacity, View, StatusBar } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
@@ -12,9 +12,12 @@ interface HeaderProps {
   // header render prop) — regular pushed screens (wear history, legal docs)
   // get a back chevron; tab roots don't pass this.
   back?: { title?: string }
+  // Trailing action slot (user-profile's overflow menu, set per screen via
+  // the headerRight option)
+  right?: ReactNode
 }
 
-export default function Header({ title, navigation, back }: HeaderProps) {
+export default function Header({ title, navigation, back, right }: HeaderProps) {
   const { headerColors, cardBorderColors, theme } = useTheme()
 
   return (
@@ -51,6 +54,7 @@ export default function Header({ title, navigation, back }: HeaderProps) {
           numberOfLines={1}>
           {title}
         </Text>
+        {right}
       </View>
     </SafeAreaView>
   )

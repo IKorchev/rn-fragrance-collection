@@ -42,7 +42,13 @@ import {
   type PickerFilters,
 } from "@/lib/utils/picker-filters"
 import useToast from "@/contexts/toast-context"
-import type { ReportReason } from "@/lib/queries"
+import type { ProfileReportReason, ReportReason } from "@/lib/queries"
+import { removeHeaderPhotoObject } from "@/lib/profile-header-photo"
+import {
+  forgetBlockedUserLabel,
+  saveBlockedUserLabel,
+  type BlockedUserLabel,
+} from "@/lib/blocked-user-labels"
 import { reportError } from "@/lib/sentry"
 import type { Tables } from "@/lib/database.types"
 
@@ -123,6 +129,20 @@ interface AuthContextValue {
     action: "resolve" | "dismiss"
     note?: string
   }) => Promise<void>
+  // App Review 1.2 UGC controls for public profiles (src/app/user-profile.tsx,
+  // src/app/report-profile.tsx, src/app/blocked-users.tsx, moderation.tsx's
+  // Profiles tab). All four throw on failure — callers own the error UI.
+  reportProfile: (input: {
+    reportedUserId: string
+    reason: ProfileReportReason
+    details?: string
+  }) => Promise<void>
+  // On "hide" the RPC returns the cleared header photo path; the storage
+  // object is removed here (best-effort) via the Storage API.
+  reviewProfileReport: (input: { id: string; action: "hide" | "dismiss"; note?: string }) => Promise<void>
+  // label is snapshotted device-locally — see src/lib/blocked-user-labels.ts
+  blockUser: (blockedId: string, label: BlockedUserLabel) => Promise<void>
+  unblockUser: (blockedId: string) => Promise<void>
   // Pro-tier entitlement — sourced from RevenueCat's local CustomerInfo cache
   // (instant, no network round-trip); always false when purchases aren't
   // configured (see src/lib/purchases.ts).
@@ -489,6 +509,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const reportProfile = async (input: {
+    reportedUserId: string
+    reason: ProfileReportReason
+    details?: string
+  }) => {
+    const { error } = await supabase.rpc("submit_profile_report", {
+      p_reported_user: input.reportedUserId,
+      p_reason: input.reason,
+      p_details: input.details,
+    })
+    if (error) throw error
+  }
+
+  const reviewProfileReport = async (input: { id: string; action: "hide" | "dismiss"; note?: string }) => {
+    const { data: clearedHeaderPath, error } = await supabase.rpc("review_profile_report", {
+      p_report_id: input.id,
+      p_action: input.action,
+      p_note: input.note,
+    })
+    if (error) throw error
+    if (clearedHeaderPath) removeHeaderPhotoObject(clearedHeaderPath)
+    queryClient.invalidateQueries({ queryKey: ["pending-profile-reports"] })
+    if (input.action === "hide") invalidateProfileViews()
+  }
+
+  const invalidateProfileViews = () => {
+    queryClient.invalidateQueries({ queryKey: ["top-collectors"] })
+    queryClient.invalidateQueries({ queryKey: ["public-profile"] })
+    queryClient.invalidateQueries({ queryKey: ["user-top-worn"] })
+  }
+
+  const blockUser = async (blockedId: string, label: BlockedUserLabel) => {
+    const { error } = await supabase
+      .from("user_blocks")
+      .upsert({ blocker_id: user!.id, blocked_id: blockedId }, { ignoreDuplicates: true })
+    if (error) throw error
+    await saveBlockedUserLabel(blockedId, label).catch(reportError)
+    queryClient.invalidateQueries({ queryKey: ["blocked-users", user!.id] })
+    invalidateProfileViews()
+  }
+
+  const unblockUser = async (blockedId: string) => {
+    const { error } = await supabase
+      .from("user_blocks")
+      .delete()
+      .eq("blocker_id", user!.id)
+      .eq("blocked_id", blockedId)
+    if (error) throw error
+    await forgetBlockedUserLabel(blockedId).catch(reportError)
+    queryClient.invalidateQueries({ queryKey: ["blocked-users", user!.id] })
+    invalidateProfileViews()
+  }
+
   const performDelete = async (object: { id: string }) => {
     try {
       const { error } = await supabase.from("user_fragrances").delete().eq("id", object.id)
@@ -736,6 +809,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         reviewSubmission,
         reportFragrance,
         reviewFragranceReport,
+        reportProfile,
+        reviewProfileReport,
+        blockUser,
+        unblockUser,
         isPro,
         userCollection,
         sortedCollection,

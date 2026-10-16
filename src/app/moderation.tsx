@@ -1,14 +1,23 @@
 import React, { useState } from "react"
-import { FlatList, Text, View } from "react-native"
+import { Alert, FlatList, Image, Text, View } from "react-native"
+import { MaterialCommunityIcons } from "@expo/vector-icons"
+import { Avatar } from "@rneui/themed"
 import {
   usePendingSubmissions,
   usePendingFragranceReports,
+  usePendingProfileReports,
   reportReasonLabel,
+  profileReportReasonLabelKey,
   type PendingSubmission,
   type PendingFragranceReport,
+  type PendingProfileReport,
 } from "@/lib/queries"
+import { headerPhotoUrl } from "@/lib/profile-header-photo"
+import { getColor } from "@/lib/utils/colors"
+import { reportError } from "@/lib/sentry"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 import Card from "@/components/card"
 import EmptyState from "@/components/shared/ui/empty-state"
 import TextField from "@/components/shared/ui/text-field"
@@ -17,6 +26,7 @@ import FilterChip from "@/components/shared/ui/filter-chip"
 
 type SubmissionAction = "approve" | "merge" | "reject"
 type ReportAction = "resolve" | "dismiss"
+type ProfileReportAction = "hide" | "dismiss"
 
 interface SubmissionRowProps {
   submission: PendingSubmission
@@ -223,22 +233,136 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
   )
 }
 
-type Queue = "suggestions" | "reports"
+interface ProfileReportRowProps {
+  report: PendingProfileReport
+  busyAction: ProfileReportAction | null
+  onReview: (action: ProfileReportAction, note?: string) => void
+}
+
+// Both decisions go through a note + confirm step: hide is destructive (forces
+// the profile private, clears its header photo, settles every other pending
+// report against it), and dismiss mirrors ReportRow above.
+const ProfileReportRow = ({ report, busyAction, onReview }: ProfileReportRowProps) => {
+  const { theme, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
+  const { t } = useLocale()
+  const [confirming, setConfirming] = useState<ProfileReportAction | null>(null)
+  const [note, setNote] = useState("")
+  const busy = busyAction !== null
+  const headerUrl = headerPhotoUrl(report.header_image_path)
+  const reasonKey = profileReportReasonLabelKey(report.reason)
+
+  return (
+    <View className={`mx-3 my-1.5 rounded-2xl border ${baseBorderClass} p-4`}>
+      <View className={`rounded-xl overflow-hidden ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}>
+        {headerUrl && <Image source={{ uri: headerUrl }} className='w-full h-24' resizeMode='cover' />}
+        <View className='flex-row items-center p-2'>
+          <Avatar
+            size={40}
+            rounded
+            source={report.avatar_url ? { uri: report.avatar_url } : undefined}
+            icon={<MaterialCommunityIcons name='account' size={24} color={getColor("zinc-500")} />}
+            containerStyle={{ backgroundColor: getColor(theme === "dark" ? "zinc-700" : "zinc-200") }}
+          />
+          <View className='flex-1 pl-3'>
+            <Text className={`${baseTextClass} text-sm font-semibold`} numberOfLines={1}>
+              {report.display_name || t("profile.anonymous")}
+            </Text>
+            {report.is_public === false && (
+              <Text className={`${mutedTextClass} text-xs`}>{t("moderation.profileHiddenLabel")}</Text>
+            )}
+          </View>
+        </View>
+      </View>
+
+      <Text className={`${baseTextClass} text-sm font-semibold pt-3`}>
+        {reasonKey ? t(reasonKey) : report.reason}
+      </Text>
+      {report.details && <Text className={`${mutedTextClass} text-sm pt-1`}>{report.details}</Text>}
+
+      {confirming ? (
+        <View className='mt-3'>
+          <TextField
+            value={note}
+            onChangeText={setNote}
+            placeholder={t("moderation.noteForModerators")}
+            multiline
+            rounded='xl'
+          />
+          <View className='flex-row mt-2' style={{ gap: 8 }}>
+            <Button
+              variant='secondary'
+              shape='rounded'
+              label={t("common.cancel")}
+              disabled={busy}
+              className='flex-1'
+              onPress={() => {
+                setConfirming(null)
+                setNote("")
+              }}
+            />
+            <Button
+              variant='danger'
+              shape='rounded'
+              label={t(confirming === "hide" ? "moderation.confirmHide" : "moderation.confirmDismiss")}
+              loadingLabel={t(confirming === "hide" ? "moderation.hiding" : "moderation.dismissing")}
+              loading={busyAction === confirming}
+              disabled={busy}
+              className='flex-1'
+              onPress={() => onReview(confirming, note.trim() || undefined)}
+            />
+          </View>
+        </View>
+      ) : (
+        <View className='flex-row mt-3' style={{ gap: 8 }}>
+          <Button
+            variant='danger'
+            shape='rounded'
+            label={t("moderation.hide")}
+            disabled={busy}
+            className='flex-1'
+            onPress={() => setConfirming("hide")}
+          />
+          <Button
+            variant='secondary'
+            shape='rounded'
+            label={t("moderation.dismiss")}
+            disabled={busy}
+            className='flex-1'
+            onPress={() => setConfirming("dismiss")}
+          />
+        </View>
+      )}
+    </View>
+  )
+}
+
+type Queue = "suggestions" | "reports" | "profiles"
 
 // Moderator-only queue (entry point gated in the Profile tab via useIsModerator).
 // Authorization for the actual decisions lives in the review_submission /
 // review_fragrance_report RPCs, not this screen's visibility. Two tabs share
 // one screen: new-fragrance suggestions (fragrance_submissions) and
 // existing-catalog issue reports (fragrance_reports) — different tables,
-// same moderator gate and review-then-note UX.
+// same moderator gate and review-then-note UX. A third tab reviews reported
+// public profiles (profile_reports — App Review 1.2).
 const ModerationScreen = () => {
   const { modalColors, baseTextClass } = useTheme()
-  const { user, reviewSubmission, reviewFragranceReport } = useAuth()
+  const { t } = useLocale()
+  const { user, reviewSubmission, reviewFragranceReport, reviewProfileReport } = useAuth()
   const [queue, setQueue] = useState<Queue>("suggestions")
   const { data: submissions, isPending: submissionsPending, error: submissionsError } =
     usePendingSubmissions(!!user?.id)
   const { data: reports, isPending: reportsPending, error: reportsError } =
     usePendingFragranceReports(!!user?.id)
+  const {
+    data: profileReports,
+    isPending: profileReportsPending,
+    error: profileReportsError,
+  } = usePendingProfileReports(!!user?.id)
+  const [busyProfileReport, setBusyProfileReport] = useState<{
+    id: string
+    action: ProfileReportAction
+  } | null>(null)
   const [busySubmission, setBusySubmission] = useState<{ id: string; action: SubmissionAction } | null>(null)
   const [busyReport, setBusyReport] = useState<{ id: string; action: ReportAction } | null>(null)
 
@@ -269,6 +393,22 @@ const ModerationScreen = () => {
     }
   }
 
+  const handleReviewProfileReport = async (
+    report: PendingProfileReport,
+    action: ProfileReportAction,
+    note?: string
+  ) => {
+    setBusyProfileReport({ id: report.id, action })
+    try {
+      await reviewProfileReport({ id: report.id, action, note })
+    } catch (error) {
+      reportError(error, { flow: "review-profile-report" })
+      Alert.alert(t("moderation.reviewFailedTitle"), t("moderation.reviewFailedMessage"))
+    } finally {
+      setBusyProfileReport(null)
+    }
+  }
+
   return (
     <View className={`flex-1 ${modalColors.background}`}>
       <Text className={`${baseTextClass} text-2xl font-bold text-center pt-6 pb-2`}>
@@ -285,8 +425,42 @@ const ModerationScreen = () => {
           selected={queue === "reports"}
           onPress={() => setQueue("reports")}
         />
+        <FilterChip
+          label={`${t("moderation.profilesTab")}${profileReports?.length ? ` (${profileReports.length})` : ""}`}
+          selected={queue === "profiles"}
+          onPress={() => setQueue("profiles")}
+        />
       </View>
-      {queue === "suggestions" ? (
+      {queue === "profiles" ? (
+        <FlatList
+          data={profileReports ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerClassName='pb-12 pt-2'
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            profileReportsError ? (
+              <EmptyState
+                icon='alert-circle-outline'
+                title={t("moderation.loadFailedTitle")}
+                message={t("moderation.loadFailedMessage")}
+              />
+            ) : profileReportsPending ? null : (
+              <EmptyState
+                icon='check-circle-outline'
+                title={t("moderation.caughtUpTitle")}
+                message={t("moderation.profilesEmpty")}
+              />
+            )
+          }
+          renderItem={({ item }) => (
+            <ProfileReportRow
+              report={item}
+              busyAction={busyProfileReport?.id === item.id ? busyProfileReport.action : null}
+              onReview={(action, note) => handleReviewProfileReport(item, action, note)}
+            />
+          )}
+        />
+      ) : queue === "suggestions" ? (
         <FlatList
           data={submissions ?? []}
           keyExtractor={(item) => item.id}
