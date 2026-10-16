@@ -1548,7 +1548,10 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   collection_count   INT NOT NULL DEFAULT 0 CHECK (collection_count >= 0),
   badge_ids          TEXT[] NOT NULL DEFAULT '{}' CHECK (coalesce(array_length(badge_ids, 1), 0) <= 64),
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Set by review_profile_report's 'hide'; while set the owner can't
+  -- re-publish (guard trigger below). Cleared only from the dashboard SQL editor.
+  moderation_hidden_at TIMESTAMPTZ
 );
 
 -- Top-collectors leaderboard scan: public rows ordered by xp
@@ -1569,9 +1572,60 @@ CREATE POLICY "update own profile" ON user_profiles FOR UPDATE
   USING ((SELECT auth.uid()) = user_id)
   WITH CHECK ((SELECT auth.uid()) = user_id);
 
-CREATE POLICY "delete own profile" ON user_profiles FOR DELETE
-  TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
+-- No DELETE policy: deleting and re-inserting the row would wipe
+-- moderation_hidden_at. Account deletion cascades from auth.users.
+
+-- Client-role write guard (migration lock_moderation_hidden_profiles). The
+-- owner-update policy allows any column, so this trigger enforces, for
+-- authenticated/anon only:
+--   * is_public can't be true while moderation_hidden_at is set
+--     (SQLSTATE WH001, matched by PROFILE_HIDDEN_ERROR_CODE in queries.ts)
+--   * moderation_hidden_at is never client-writable
+--   * header_image_path may only be cleared (the remove-photo flow); setting
+--     it is reserved for the upload-header-photo edge function (service role)
+-- service_role and SECURITY DEFINER RPCs (run as their owner) pass untouched.
+-- Un-hide: UPDATE user_profiles SET moderation_hidden_at = NULL WHERE user_id = '<id>';
+CREATE OR REPLACE FUNCTION guard_user_profile_writes()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF current_user NOT IN ('authenticated', 'anon') THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.moderation_hidden_at IS NOT NULL THEN
+      RAISE EXCEPTION 'moderation_hidden_at is not client-writable' USING ERRCODE = '42501';
+    END IF;
+    IF NEW.header_image_path IS NOT NULL THEN
+      RAISE EXCEPTION 'header_image_path can only be set by the upload function' USING ERRCODE = '42501';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.moderation_hidden_at IS DISTINCT FROM OLD.moderation_hidden_at THEN
+    RAISE EXCEPTION 'moderation_hidden_at is not client-writable' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.header_image_path IS NOT NULL
+     AND NEW.header_image_path IS DISTINCT FROM OLD.header_image_path THEN
+    RAISE EXCEPTION 'header_image_path can only be set by the upload function' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.is_public AND NEW.moderation_hidden_at IS NOT NULL THEN
+    RAISE EXCEPTION 'profile_hidden' USING ERRCODE = 'WH001',
+      DETAIL = 'This profile was hidden by a moderator and cannot be made public.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS user_profiles_guard_writes ON user_profiles;
+CREATE TRIGGER user_profiles_guard_writes
+  BEFORE INSERT OR UPDATE ON user_profiles
+  FOR EACH ROW EXECUTE FUNCTION guard_user_profile_writes();
+
+REVOKE EXECUTE ON FUNCTION guard_user_profile_writes() FROM PUBLIC, anon, authenticated;
 
 -- A public user's most-worn fragrances, aggregated from their real
 -- wear_events (own-rows RLS makes cross-user reads impossible directly —

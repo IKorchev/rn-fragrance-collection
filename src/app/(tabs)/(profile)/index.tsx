@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import { supabase } from "@/lib/supabase"
 import {
+  PROFILE_HIDDEN_ERROR_CODE,
   useIsModerator,
   useMyProfile,
   useRemindersEnabled,
@@ -161,6 +162,12 @@ const ProfileScreen = () => {
   // Publishing writes the full snapshot eagerly — without it a just-published
   // profile would sit at level 1 / 0 XP until use-profile-sync's next pass
   const togglePublicProfile = async (value: boolean) => {
+    const showHiddenAlert = () =>
+      Alert.alert(t("profile.publicHiddenTitle"), t("profile.publicHiddenMessage"))
+    if (value && myProfile?.moderation_hidden_at) {
+      showHiddenAlert()
+      return
+    }
     queryClient.setQueryData(["my-profile", user?.id], (old: UserProfile | null | undefined) =>
       old ? { ...old, is_public: value } : old
     )
@@ -172,6 +179,10 @@ const ProfileScreen = () => {
       queryClient.invalidateQueries({ queryKey: ["top-collectors"] })
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ["my-profile", user?.id] })
+      if ((error as { code?: string }).code === PROFILE_HIDDEN_ERROR_CODE) {
+        showHiddenAlert()
+        return
+      }
       reportError(error, { flow: "public-profile-toggle" })
       Alert.alert(t("profile.publicUpdateFailedTitle"), t("profile.publicUpdateFailedMessage"))
     }

@@ -53,6 +53,9 @@ const en: Dictionary = {
     publicProfile: "Public profile",
     publicUpdateFailedTitle: "Oops",
     publicUpdateFailedMessage: "Couldn't update your public profile, please try again.",
+    publicHiddenTitle: "Profile hidden",
+    publicHiddenMessage:
+      "A moderator hid your profile after a report, so it can't be made public right now.",
     headerPhoto: {
       title: "Collection photo",
       take: "Take photo",
