@@ -69,6 +69,8 @@ const Button = ({
       onPress={onPress}
       disabled={isDisabled}
       testID={testID}
+      accessibilityRole='button'
+      accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       className={`${containerByVariant[variant]} ${className ?? ""}`}>
       <Text className={labelByVariant[variant]}>{shownLabel}</Text>
     </TouchableOpacity>

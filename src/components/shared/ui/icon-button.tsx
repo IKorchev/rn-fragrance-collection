@@ -12,6 +12,10 @@ interface IconButtonProps {
   className?: string
   style?: StyleProp<ViewStyle>
   testID?: string
+  // Required: the icon is the only content, so without this a screen reader
+  // announces an unnamed button
+  accessibilityLabel: string
+  accessibilityHint?: string
   children: ReactNode
 }
 
@@ -26,6 +30,8 @@ const IconButton = ({
   className,
   style,
   testID,
+  accessibilityLabel,
+  accessibilityHint,
   children,
 }: IconButtonProps) => {
   const sizeClass = size === "xl" ? "h-14 w-14" : size === "lg" ? "h-12 w-12" : "h-11 w-11"
@@ -35,6 +41,8 @@ const IconButton = ({
       className={`${bgClassName} ${sizeClass} justify-center rounded-full items-center ${dimmed ? "opacity-40" : ""} ${className ?? ""}`}
       style={style}
       testID={testID}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       onPress={onPress}>
       {children}
     </PressableScale>

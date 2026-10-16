@@ -19,7 +19,9 @@ let notifiedThisSession = false
 // ids reset every week, and a quest id can recur in a later week (56
 // possible 3-of-8 combos), so a stale snapshot from a previous occurrence of
 // the same id must not suppress a genuine re-completion this week.
-export const useQuestAlerts = (quests: ActiveQuest[]) => {
+// `ready` is useGamificationReady() — quests computed from half-loaded data
+// must not be compared or persisted.
+export const useQuestAlerts = (quests: ActiveQuest[], ready: boolean) => {
   const { user } = useAuth()
   const { showToast } = useToast()
   const { t } = useLocale()
@@ -42,7 +44,7 @@ export const useQuestAlerts = (quests: ActiveQuest[]) => {
   }, [userId, weekKey])
 
   useEffect(() => {
-    if (!userId || prevCompleted === undefined || quests.length === 0) return
+    if (!userId || !ready || prevCompleted === undefined || quests.length === 0) return
 
     const completedIds = quests.filter((q) => q.completed).map((q) => q.id)
     const changed = !prevCompleted || completedIds.length !== prevCompleted.length
@@ -68,7 +70,7 @@ export const useQuestAlerts = (quests: ActiveQuest[]) => {
       AsyncStorage.setItem(snapshotKey(userId, weekKey), JSON.stringify(completedIds))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, weekKey, quests, prevCompleted])
+  }, [userId, weekKey, quests, prevCompleted, ready])
 }
 
 export default useQuestAlerts

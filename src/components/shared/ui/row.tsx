@@ -55,7 +55,12 @@ const Row = ({ icon, label, onPress, trailing, tone = "base", className, testID 
   }
 
   return (
-    <TouchableOpacity testID={testID} onPress={onPress} className={containerClass} style={style}>
+    <TouchableOpacity
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole='button'
+      className={containerClass}
+      style={style}>
       {content}
     </TouchableOpacity>
   )

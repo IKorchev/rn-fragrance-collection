@@ -107,7 +107,7 @@ export const Swipeable: Story = {
     <Card.Root
       onPress={() => {}}
       swipeActions={
-        <Card.ActionButton variant='delete' onPress={() => {}}>
+        <Card.ActionButton variant='delete' onPress={() => {}} accessibilityLabel='Delete'>
           {(iconColor) => <AntDesign name='delete' color={iconColor} size={18} />}
         </Card.ActionButton>
       }>

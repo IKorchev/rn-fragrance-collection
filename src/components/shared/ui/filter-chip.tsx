@@ -36,6 +36,7 @@ const FilterChip = ({ label, selected, onPress, testID, paddingHorizontal = 12 }
       }}
       title={label}
       onPress={onPress}
+      accessibilityState={{ selected, disabled: false }}
     />
   )
 }

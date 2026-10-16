@@ -71,6 +71,17 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
   const baseHex = getColor(accentColors)
   const emptyColor = getColor(theme === "dark" ? "zinc-800" : "zinc-100")
 
+  const { windowEntries, activeDays } = useMemo(() => {
+    let entries = 0
+    let days = 0
+    for (const date of columns.flat()) {
+      const count = countByDay.get(date.toDateString()) ?? 0
+      entries += count
+      if (count > 0) days++
+    }
+    return { windowEntries: entries, activeDays: days }
+  }, [columns, countByDay])
+
   return (
     <View className={`w-full rounded-2xl border ${baseBorderClass} p-4 ${className ?? ""}`}>
       <Text className={`${mutedTextClass} text-xs font-semibold uppercase pb-4`}>
@@ -78,14 +89,22 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
       </Text>
 
       <View className='items-center'>
-        <View className='flex-row' style={{ paddingTop: 13 }}>
+        {/* One summary for screen readers instead of 112 unlabeled day cells */}
+        <View
+          className='flex-row'
+          style={{ paddingTop: 13 }}
+          accessible
+          accessibilityLabel={`Last ${WEEKS} weeks: ${windowEntries} ${windowEntries === 1 ? "entry" : "entries"} across ${activeDays} ${activeDays === 1 ? "day" : "days"}`}>
           {columns.map((col, w) => {
             const monthLabel =
               w === 0 || col[0].getMonth() !== columns[w - 1][0].getMonth()
                 ? col[0].toLocaleDateString("en", { month: "short" })
                 : null
             return (
-              <View key={w} style={{ width: CELL, marginRight: w === WEEKS - 1 ? 0 : GAP }}>
+              <View
+                key={w}
+                importantForAccessibility='no-hide-descendants'
+                style={{ width: CELL, marginRight: w === WEEKS - 1 ? 0 : GAP }}>
                 {monthLabel && (
                   <Text
                     className={`${mutedTextClass} text-[9px]`}

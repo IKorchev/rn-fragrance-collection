@@ -19,7 +19,7 @@ tags:
     id: "wear-button"
     index: 0
 - extendedWaitUntil:
-    visible: "Wear logged for .*|.* was already worn today"
+    visible: "Scent logged for .*|.* was already worn today"
     timeout: 10000
 
 # Undo appears only on the success toast — always take it back
@@ -29,7 +29,19 @@ tags:
     commands:
       - tapOn: "Undo"
       - extendedWaitUntil:
-          notVisible: "Wear logged for .*"
+          notVisible: "Scent logged for .*"
           timeout: 6000
       # undo_wear failure surfaces as an "Oops" alert
       - assertNotVisible: "Oops"
+
+# On a device never asked for notifications, the first logged wear offers the
+# daily reminder once the Undo toast is gone — decline it so the run ends clean
+- extendedWaitUntil:
+    visible: "Get a daily reminder?"
+    timeout: 6000
+    optional: true
+- runFlow:
+    when:
+      visible: "Get a daily reminder?"
+    commands:
+      - tapOn: "Not now"

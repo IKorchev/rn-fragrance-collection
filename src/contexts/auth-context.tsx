@@ -13,14 +13,15 @@ import * as Haptics from "expo-haptics"
 import * as Notifications from "expo-notifications"
 import * as WebBrowser from "expo-web-browser"
 import { router, usePathname } from "expo-router"
-import { Alert, Platform } from "react-native"
+import { Alert } from "react-native"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { User } from "@supabase/supabase-js"
 import Purchases, { type CustomerInfo } from "react-native-purchases"
 
 import { supabase } from "@/lib/supabase"
 import {
-  registerForPushNotificationsAsync,
+  offerDailyReminderOnce,
+  syncPushToken,
   WEAR_REMINDER_ACTIONS,
   WEAR_REMINDER_CATEGORY,
 } from "@/lib/notifications"
@@ -300,24 +301,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user?.id])
 
-  // Register this device for push and remember its Expo token. Upserting on
-  // the token re-homes it if a different account signs in on the same device.
+  const invalidateReminderQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["reminder-prefs", user?.id] })
+    queryClient.invalidateQueries({ queryKey: ["notification-permission"] })
+  }
+
+  // Keeps this device's push token current when permission was already
+  // granted. Deliberately never prompts here: the OS prompt is offered after
+  // the first logged wear (see incrementWear) or from the Profile toggle.
   useEffect(() => {
     if (!user?.id) return
-    registerForPushNotificationsAsync().then(async (token) => {
-      if (!token) return
-      const { error } = await supabase
-        .from("user_push_tokens")
-        .upsert(
-          {
-            user_id: user.id,
-            token,
-            platform: Platform.OS,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "token" }
-        )
-      if (error) reportError(error, { rpc: "save-push-token" })
+    syncPushToken(user.id).then((saved) => {
+      if (saved) invalidateReminderQueries()
     })
   }, [user?.id])
 
@@ -566,6 +561,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (error) throw error
       }
       queryClient.invalidateQueries({ queryKey: ["my-rating", user?.id, fragranceId] })
+      queryClient.invalidateQueries({ queryKey: ["my-ratings", user?.id] })
       queryClient.invalidateQueries({ queryKey: ["fragrance-ratings"] })
       queryClient.invalidateQueries({ queryKey: ["recommendations", user?.id] })
     } catch (error) {
@@ -625,6 +621,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         actionLabel: "Undo",
         onAction: () => undoWear(object),
       })
+      offerDailyReminderOnce(user!.id, invalidateReminderQueries)
     } catch (error) {
       Alert.alert("Oops", `Something went wrong!`)
       reportError(error, { flow: "increment-wear" })

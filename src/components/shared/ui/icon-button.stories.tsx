@@ -12,6 +12,7 @@ const meta = {
   args: {
     bgClassName: "bg-emerald-600",
     onPress: () => {},
+    accessibilityLabel: "Add",
     children: <MaterialCommunityIcons name='plus' size={22} color='white' />,
   },
   argTypes: {
@@ -44,10 +45,10 @@ export const ThemedBackgrounds: Story = {
     const { primaryBg, buttons } = useTheme()
     return (
       <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-        <IconButton bgClassName={primaryBg} onPress={() => {}}>
+        <IconButton bgClassName={primaryBg} onPress={() => {}} accessibilityLabel='Add'>
           <MaterialCommunityIcons name='plus' size={22} color='white' />
         </IconButton>
-        <IconButton bgClassName={buttons.deleteBg} onPress={() => {}}>
+        <IconButton bgClassName={buttons.deleteBg} onPress={() => {}} accessibilityLabel='Delete'>
           <AntDesign name='delete' size={18} color={getColor(buttons.deleteIcon)} />
         </IconButton>
       </View>

@@ -110,6 +110,7 @@ const SearchScreen = () => {
         <PressableScale
           onPress={() => setOpenPicker("brand")}
           testID='open-brand-filter'
+          accessibilityLabel={brand ? `Brand filter: ${brand}` : "Filter by brand"}
           className={`h-11 w-11 items-center justify-center rounded-full ${
             brand ? pill.tintBg : `border ${baseBorderClass}`
           }`}>
@@ -128,7 +129,12 @@ const SearchScreen = () => {
             paddingHorizontal={14}
             onPress={() => setOpenPicker("brand")}
           />
-          <TouchableOpacity onPress={() => setBrand(null)} hitSlop={8} testID='clear-brand-filter'>
+          <TouchableOpacity
+            onPress={() => setBrand(null)}
+            hitSlop={8}
+            testID='clear-brand-filter'
+            accessibilityRole='button'
+            accessibilityLabel='Clear brand filter'>
             <MaterialCommunityIcons name='close-circle' size={20} color={getColor(mutedColors)} />
           </TouchableOpacity>
         </View>
