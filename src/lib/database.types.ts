@@ -387,6 +387,7 @@ export type Database = {
         Row: {
           bottle_price: number | null
           bottle_size_ml: number | null
+          bottle_type: string | null
           created_at: string
           fragrance_id: string | null
           id: string
@@ -395,6 +396,7 @@ export type Database = {
           name: string
           notes: string | null
           rating: number | null
+          running_low: boolean
           tags: string[]
           times_worn: number
           user_id: string
@@ -402,6 +404,7 @@ export type Database = {
         Insert: {
           bottle_price?: number | null
           bottle_size_ml?: number | null
+          bottle_type?: string | null
           created_at?: string
           fragrance_id?: string | null
           id?: string
@@ -410,6 +413,7 @@ export type Database = {
           name: string
           notes?: string | null
           rating?: number | null
+          running_low?: boolean
           tags?: string[]
           times_worn?: number
           user_id: string
@@ -417,6 +421,7 @@ export type Database = {
         Update: {
           bottle_price?: number | null
           bottle_size_ml?: number | null
+          bottle_type?: string | null
           created_at?: string
           fragrance_id?: string | null
           id?: string
@@ -425,6 +430,7 @@ export type Database = {
           name?: string
           notes?: string | null
           rating?: number | null
+          running_low?: boolean
           tags?: string[]
           times_worn?: number
           user_id?: string
@@ -558,6 +564,35 @@ export type Database = {
             columns: ["user_fragrance_id"]
             isOneToOne: false
             referencedRelation: "user_fragrances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wishlist_items: {
+        Row: {
+          created_at: string
+          fragrance_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fragrance_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fragrance_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_items_fragrance_id_fkey"
+            columns: ["fragrance_id"]
+            isOneToOne: false
+            referencedRelation: "fragrances"
             referencedColumns: ["id"]
           },
         ]
@@ -727,6 +762,17 @@ export type Database = {
         }[]
       }
       valid_tag_array: { Args: { tags: string[] }; Returns: boolean }
+      wear_summary: {
+        Args: { p_tz?: string }
+        Returns: {
+          dusted_off: boolean
+          name: string
+          recent_wears: number
+          user_fragrance_id: string
+          wears: number
+          worn_days: string[]
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,5 +1,6 @@
 import { Alert } from "react-native"
 import { presentPaywall } from "@/lib/purchases"
+import { translateDefault } from "@/lib/i18n/translate"
 
 // Free-vs-Pro entitlement boundary for this app (see CLAUDE.md "Monetization").
 // Free keeps the whole core loop useful: unlimited wear logging/undo, tags,
@@ -42,9 +43,9 @@ export const isStreakSaverMonthlyLimitError = (error: unknown): boolean =>
 // wear-history insights).
 export const promptProUpsell = (title: string, message: string) => {
   Alert.alert(title, message, [
-    { text: "Not now", style: "cancel" },
+    { text: translateDefault("upsell.notNow"), style: "cancel" },
     {
-      text: "Upgrade",
+      text: translateDefault("upsell.upgrade"),
       onPress: () => {
         presentPaywall()
       },

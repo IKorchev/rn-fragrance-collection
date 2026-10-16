@@ -6,6 +6,7 @@ import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
 import useToast from "@/contexts/toast-context"
+import useLocale from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
 import { REPORT_REASONS, type ReportReason } from "@/lib/queries"
 import Card from "@/components/card"
@@ -30,6 +31,7 @@ const ReportFragranceScreen = () => {
     accentTintBg,
   } = useTheme()
   const { reportFragrance } = useAuth()
+  const { t } = useLocale()
   const { showToast } = useToast()
   const [reason, setReason] = useState<ReportReason | null>(null)
   const [details, setDetails] = useState("")
@@ -48,10 +50,10 @@ const ReportFragranceScreen = () => {
         details: details.trim() || undefined,
       })
       router.back()
-      showToast({ message: "Thanks — we'll take a look." })
+      showToast({ message: t("reportFragrance.thanks") })
     } catch (error) {
       reportError(error, { flow: "report-fragrance" })
-      Alert.alert("Couldn't send your report", "Something went wrong, please try again.")
+      Alert.alert(t("reportFragrance.failedTitle"), t("reportFragrance.failedMessage"))
     } finally {
       setSubmitting(false)
     }
@@ -63,9 +65,9 @@ const ReportFragranceScreen = () => {
       contentContainerClassName='px-5 pt-6 pb-12'
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps='handled'>
-      <Text className={`${baseTextClass} text-xl font-bold text-center`}>Report an issue</Text>
+      <Text className={`${baseTextClass} text-xl font-bold text-center`}>{t("reportFragrance.title")}</Text>
       <Text className={`${mutedTextClass} text-sm text-center pt-1`}>
-        Flag a problem with this catalog listing for our moderators.
+        {t("reportFragrance.subtitle")}
       </Text>
 
       <View
@@ -91,7 +93,7 @@ const ReportFragranceScreen = () => {
               onPress={() => setReason(option.key)}
               accessibilityRole='radio'
               accessibilityState={{ selected }}
-              accessibilityLabel={option.label}
+              accessibilityLabel={t(option.labelKey)}
               className={`flex-row items-center mt-2 px-4 py-3 rounded-2xl border ${
                 selected ? "" : baseBorderClass
               }`}
@@ -102,7 +104,7 @@ const ReportFragranceScreen = () => {
                 color={selected ? getColor(accentColors) : getColor(mutedColors)}
               />
               <Text className={`${selected ? baseTextClass : mutedTextClass} text-sm font-semibold pl-3`}>
-                {option.label}
+                {t(option.labelKey)}
               </Text>
             </TouchableOpacity>
           )
@@ -110,23 +112,23 @@ const ReportFragranceScreen = () => {
       </View>
 
       <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>
-        Details <Text className={mutedTextClass}>(optional)</Text>
+        {t("reportProfile.detailsHeading")} <Text className={mutedTextClass}>{t("reportProfile.optional")}</Text>
       </Text>
       <TextField
         value={details}
         onChangeText={setDetails}
-        placeholder='Anything that helps us fix it…'
+        placeholder={t("reportFragrance.detailsPlaceholder")}
         multiline
         maxLength={1000}
         minHeightClass='min-h-[80px]'
       />
 
       <Button
-        label='Submit report'
+        label={t("reportFragrance.submit")}
         onPress={handleSubmit}
         disabled={!reason}
         loading={submitting}
-        loadingLabel='Sending…'
+        loadingLabel={t("reportFragrance.sending")}
         className='mt-6'
         testID='submit-report'
       />

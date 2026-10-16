@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS user_fragrances (
   -- not surfaced anywhere in the app yet
   bottle_price   NUMERIC,
   bottle_size_ml INT,
+  -- What the user owns of it, and whether it's running low (detail sheet)
+  bottle_type    TEXT CONSTRAINT user_fragrances_bottle_type_check CHECK (bottle_type IN ('full', 'decant', 'sample')),
+  running_low    BOOLEAN NOT NULL DEFAULT false,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -172,6 +175,56 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION undo_wear(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION undo_wear(uuid, text) TO authenticated;
+
+-- Uncapped per-scent aggregate of the caller's own wear_events (migration
+-- add_wear_summary_rpc) — the input for badges/streaks (src/lib/gamification)
+-- and the wear diary's header stats + facets, so neither depends on fetching
+-- every raw row. SECURITY INVOKER: the "own events" policy scopes it. One row
+-- per (user_fragrance_id, name):
+--   dusted_off — some wear of this name came >= 30 days after the previous
+--     wear of the same name (lag partitioned by name, so a deleted-then-re-
+--     added fragrance still counts across both rows)
+--   worn_days  — distinct calendar days in p_tz (device timezone; invalid
+--     input falls back to UTC, same as increment_wear)
+CREATE OR REPLACE FUNCTION wear_summary(p_tz text DEFAULT 'UTC')
+RETURNS TABLE (
+  user_fragrance_id uuid,
+  name text,
+  wears bigint,
+  recent_wears bigint,
+  dusted_off boolean,
+  worn_days date[]
+)
+LANGUAGE plpgsql STABLE SECURITY INVOKER
+SET search_path = public
+AS $$
+BEGIN
+  BEGIN
+    PERFORM now() AT TIME ZONE p_tz;
+  EXCEPTION WHEN OTHERS THEN
+    p_tz := 'UTC';
+  END;
+
+  RETURN QUERY
+  WITH ev AS (
+    SELECT e.user_fragrance_id, e.name, e.worn_at,
+           e.worn_at - lag(e.worn_at) OVER (PARTITION BY e.name ORDER BY e.worn_at) AS gap
+    FROM wear_events e
+    WHERE e.user_id = (SELECT auth.uid())
+  )
+  SELECT ev.user_fragrance_id,
+         ev.name,
+         count(*),
+         count(*) FILTER (WHERE ev.worn_at > now() - interval '7 days'),
+         coalesce(bool_or(ev.gap >= interval '30 days'), false),
+         array_agg(DISTINCT (ev.worn_at AT TIME ZONE p_tz)::date)
+  FROM ev
+  GROUP BY ev.user_fragrance_id, ev.name;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION wear_summary(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION wear_summary(text) TO authenticated;
 
 -- Top-100 most worn across ALL users (the app's "Most Worn" tab). Every
 -- period counts wear_events ('all' just uses an unbounded cutoff), so results
@@ -1541,6 +1594,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   display_name       TEXT NOT NULL DEFAULT '' CHECK (char_length(display_name) <= 80),
   avatar_url         TEXT CHECK (avatar_url IS NULL OR (avatar_url LIKE 'https://%' AND char_length(avatar_url) <= 2048)),
   header_image_path  TEXT CHECK (header_image_path IS NULL OR char_length(header_image_path) <= 1024),
+  -- level/xp: retired with the XP system; 1.3.x binaries still write them,
+  -- nothing reads them. Drop once those binaries are gone.
   level              INT NOT NULL DEFAULT 1 CHECK (level BETWEEN 1 AND 10),
   xp                 INT NOT NULL DEFAULT 0 CHECK (xp >= 0),
   streak             INT NOT NULL DEFAULT 0 CHECK (streak >= 0),
@@ -1554,8 +1609,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   moderation_hidden_at TIMESTAMPTZ
 );
 
--- Top-collectors leaderboard scan: public rows ordered by xp
-CREATE INDEX IF NOT EXISTS user_profiles_public_xp_idx ON user_profiles (xp DESC) WHERE is_public;
+-- Top-collectors leaderboard scan: public rows ordered by total_wears
+CREATE INDEX IF NOT EXISTS user_profiles_public_total_wears_idx
+  ON user_profiles (total_wears DESC) WHERE is_public;
 
 -- User blocks (App Review 1.2): private to the blocker — the blocked user
 -- can't tell. Defined here because the user_profiles SELECT policy below
@@ -1902,3 +1958,22 @@ CREATE POLICY "moderator profile header delete" ON storage.objects FOR DELETE TO
   USING (bucket_id = 'profile-headers' AND EXISTS (
     SELECT 1 FROM public.moderators m WHERE m.user_id = (SELECT auth.uid())
   ));
+
+-- "Want to try" list: catalog fragrances the user hasn't bought yet. Catalog
+-- only; name/image come through the fragrances embed, not a snapshot.
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  fragrance_id  UUID NOT NULL REFERENCES fragrances(id) ON DELETE CASCADE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT wishlist_items_user_fragrance_unique UNIQUE (user_id, fragrance_id)
+);
+
+CREATE INDEX IF NOT EXISTS wishlist_items_fragrance_id_idx ON wishlist_items (fragrance_id);
+
+ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own wishlist" ON wishlist_items FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+
+REVOKE ALL ON wishlist_items FROM anon;

@@ -7,6 +7,7 @@ import { useRouter } from "expo-router"
 import { SignInBackdrop, SignInHero } from "@/components/sign-in-hero"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 
 const MAX_CONTENT_WIDTH = 320
 const BUTTON_HEIGHT = 52
@@ -14,6 +15,7 @@ const BUTTON_HEIGHT = 52
 export default function SigninScreen() {
   const router = useRouter()
   const { signInWithGoogle, signInWithApple } = useAuth()
+  const { t } = useLocale()
   const {
     theme,
     viewColors,
@@ -42,8 +44,7 @@ export default function SigninScreen() {
           <Text
             className={`mt-3 text-center text-base leading-6 ${mutedTextClass}`}
             style={{ maxWidth: MAX_CONTENT_WIDTH }}>
-            Your nose knows. Build your collection, log every spritz, and let
-            the picker decide what today smells like.
+            {t("signIn.tagline")}
           </Text>
 
           <View className='mt-12 w-full' style={{ maxWidth: MAX_CONTENT_WIDTH }}>
@@ -56,7 +57,7 @@ export default function SigninScreen() {
               }`}>
               <AntDesign name='google' size={20} color='#dd4b39' />
               <Text className='ml-3 text-base font-semibold text-zinc-900'>
-                Continue with Google
+                {t("signIn.google")}
               </Text>
             </TouchableOpacity>
             {/* App Store 4.8: Google sign-in requires an Apple sign-in option on iOS */}
@@ -80,24 +81,24 @@ export default function SigninScreen() {
           <Text
             className={`mt-6 text-center text-xs leading-5 ${mutedTextClass}`}
             style={{ maxWidth: MAX_CONTENT_WIDTH }}>
-            By continuing you agree to our{" "}
+            {t("signIn.agreePrefix")}{" "}
             <Text
               className={`${accentTextClass} font-semibold`}
               onPress={() => router.push("/terms")}>
-              Terms & Conditions
+              {t("screens.terms")}
             </Text>{" "}
-            and{" "}
+            {t("signIn.and")}{" "}
             <Text
               className={`${accentTextClass} font-semibold`}
               onPress={() => router.push("/privacy-policy")}>
-              Privacy Policy
+              {t("screens.privacyPolicy")}
             </Text>
             .
           </Text>
         </View>
 
         <Text className={`mb-6 text-center text-xs ${mutedTextClass}`}>
-          Track · Discover · Wear
+          {t("signIn.footer")}
         </Text>
       </SafeAreaView>
     </View>

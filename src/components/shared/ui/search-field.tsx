@@ -3,6 +3,7 @@ import { TextInput, TouchableOpacity, View } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 
 interface SearchFieldProps {
   value: string
@@ -33,6 +34,7 @@ const SearchField = ({
   testID,
 }: SearchFieldProps) => {
   const { theme, baseColors, mutedColors } = useTheme()
+  const { t } = useLocale()
 
   return (
     <View
@@ -60,7 +62,7 @@ const SearchField = ({
           onPress={() => onChangeText("")}
           hitSlop={8}
           accessibilityRole='button'
-          accessibilityLabel='Clear search'>
+          accessibilityLabel={t("diary.clearSearch")}>
           <MaterialCommunityIcons name='close-circle' size={18} color={getColor(mutedColors)} />
         </TouchableOpacity>
       )}

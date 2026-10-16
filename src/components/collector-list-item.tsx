@@ -13,7 +13,7 @@ interface CollectorListItemProps {
   place: number
 }
 
-// One row of the Collectors leaderboard: rank, avatar, name, level + wears
+// One row of the Collectors leaderboard: rank, avatar, name, wears + badges
 // meta. A people row, not a fragrance row — deliberately not built from the
 // Card.* primitives (those stay domain-specific to fragrance lists).
 const CollectorListItem = ({ profile, place }: CollectorListItemProps) => {
@@ -56,7 +56,7 @@ const CollectorListItem = ({ profile, place }: CollectorListItemProps) => {
           {name}
         </Text>
         <Text className={`${mutedTextClass} text-sm pt-0.5`} numberOfLines={1}>
-          {t("collectors.meta", { level: profile.level, count: profile.total_wears })}
+          {t("collectors.meta", { count: profile.total_wears, badges: profile.badge_ids.length })}
         </Text>
       </View>
       <MaterialCommunityIcons name='chevron-right' size={22} color={getColor(mutedColors)} />

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Whiff",
     "slug": "fragrance-collection",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -68,6 +68,17 @@
       ],
       "@sentry/react-native/expo",
       "expo-sharing",
+      [
+        "expo-quick-actions",
+        {
+          "androidIcons": {
+            "shuffle": {
+              "foregroundImage": "./assets/adaptive-icon.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          }
+        }
+      ],
       [
         "expo-image-picker",
         {

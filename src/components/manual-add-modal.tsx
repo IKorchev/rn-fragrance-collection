@@ -4,6 +4,7 @@ import { useDebouncedValue } from "@/lib/utils/use-debounced-value"
 import { useFragranceSearch, MIN_SEARCH_LENGTH } from "@/lib/queries"
 import useTheme from "@/contexts/theme-context"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 import Card from "@/components/card"
 import Dialog from "@/components/shared/ui/dialog"
 import TextField from "@/components/shared/ui/text-field"
@@ -24,6 +25,7 @@ interface ManualAddModalProps {
 const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps) => {
   const { theme, baseTextClass, mutedTextClass } = useTheme()
   const { addFragranceToCollection, addManualFragrance } = useAuth()
+  const { t } = useLocale()
   const [brand, setBrand] = useState("")
   const [title, setTitle] = useState("")
   const [saving, setSaving] = useState(false)
@@ -72,19 +74,19 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
   }
 
   return (
-    <Dialog visible={visible} title='Add manually' onClose={onClose}>
+    <Dialog visible={visible} title={t("search.addManually")} onClose={onClose}>
       <Text className={`${mutedTextClass} text-sm pt-1`}>
-        Can't find it in the catalog? Add it to your collection by hand.
+        {t("manualAdd.intro")}
       </Text>
 
       <Text className={`${baseTextClass} text-sm font-semibold pt-5`}>Brand</Text>
-      <TextField value={brand} onChangeText={setBrand} placeholder='e.g. Dior' autoCorrect={false} className='mt-2' />
+      <TextField value={brand} onChangeText={setBrand} placeholder={t("manualAdd.brandPlaceholder")} autoCorrect={false} className='mt-2' />
 
       <Text className={`${baseTextClass} text-sm font-semibold pt-4`}>Name</Text>
       <TextField
         value={title}
         onChangeText={setTitle}
-        placeholder='e.g. Sauvage Elixir'
+        placeholder={t("manualAdd.titlePlaceholder")}
         autoCorrect={false}
         className='mt-2'
       />
@@ -92,7 +94,7 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
       {matches.length > 0 && (
         <View className='pt-4'>
           <Text className={`${mutedTextClass} text-sm font-semibold`}>
-            Did you mean one of these?
+            {t("manualAdd.didYouMean")}
           </Text>
           {matches.map((match) => (
             <View
@@ -108,8 +110,8 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
                 </Text>
               </View>
               <Card.ActionPill
-                label='Add'
-                accessibilityLabel={`Add ${match.name}`}
+                label={t("actions.add")}
+                accessibilityLabel={t("actions.addLabel", { name: match.name })}
                 disabled={saving}
                 onPress={() => handleAddMatch(match)}
                 className='ml-2'
@@ -120,11 +122,11 @@ const ManualAddModal = ({ visible, initialTitle, onClose }: ManualAddModalProps)
       )}
 
       <Button
-        label='Add to collection'
+        label={t("wishlist.addToCollection")}
         onPress={handleAdd}
         disabled={!canAdd}
         loading={saving}
-        loadingLabel='Adding…'
+        loadingLabel={t("manualAdd.adding")}
         className='mt-6'
       />
     </Dialog>

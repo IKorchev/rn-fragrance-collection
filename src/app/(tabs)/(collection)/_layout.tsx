@@ -2,8 +2,11 @@ import React from "react"
 import { Stack } from "expo-router"
 import { getHeaderTitle } from "expo-router/react-navigation"
 import Header from "@/components/header"
+import useLocale from "@/contexts/locale-context"
 
 export default function CollectionLayout() {
+  const { t } = useLocale()
+
   return (
     <Stack
       screenOptions={{
@@ -11,7 +14,7 @@ export default function CollectionLayout() {
           <Header title={getHeaderTitle(options, route.name)} navigation={navigation} />
         ),
       }}>
-      <Stack.Screen name="index" options={{ title: "Collection" }} />
+      <Stack.Screen name="index" options={{ title: t("collection.title") }} />
     </Stack>
   )
 }

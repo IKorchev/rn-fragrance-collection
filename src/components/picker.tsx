@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useAuth, { type UserFragrance } from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { pickWeightedIndex } from "@/lib/utils/pick-weighted-index"
 import { isWornToday } from "@/lib/utils/worn-today"
 import { getImageSource } from "@/lib/utils/image-source"
@@ -37,6 +38,7 @@ const Picker = ({ fragrance, index, onSpin }: PickerProps) => {
     getNewFrag,
   } = useAuth()
   const { theme, baseBorderClass, mutedTextClass } = useTheme()
+  const { t } = useLocale()
   const animatedOffset = useRef(new Animated.Value(0)).current
   const animationLoopRef = useRef<Animated.CompositeAnimation | null>(null)
   // "settling" = main spin done, overshoot spring still bouncing — the reel is
@@ -266,12 +268,12 @@ const Picker = ({ fragrance, index, onSpin }: PickerProps) => {
                   the increment_wear round-trip shows the "already worn" toast */}
               {spinPhase !== "spinning" && (
                 <Card.ActionPill
-                  label='Wear'
+                  label={t("actions.wear")}
                   appearance='solid'
                   size='lg'
                   className='absolute bottom-3.5 right-3'
                   testID='picker-wear-button'
-                  accessibilityLabel={`Wear ${currentItem.name.split(" - ")[1] ?? currentItem.name}`}
+                  accessibilityLabel={t("actions.wearLabel", { name: currentItem.name.split(" - ")[1] ?? currentItem.name })}
                   style={styles.knob}
                   worn={isWornToday(currentItem.last_worn)}
                   onPress={() => incrementWear({ id: currentItem.id })}
@@ -281,16 +283,14 @@ const Picker = ({ fragrance, index, onSpin }: PickerProps) => {
           ) : (
             <View className='flex-1 items-center justify-center px-6'>
               <Text className={`${mutedTextClass} text-center`}>
-                {userCollection.length === 0
-                  ? "No fragrances yet"
-                  : "No fragrances match your picker filters"}
+                {userCollection.length === 0 ? t("picker.empty") : t("picker.noMatches")}
               </Text>
               {userCollection.length > 0 && pickerHasActiveFilters && (
                 <Button
                   variant='ghost'
                   size='sm'
                   fullWidth={false}
-                  label='Clear filters'
+                  label={t("picker.clearFilters")}
                   className='mt-3'
                   onPress={() => setPickerFilters(EMPTY_PICKER_FILTERS)}
                 />
@@ -313,8 +313,8 @@ const Picker = ({ fragrance, index, onSpin }: PickerProps) => {
             hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
             accessible
             accessibilityRole='button'
-            accessibilityLabel='Spin the picker'
-            accessibilityHint='Picks a fragrance from your collection'
+            accessibilityLabel={t("picker.spinLabel")}
+            accessibilityHint={t("picker.spinHint")}
             accessibilityState={{ disabled: isSpinning || !pool.length }}
             accessibilityActions={[{ name: "activate" }]}
             onAccessibilityAction={(event) => {

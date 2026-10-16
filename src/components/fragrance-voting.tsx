@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import useTheme from "@/contexts/theme-context";
 import { getColor } from "@/lib/utils/colors";
 import useToast from "@/contexts/toast-context";
+import useLocale from "@/contexts/locale-context";
 import Button from "@/components/shared/ui/button";
 import SegmentedControl from "@/components/shared/ui/segmented-control";
 import StatTile from "@/components/shared/ui/stat-tile";
@@ -16,31 +17,8 @@ import {
   useFragranceVoteMutation,
   useFragranceVoteSummary,
 } from "@/lib/queries";
-const seasonLabels: Record<VoteSeason, string> = {
-  spring: "Spring",
-  summer: "Summer",
-  autumn: "Autumn",
-  winter: "Winter",
-};
-const genderLabels: Record<VoteGender, string> = {
-  female: "Feminine",
-  unisex: "Unisex",
-  male: "Masculine",
-};
-const sillageLabels = [
-  "Very intimate",
-  "Intimate",
-  "Moderate",
-  "Strong",
-  "Enormous",
-];
-const longevityLabels = [
-  "Very weak",
-  "Weak",
-  "Moderate",
-  "Long lasting",
-  "Eternal",
-];
+// 1–5 scale label keys (voting.sillage.1 … voting.longevity.5)
+const SCALE_STEPS = [1, 2, 3, 4, 5] as const;
 // Bare getColor() tokens per theme — resolved via tint() inside the component
 type TintTokens = { light: string; dark: string };
 const seasonTints: Record<VoteSeason, TintTokens> = {
@@ -86,6 +64,13 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
   );
   const mutation = useFragranceVoteMutation(userId, fragranceId);
   const { showToast } = useToast();
+  const { t } = useLocale();
+  const seasonLabel = (season: VoteSeason) => t(`voting.seasons.${season}`);
+  const genderLabel = (gender: VoteGender) => t(`voting.genders.${gender}`);
+  const sillageLabel = (index: number) =>
+    index >= 0 && index < 5 ? t(`voting.sillage.${index + 1}`) : undefined;
+  const longevityLabel = (index: number) =>
+    index >= 0 && index < 5 ? t(`voting.longevity.${index + 1}`) : undefined;
   const { theme, baseTextClass, mutedTextClass, baseBorderClass, cardColors } =
     useTheme();
   const tint = (tokens: TintTokens) =>
@@ -101,7 +86,7 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
     if (mutation.isSuccess) {
       setDirty(false);
       setEditing(false);
-      showToast({ message: mutation.variables ? "Vote saved" : "Vote removed" });
+      showToast({ message: mutation.variables ? t("voting.saved") : t("voting.removed") });
       mutation.reset();
     }
   }, [mutation.isSuccess]);
@@ -117,7 +102,7 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
   const toggleSeason = (season: VoteSeason) => {
     const selected = draft.seasons.includes(season);
     if (!selected && draft.seasons.length >= 2) {
-      setValidationError("Choose 1–2 seasons.");
+      setValidationError(t("voting.errorSeasons"));
       return;
     }
     setDraftValue(
@@ -129,19 +114,19 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
   };
   const save = () => {
     if (draft.seasons.length < 1 || draft.seasons.length > 2) {
-      setValidationError("Choose 1–2 seasons.");
+      setValidationError(t("voting.errorSeasons"));
       return;
     }
     if (!draft.gender) {
-      setValidationError("Choose a gender impression.");
+      setValidationError(t("voting.errorGender"));
       return;
     }
     if (!draft.sillage) {
-      setValidationError("Choose a sillage level.");
+      setValidationError(t("voting.errorSillage"));
       return;
     }
     if (!draft.longevity) {
-      setValidationError("Choose a longevity level.");
+      setValidationError(t("voting.errorLongevity"));
       return;
     }
     const vote: FragranceVote = {
@@ -169,7 +154,7 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         }
       >
         <Text className={mutedTextClass + " text-sm"}>
-          Loading community votes…
+          {t("voting.loading")}
         </Text>
       </View>
     );
@@ -185,10 +170,10 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         }
       >
         <Text className={mutedTextClass + " text-sm"}>
-          Community votes are unavailable right now.
+          {t("voting.unavailable")}
         </Text>
         <Button
-          label="Retry"
+          label={t("common.retry")}
           variant="ghost"
           tone="accent"
           size="sm"
@@ -216,12 +201,12 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         }
       >
         <Text className={baseTextClass + " text-base font-bold"}>
-          Community profile
+          {t("voting.title")}
         </Text>
         {data.total_votes > 0 ? (
           <>
             <Text className={mutedTextClass + " text-xs pt-1"}>
-              Based on {data.total_votes} vote{data.total_votes === 1 ? "" : "s"}
+              {t("voting.basedOn", { count: data.total_votes })}
             </Text>
             <StatTile
               size="sm"
@@ -229,23 +214,23 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
               className="mt-4"
               items={[
                 {
-                  value: seasonLabels[topSeason],
-                  label: "Season",
+                  value: seasonLabel(topSeason),
+                  label: t("voting.season"),
                   color: tint(seasonTints[topSeason]),
                 },
                 {
-                  value: genderLabels[topGender],
-                  label: "Gender",
+                  value: genderLabel(topGender),
+                  label: t("voting.gender"),
                   color: tint(genderTints[topGender]),
                 },
                 {
-                  value: sillageLabels[topSillage] ?? "—",
-                  label: "Sillage",
+                  value: sillageLabel(topSillage) ?? "—",
+                  label: t("voting.sillageTitle"),
                   color: scaleTints[topSillage] && tint(scaleTints[topSillage]),
                 },
                 {
-                  value: longevityLabels[topLongevity] ?? "—",
-                  label: "Longevity",
+                  value: longevityLabel(topLongevity) ?? "—",
+                  label: t("voting.longevityTitle"),
                   color: scaleTints[topLongevity] && tint(scaleTints[topLongevity]),
                 },
               ]}
@@ -253,11 +238,11 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
           </>
         ) : (
           <Text className={mutedTextClass + " text-sm pt-2"}>
-            No votes yet — how does it wear on you?
+            {t("voting.noVotes")}
           </Text>
         )}
         <Button
-          label={data.my_vote ? "Edit your vote" : "Vote"}
+          label={data.my_vote ? t("voting.edit") : t("voting.vote")}
           variant="ghost"
           tone="accent"
           size="sm"
@@ -286,19 +271,19 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
       }
     >
       <Text className={baseTextClass + " text-base font-bold"}>
-        Community profile
+        {t("voting.title")}
       </Text>
       <Text className={mutedTextClass + " text-xs pt-1"}>
-        Share how it wears on you
+        {t("voting.subtitle")}
       </Text>
       <Text className={baseTextClass + " pt-4 text-sm font-semibold"}>
-        Seasons
-        <Text className={mutedTextClass + " font-normal"}> (pick 1–2)</Text>
+        {t("voting.seasonsTitle")}
+        <Text className={mutedTextClass + " font-normal"}> {t("voting.pickOneOrTwo")}</Text>
       </Text>
       <SegmentedControl
         className="mt-2"
         options={VOTE_SEASONS.map((season) => ({
-          label: seasonLabels[season],
+          label: seasonLabel(season),
           value: season,
           testID: `vote-season-${season}`,
           tint: tint(seasonTints[season]),
@@ -307,12 +292,12 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         onChange={toggleSeason}
       />
       <Text className={baseTextClass + " pt-4 text-sm font-semibold"}>
-        Gender
+        {t("voting.gender")}
       </Text>
       <SegmentedControl
         className="mt-2"
         options={VOTE_GENDERS.map((gender) => ({
-          label: genderLabels[gender],
+          label: genderLabel(gender),
           value: gender,
           testID: `vote-gender-${gender}`,
           tint: tint(genderTints[gender]),
@@ -321,12 +306,12 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         onChange={(gender) => setDraftValue("gender", gender)}
       />
       <Text className={baseTextClass + " pt-4 text-sm font-semibold"}>
-        Sillage
+        {t("voting.sillageTitle")}
       </Text>
       <SegmentedControl
         className="mt-2"
-        options={sillageLabels.map((label, index) => ({
-          label,
+        options={SCALE_STEPS.map((step, index) => ({
+          label: t(`voting.sillage.${step}`),
           value: (index + 1) as VoteScale,
           testID: `sillage-${index + 1}`,
           tint: tint(scaleTints[index]),
@@ -335,12 +320,12 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         onChange={(level) => setDraftValue("sillage", level)}
       />
       <Text className={baseTextClass + " pt-4 text-sm font-semibold"}>
-        Longevity
+        {t("voting.longevityTitle")}
       </Text>
       <SegmentedControl
         className="mt-2"
-        options={longevityLabels.map((label, index) => ({
-          label,
+        options={SCALE_STEPS.map((step, index) => ({
+          label: t(`voting.longevity.${step}`),
           value: (index + 1) as VoteScale,
           testID: `longevity-${index + 1}`,
           tint: tint(scaleTints[index]),
@@ -350,13 +335,13 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
       />
       {(validationError || mutation.isError) && (
         <Text className="pt-3 text-sm text-rose-600">
-          {validationError ?? "Could not save your vote. Try again."}
+          {validationError ?? t("voting.saveFailed")}
         </Text>
       )}
       <View className="flex-row items-center pt-5" style={{ gap: 12 }}>
         <View className="flex-1">
           <Button
-            label="Cancel"
+            label={t("common.cancel")}
             variant="secondary"
             testID="fragrance-vote-cancel"
             onPress={() => {
@@ -370,17 +355,17 @@ const FragranceVoting = ({ userId, fragranceId }: FragranceVotingProps) => {
         </View>
         <View className="flex-1">
           <Button
-            label={data.my_vote ? "Update vote" : "Save vote"}
+            label={data.my_vote ? t("voting.update") : t("voting.save")}
             onPress={save}
             loading={mutation.isPending}
-            loadingLabel="Saving…"
+            loadingLabel={t("voting.saving")}
             testID="fragrance-vote-save"
           />
         </View>
       </View>
       {data.my_vote && (
         <Button
-          label="Remove my vote"
+          label={t("voting.remove")}
           variant="ghost"
           tone="danger"
           size="sm"

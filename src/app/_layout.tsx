@@ -112,6 +112,15 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="wishlist"
+            options={{
+              title: t("screens.wishlist"),
+              header: ({ navigation, route, options, back }) => (
+                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
+              ),
+            }}
+          />
+          <Stack.Screen
             name="badges"
             options={{
               title: t("screens.badges"),

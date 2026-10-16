@@ -1,4 +1,4 @@
-# Legal screens: the Profile tab links to the Privacy Policy and Terms &
+# Legal screens: Profile → Settings links to the Privacy Policy and Terms &
 # Conditions screens (regular pushed screens, not sheets) and both render
 # their content.
 appId: com.korchev.fragrancecollection
@@ -7,14 +7,13 @@ tags:
 ---
 - runFlow: ../subflows/launch-dev-client.yaml
 
-# Profile is a regular tab now
 - tapOn: "Profile"
+- tapOn:
+    id: profile-settings-button
 - extendedWaitUntil:
-    visible: "Wear history"
+    visible: "Appearance"
     timeout: 10000
 
-# The Upgrade to Pro row (shown when RevenueCat keys are configured) pushes
-# Privacy Policy below the fold
 - scrollUntilVisible:
     element:
       text: "Privacy Policy"

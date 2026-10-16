@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import useAuth from "@/contexts/auth-context"
+import useLocale from "@/contexts/locale-context"
 
 const dismissedKey = (userId: string) => `onboarding:dismissed:${userId}`
 const pickerTriedKey = (userId: string) => `onboarding:picker-tried:${userId}`
@@ -29,6 +30,7 @@ export interface OnboardingStep {
 // point stays available (via `resume`) until all 3 steps are actually done.
 export const useOnboarding = () => {
   const { user, userCollection } = useAuth()
+  const { t } = useLocale()
   const userId = user?.id
   const [dismissed, setDismissed] = useState(false)
   const [pickerTried, setPickerTried] = useState(false)
@@ -70,22 +72,22 @@ export const useOnboarding = () => {
   const steps: OnboardingStep[] = [
     {
       key: "add",
-      label: "Add your first fragrance",
-      description: "Search the catalog, or add one by hand if we're missing it.",
+      label: t("onboarding.addLabel"),
+      description: t("onboarding.addDescription"),
       done: hasCollection,
       enabled: true,
     },
     {
       key: "wear",
-      label: "Log your first wear",
-      description: "Tap Wear next time you spritz something on.",
+      label: t("onboarding.wearLabel"),
+      description: t("onboarding.wearDescription"),
       done: hasWorn,
       enabled: hasCollection,
     },
     {
       key: "picker",
-      label: "Try the picker",
-      description: "Can't decide? Let the picker do the sniffing for you.",
+      label: t("onboarding.pickerLabel"),
+      description: t("onboarding.pickerDescription"),
       done: pickerTried,
       enabled: hasCollection,
     },

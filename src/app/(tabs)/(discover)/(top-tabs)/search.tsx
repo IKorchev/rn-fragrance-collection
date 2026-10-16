@@ -22,6 +22,7 @@ import { useDebouncedValue } from "@/lib/utils/use-debounced-value"
 import { useRecentSearches } from "@/lib/utils/use-recent-searches"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import TopListItem from "@/components/top-list-item"
 import OnboardingChecklist from "@/components/onboarding-checklist"
 import FilterPickerModal from "@/components/filter-picker-modal"
@@ -44,6 +45,7 @@ const SearchScreen = () => {
   const [searchFocused, setSearchFocused] = useState(false)
   const { viewColors, mutedColors, accentColors, baseBorderClass, pill, mutedTextClass } = useTheme()
   const recentSearches = useRecentSearches()
+  const { t } = useLocale()
 
   const filters: SearchFilters = { brand }
   const { data, isFetching, isLoading, error, refetch } = useFragranceSearch(
@@ -97,7 +99,7 @@ const SearchScreen = () => {
           <SearchField
             value={searchTerm}
             onChangeText={setSearchTerm}
-            placeholder='Search name or brand'
+            placeholder={t("search.placeholder")}
             onSubmitEditing={() => Keyboard.dismiss()}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
@@ -110,7 +112,7 @@ const SearchScreen = () => {
         <PressableScale
           onPress={() => setOpenPicker("brand")}
           testID='open-brand-filter'
-          accessibilityLabel={brand ? `Brand filter: ${brand}` : "Filter by brand"}
+          accessibilityLabel={brand ? t("search.brandFilterActive", { brand }) : t("search.filterByBrand")}
           className={`h-11 w-11 items-center justify-center rounded-full ${
             brand ? pill.tintBg : `border ${baseBorderClass}`
           }`}>
@@ -134,7 +136,7 @@ const SearchScreen = () => {
             hitSlop={8}
             testID='clear-brand-filter'
             accessibilityRole='button'
-            accessibilityLabel='Clear brand filter'>
+            accessibilityLabel={t("search.clearBrandFilter")}>
             <MaterialCommunityIcons name='close-circle' size={20} color={getColor(mutedColors)} />
           </TouchableOpacity>
         </View>
@@ -150,8 +152,8 @@ const SearchScreen = () => {
         {!queryEnabled && !tooShort && (
           <EmptyState
             icon='text-search'
-            title='Search the catalog'
-            message='Type a name or brand, or filter by brand above.'
+            title={t("search.idleTitle")}
+            message={t("search.idleMessage")}
           />
         )}
         {tooShort && (
@@ -163,9 +165,9 @@ const SearchScreen = () => {
         {queryEnabled && !isLoading && error && (
           <EmptyState
             icon='cloud-alert'
-            title='Search failed'
-            message='Check your connection and try again.'
-            actionLabel='Try again'
+            title={t("search.errorTitle")}
+            message={t("collection.loadErrorMessage")}
+            actionLabel={t("collection.tryAgain")}
             onAction={() => refetch()}
           />
         )}
@@ -173,9 +175,9 @@ const SearchScreen = () => {
           <EmptyState
             icon='magnify-close'
             illustration={<NoResultsIllustration />}
-            title='No results found'
-            message="The catalog doesn't have everything — you can add it yourself."
-            actionLabel='Add manually'
+            title={t("search.noResultsTitle")}
+            message={t("search.noResultsMessage")}
+            actionLabel={t("search.addManually")}
             onAction={() => setManualAddOpen(true)}
           />
         )}
@@ -205,7 +207,7 @@ const SearchScreen = () => {
             ListFooterComponent={
               <TouchableOpacity onPress={() => setManualAddOpen(true)} className='py-4'>
                 <Text className={`${mutedTextClass} text-center text-sm`}>
-                  Can't find it? <Text className='font-semibold'>Add manually</Text>
+                  {t("search.cantFindIt")} <Text className='font-semibold'>{t("search.addManually")}</Text>
                 </Text>
               </TouchableOpacity>
             }
@@ -224,10 +226,10 @@ const SearchScreen = () => {
             <Pressable onPress={() => {}} className='px-6 pt-6'>
               <View className='flex-row items-center justify-between pb-2'>
                 <Text className={`${mutedTextClass} text-xs font-semibold uppercase`}>
-                  Recent searches
+                  {t("search.recentSearches")}
                 </Text>
                 <TouchableOpacity onPress={recentSearches.clear} hitSlop={8}>
-                  <Text className={`${mutedTextClass} text-xs`}>Clear</Text>
+                  <Text className={`${mutedTextClass} text-xs`}>{t("diary.clear")}</Text>
                 </TouchableOpacity>
               </View>
               <View className='flex-row flex-wrap' style={{ gap: 8 }}>
@@ -251,7 +253,7 @@ const SearchScreen = () => {
       />
       <FilterPickerModal
         visible={openPicker === "brand"}
-        title='Brand'
+        title={t("diary.brand")}
         options={brandOptions}
         loading={brandsLoading}
         searchValue={brandSearch}

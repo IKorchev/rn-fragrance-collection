@@ -10,6 +10,8 @@ export interface NativeMenuItem {
   icon?: MenuAction["image"]
   destructive?: boolean
   disabled?: boolean
+  // Renders a checkmark: for single-choice menus (sort order, appearance)
+  checked?: boolean
   onPress: () => void
 }
 
@@ -40,6 +42,7 @@ const NativeMenu = ({ title, items, style, testID, children }: NativeMenuProps) 
         id: item.id,
         title: item.title,
         image: item.icon,
+        state: item.checked ? "on" : undefined,
         attributes: { destructive: item.destructive, disabled: item.disabled },
       }))}
       onPressAction={({ nativeEvent }) => items.find((item) => item.id === nativeEvent.event)?.onPress()}>

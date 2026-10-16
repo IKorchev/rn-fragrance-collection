@@ -92,8 +92,6 @@ const MonthlyRecapScreen = () => {
     return monthEndState.badges.filter((b) => b.earned && !earnedAtStart.has(b.id))
   }, [monthStartState, monthEndState])
 
-  const xpGained = monthEndState.xp - monthStartState.xp
-
   const shareMessage = useMemo(
     () =>
       buildMonthlyRecapShareText(t, {
@@ -102,9 +100,8 @@ const MonthlyRecapScreen = () => {
         topFragranceName: topThree[0] ? displayFragranceName(topThree[0].name) : null,
         streak: bestStreak,
         badgesCount: newBadges.length,
-        levelTitle: t(monthEndState.levelTitle),
       }),
-    [t, monthLabel, totalWears, topThree, bestStreak, newBadges.length, monthEndState.levelTitle]
+    [t, monthLabel, totalWears, topThree, bestStreak, newBadges.length]
   )
 
   const isEmpty = totalWears === 0
@@ -217,22 +214,6 @@ const MonthlyRecapScreen = () => {
               ) : (
                 <Text className={`${mutedTextClass} text-sm`}>{t("recap.noNewBadges")}</Text>
               )}
-            </View>
-
-            <View className='pt-8'>
-              <Text className={`${mutedTextClass} text-xs font-semibold uppercase tracking-wider pb-3`}>
-                {t("recap.levelSectionTitle")}
-              </Text>
-              <StatTile
-                items={[
-                  { value: monthEndState.level, label: t("recap.levelLabel") },
-                  { value: `+${xpGained}`, label: t("recap.xpGainedLabel") },
-                ]}
-                columns={2}
-              />
-              <Text className={`${mutedTextClass} text-sm text-center pt-3`}>
-                {t(monthEndState.levelTitle)}
-              </Text>
             </View>
           </>
         )}
