@@ -1,0 +1,93 @@
+name: OTA publish
+
+# Publishes a JS update to the self-hosted xprem server through the same
+# `yarn ota:publish` the docs prescribe (preflight + eoas) — never bare eoas or
+# `eas update`.
+#   push to main             → preview, automatically
+#   push a v<version>-ota.<n> tag → production, after approval on the
+#                              `production` environment
+#   Run workflow (manual)    → either branch, any platform — hotfixes/rollbacks
+on:
+  push:
+    branches: [main]
+    tags: ["v*-ota.*"]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Update branch
+        type: choice
+        options: [preview, production]
+        default: preview
+      platform:
+        description: Platforms
+        type: choice
+        options: [all, ios, android]
+        default: all
+      message:
+        description: Update message (defaults to the commit subject)
+        type: string
+        required: false
+
+# One publish per update branch at a time, and never cancel one mid-upload
+concurrency:
+  group: ota-${{ startsWith(github.ref, 'refs/tags/') && 'production' || inputs.branch || 'preview' }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The production environment requires a reviewer's approval before this
+    # job starts, and only accepts main and release tags (repo settings)
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'production' || inputs.branch || 'preview' }}
+    env:
+      UPDATE_BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && 'production' || inputs.branch || 'preview' }}
+      # app.config.js refuses to evaluate without it, and eas-cli evaluates the
+      # config before it can pull anything — so this one can't come from EAS
+      XPREM_BASE_URL: ${{ secrets.XPREM_BASE_URL }}
+      # The xprem upload credential — publish-only, deliberately not on EAS
+      EOO_TOKEN: ${{ secrets.EOO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the release-tag check below can see main
+          fetch-depth: 0
+      # A release tag must sit on main, and its version must be the runtime the
+      # installed binaries run (runtimeVersion policy is appVersion): an update
+      # for any other version would never be delivered
+      - name: Check release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+          tag_version="${GITHUB_REF_NAME#v}"
+          tag_version="${tag_version%%-ota.*}"
+          app_version="$(node -p "require('./app.json').expo.version")"
+          [ "$tag_version" = "$app_version" ] \
+            || { echo "::error::$GITHUB_REF_NAME targets $tag_version but app.json is $app_version"; exit 1; }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+      # EAS is the single source of truth for the bundle-time EXPO_PUBLIC_*
+      # values: pull the matching environment into .env.local, which
+      # ota:publish's `dotenv -e .env.local` (and its preflight) then read
+      - name: Pull env from EAS
+        run: eas env:pull --environment "$UPDATE_BRANCH" --non-interactive
+      - name: Publish
+        env:
+          UPDATE_PLATFORM: ${{ inputs.platform || 'all' }}
+          UPDATE_MESSAGE: ${{ inputs.message || (startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name)) || github.event.head_commit.message || 'Manual publish' }}
+        run: >-
+          yarn ota:publish
+          --branch "$UPDATE_BRANCH"
+          --platform "$UPDATE_PLATFORM"
+          --serverUrl "$XPREM_BASE_URL"
+          --nonInteractive
+          -m "$(printf '%s' "$UPDATE_MESSAGE" | head -n 1)"
