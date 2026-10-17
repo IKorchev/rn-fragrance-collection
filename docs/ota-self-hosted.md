@@ -70,6 +70,29 @@ yarn ota:publish --branch production --rollout-percentage 10 -m "fix picker cras
 Takes ~4 minutes, nearly all of it `expo export` building two ~7.5MB Hermes
 bundles. `--branch` is required.
 
+The usual path is GitHub Actions (`.github/workflows/ota-publish.yml`):
+
+- every push to `main` publishes to `preview`;
+- a release tag publishes the tagged commit to `production` once approved on
+  the `production` GitHub environment (required reviewer; it only accepts
+  `main` and release tags):
+
+  ```bash
+  git tag v1.4.0-ota.1   # v<app.json version>-ota.<n>, on main
+  git push origin v1.4.0-ota.1
+  ```
+
+  The version in the tag must equal `app.json`'s (the runtime) — the job fails
+  otherwise. Don't bump `app.json` to make a tag: that changes the runtime and
+  no installed binary would take the update;
+- Actions → OTA publish → Run workflow publishes to `preview` or `production`
+  for a chosen platform — for hotfixes and rollbacks. It runs the same
+`yarn ota:publish` (preflight included), after `eas env:pull` writes the
+matching EAS environment's values to `.env.local` — EAS is the one place the
+bundle-time `EXPO_PUBLIC_*` values live for CI. GitHub secrets: `EXPO_TOKEN`,
+`XPREM_BASE_URL`, `EOO_TOKEN`. It passes `--nonInteractive` and an explicit
+`--serverUrl`, since eoas otherwise stops to confirm the server URL.
+
 ### Never call `eoas` directly
 
 `eoas` runs `expo export` with `EXPO_NO_DOTENV=1` and loads no `.env` files, but

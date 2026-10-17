@@ -1,0 +1,44 @@
+name: EAS build
+
+# Manual native builds on EAS (Actions tab → Run workflow). The build itself
+# runs on Expo's servers with the EAS environment variables; this job only
+# queues it. Needs an EXPO_TOKEN secret (expo.dev → Account settings → Access
+# tokens).
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform
+        type: choice
+        options: [android, ios, all]
+        default: android
+      profile:
+        description: Build profile (eas.json)
+        type: choice
+        options: [preview, production, ios-simulator]
+        default: preview
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # eas-cli evaluates app.config.js locally before uploading, and that
+      # throws without XPREM_BASE_URL
+      XPREM_BASE_URL: ${{ secrets.XPREM_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: yarn install --frozen-lockfile
+      - name: Queue build
+        env:
+          BUILD_PLATFORM: ${{ inputs.platform }}
+          BUILD_PROFILE: ${{ inputs.profile }}
+        run: eas build --platform "$BUILD_PLATFORM" --profile "$BUILD_PROFILE" --non-interactive --no-wait
