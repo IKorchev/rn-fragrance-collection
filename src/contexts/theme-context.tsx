@@ -77,6 +77,9 @@ interface ThemeContextValue {
   highlightTintBg: string
   // Switch trackColor.true — a resolved color string
   switchTrackColor: string
+  // Resolved color strings for control backgrounds (see tokens.ts)
+  controlFillBg: string
+  segmentThumbBg: string
   // NativeTabs' backgroundColor prop takes a ColorValue, not a className —
   // matches headerColors.background so the bottom bar isn't stuck light on
   // Android (NativeTabs doesn't follow in-app theme automatically there)
@@ -153,6 +156,8 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
   const highlightColors = t.highlight.token
   const highlightTintBg = t.highlightTintBg
   const switchTrackColor = t.switchTrack
+  const controlFillBg = t.controlFill
+  const segmentThumbBg = t.segmentThumb
   const tabBarBackgroundColor = t.tabBarBackground
   const danger: DangerGroup = {
     textClass: t.danger.text,
@@ -178,6 +183,8 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
         highlightColors,
         highlightTintBg,
         switchTrackColor,
+        controlFillBg,
+        segmentThumbBg,
         tabBarBackgroundColor,
         viewColors,
         headerColors,

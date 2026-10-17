@@ -43,7 +43,7 @@ const SearchScreen = () => {
   const [brandSearch, setBrandSearch] = useState("")
   const [manualAddOpen, setManualAddOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
-  const { viewColors, mutedColors, accentColors, baseBorderClass, pill, mutedTextClass } = useTheme()
+  const { viewColors, mutedColors, baseColors, onPrimaryColors, controlFillBg, primaryBg, mutedTextClass } = useTheme()
   const recentSearches = useRecentSearches()
   const { t } = useLocale()
 
@@ -107,19 +107,18 @@ const SearchScreen = () => {
         </View>
         {/* Filter entry point — a plain icon button rather than a chip so it
             reads as a control next to the search field, not a second search
-            box; turns tinted once a brand is active (the active state itself
+            box; turns solid once a brand is active (the active state itself
             is surfaced by the removable chip below, not by this button) */}
         <PressableScale
           onPress={() => setOpenPicker("brand")}
           testID='open-brand-filter'
           accessibilityLabel={brand ? t("search.brandFilterActive", { brand }) : t("search.filterByBrand")}
-          className={`h-11 w-11 items-center justify-center rounded-full ${
-            brand ? pill.tintBg : `border ${baseBorderClass}`
-          }`}>
+          className={`h-11 w-11 items-center justify-center rounded-full ${brand ? primaryBg : ""}`}
+          style={brand ? undefined : { backgroundColor: controlFillBg }}>
           <MaterialCommunityIcons
             name='filter-variant'
             size={22}
-            color={getColor(brand ? accentColors : mutedColors)}
+            color={getColor(brand ? onPrimaryColors : baseColors)}
           />
         </PressableScale>
       </View>
@@ -142,9 +141,8 @@ const SearchScreen = () => {
         </View>
       )}
 
-      {/* Search is the default landing sub-tab (see the top-tabs layout's
-          Screen order) — this is the first thing a brand-new user sees, so
-          the checklist lives here rather than only on the Collection tab.
+      {/* Where a brand-new user goes to add their first bottle, so the
+          checklist lives here rather than only on the Collection tab.
           Idle-state only: it steps out of the way once there's a query. */}
       {!queryEnabled && <OnboardingChecklist />}
 

@@ -316,12 +316,18 @@ const en: Dictionary = {
 
   top: {
     errorTitle: "Couldn't load the leaderboard",
+    mostWorn: "Most worn",
+    topCollectors: "Top collectors",
+    sectionTitle: "Leaderboard",
+    periodTitle: "Time period",
+    emptyPeriod: "No scents logged in this period yet — wear something from your collection!",
+    emptyAll: "No scents logged yet — wear something from your collection!",
     periods: {
       day: "Today",
-      week: "Week",
-      month: "Month",
-      year: "Year",
-      all: "All Time",
+      week: "This week",
+      month: "This month",
+      year: "This year",
+      all: "All time",
     },
   },
 
@@ -470,8 +476,6 @@ const en: Dictionary = {
   },
 
   collectors: {
-    segmentFragrances: "Fragrances",
-    segmentCollectors: "Collectors",
     meta: "Worn {{count}}× · {{badges}} badges",
     emptyTitle: "No public collectors yet",
     emptyMessage: "Make your profile public to be the first one here.",

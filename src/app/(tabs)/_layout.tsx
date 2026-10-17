@@ -33,6 +33,13 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="safari.fill" md="explore" />
         <NativeTabs.Trigger.Label>{t("discover.title")}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      {/* Second on Android, next to Discover. role="search": iOS 26 always
+          sets it apart at the trailing end as the tab bar's own search button
+          (system icon and title), whatever the declaration order */}
+      <NativeTabs.Trigger name="(search)" role="search">
+        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
+        <NativeTabs.Trigger.Label>{t("discover.tabs.search")}</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(collection)">
         <NativeTabs.Trigger.Icon sf="drop.fill" md="fragrance" />
         <NativeTabs.Trigger.Label>{t("collection.title")}</NativeTabs.Trigger.Label>

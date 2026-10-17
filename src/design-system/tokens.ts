@@ -88,6 +88,12 @@ interface ThemeTokens {
   // literal-scanner rule above and can use rgba for alpha.
   accentTintBg: string
   highlightTintBg: string
+  // iOS tertiary system fill: the resting background of controls (secondary
+  // buttons, chips, segmented tracks). Translucent so it reads on the page and
+  // on cards alike.
+  controlFill: string
+  // The raised thumb of a segmented control
+  segmentThumb: string
   // On-state Switch track. Not ink in dark mode: a near-white track under the
   // white thumb would hide the thumb.
   switchTrack: string
@@ -116,6 +122,8 @@ export const tokens: Record<Theme, ThemeTokens> = {
     accentTintBg: "rgba(0, 0, 0, 0.06)",
     highlightTintBg: "rgba(0, 0, 0, 0.06)",
     switchTrack: getColor("zinc-900"),
+    controlFill: "rgba(118, 118, 128, 0.12)",
+    segmentThumb: "white",
     tabBarBackground: getColor("zinc-100"),
 
     pill: {
@@ -148,6 +156,8 @@ export const tokens: Record<Theme, ThemeTokens> = {
     accentTintBg: "rgba(255, 255, 255, 0.12)",
     highlightTintBg: "rgba(255, 255, 255, 0.12)",
     switchTrack: getColor("zinc-500"),
+    controlFill: "rgba(118, 118, 128, 0.24)",
+    segmentThumb: getColor("zinc-600"),
     tabBarBackground: "black",
 
     pill: {

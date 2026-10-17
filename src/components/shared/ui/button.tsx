@@ -37,7 +37,7 @@ const Button = ({
   className,
   testID,
 }: ButtonProps) => {
-  const { primaryBg, onPrimaryTextClass, baseBorderClass, baseTextClass, accentTextClass, danger } = useTheme()
+  const { primaryBg, onPrimaryTextClass, controlFillBg, baseTextClass, accentTextClass, danger } = useTheme()
   const isDisabled = disabled || loading
   const shapeClass = shape === "pill" ? "rounded-full" : "rounded-2xl"
   // fullWidth only ever adds "w-full" — it has no opinion when false, so a
@@ -52,7 +52,7 @@ const Button = ({
 
   const containerByVariant: Record<ButtonVariant, string> = {
     primary: `${primaryBg} ${widthClass} py-3 ${shapeClass} items-center ${isDisabled ? "opacity-40" : ""}`,
-    secondary: `border ${baseBorderClass} ${widthClass} py-2.5 ${shapeClass} items-center ${isDisabled ? "opacity-40" : ""}`,
+    secondary: `${widthClass} py-2.5 ${shapeClass} items-center ${isDisabled ? "opacity-40" : ""}`,
     danger: `${danger.bgClass} ${widthClass} py-2.5 ${shapeClass} items-center ${isDisabled ? "opacity-40" : ""}`,
     ghost: `py-2 items-center ${isDisabled ? "opacity-40" : ""}`,
   }
@@ -71,7 +71,8 @@ const Button = ({
       testID={testID}
       accessibilityRole='button'
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
-      className={`${containerByVariant[variant]} ${className ?? ""}`}>
+      className={`${containerByVariant[variant]} ${className ?? ""}`}
+      style={variant === "secondary" ? { backgroundColor: controlFillBg } : undefined}>
       <Text className={labelByVariant[variant]}>{shownLabel}</Text>
     </TouchableOpacity>
   )

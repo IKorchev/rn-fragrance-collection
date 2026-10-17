@@ -21,7 +21,7 @@ const OnboardingChecklist = () => {
   if (!loaded || dismissed || allDone) return null
 
   const onStepPress = (key: OnboardingStep["key"]) => {
-    if (key === "add") router.navigate("/(tabs)/(discover)/(top-tabs)/search")
+    if (key === "add") router.navigate("/(tabs)/(search)")
     else if (key === "wear") router.navigate("/(tabs)/(collection)")
     else router.push("/picker")
   }
