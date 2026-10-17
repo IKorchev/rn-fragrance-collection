@@ -142,7 +142,7 @@ const MonthlyRecapScreen = () => {
           <Text className={`${mutedTextClass} text-xs font-semibold uppercase tracking-wider`}>
             {t("recap.eyebrow")}
           </Text>
-          <Text className={`${baseTextClass} font-display text-4xl text-center pt-2`}>
+          <Text className={`${baseTextClass} text-4xl font-bold text-center pt-2`}>
             {t("recap.heroTitle", { month: monthLabel })}
           </Text>
           <Text className={`${mutedTextClass} text-base text-center pt-2`}>{t("recap.heroSubtitle")}</Text>

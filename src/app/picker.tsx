@@ -68,8 +68,8 @@ const PickerScreen = () => {
   const handleFilterPress = () => {
     if (!isPro) {
       promptProUpsell(
-        "Picker filters are a Pro feature",
-        "Upgrade to Pro to narrow the picker by tag, brand, or unworn-only."
+        t("pickerFilters.upsellTitle"),
+        t("pickerFilters.upsellMessage")
       )
       return
     }
@@ -85,7 +85,7 @@ const PickerScreen = () => {
         style={{ top: insets.top + 8 }}
         testID='picker-close'
         accessibilityRole='button'
-        accessibilityLabel='Close picker'
+        accessibilityLabel={t("picker.close")}
         onPress={() => router.back()}>
         <AntDesign name='close' size={26} color={getColor(mutedColors)} />
       </TouchableOpacity>
@@ -95,7 +95,7 @@ const PickerScreen = () => {
           style={{ backgroundColor: pickerHasActiveFilters ? accentTintBg : undefined }}
           testID='picker-filter-button'
           accessibilityRole='button'
-          accessibilityLabel={isPro ? "Filter picker" : "Picker filters — Pro feature"}
+          accessibilityLabel={isPro ? t("pickerFilters.title") : t("pickerFilters.proLabel")}
           onPress={handleFilterPress}>
           <MaterialCommunityIcons
             name={isPro ? "tune-variant" : "lock-outline"}

@@ -38,7 +38,7 @@ export default function SigninScreen() {
           </View>
 
           <Text
-            className={`mt-8 text-center font-display text-4xl tracking-tight ${baseTextClass}`}>
+            className={`mt-8 text-center text-4xl font-bold tracking-tight ${baseTextClass}`}>
             <Text className={accentTextClass}>Whiff</Text>
           </Text>
           <Text

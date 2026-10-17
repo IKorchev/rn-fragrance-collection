@@ -117,7 +117,7 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
               onChangeText={setDraft}
               onSubmitEditing={commitDraft}
               onBlur={commitDraft}
-              placeholder='Add tag'
+              placeholder={t("tags.add")}
               placeholderTextColor={getColor(mutedColors)}
               maxLength={MAX_TAG_LENGTH}
               autoCapitalize='none'

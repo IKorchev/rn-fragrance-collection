@@ -147,24 +147,28 @@ const SettingsScreen = () => {
       contentContainerClassName='px-5 pt-6 pb-12 items-center'
       showsVerticalScrollIndicator={false}>
       <RowGroup title={t("profile.sectionPreferences")}>
-        <NativeMenu
-          title={t("profile.appearance")}
-          testID='settings-appearance-menu'
-          items={APPEARANCE_OPTIONS.map(({ key, labelKey }) => ({
-            id: key,
-            title: t(labelKey),
-            checked: key === themePreference,
-            onPress: () => setThemePreference(key),
-          }))}>
-          <Row
-            icon='theme-light-dark'
-            label={t("profile.appearance")}
-            trailing={trailingValue(
-              t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey),
-              "unfold-more-horizontal"
-            )}
-          />
-        </NativeMenu>
+        <Row
+          icon='theme-light-dark'
+          label={t("profile.appearance")}
+          trailing={
+            // Only the trailing value is the menu trigger: Android's native menu view sizes to its
+            // content, so wrapping the whole row squashes the label
+            <NativeMenu
+              title={t("profile.appearance")}
+              testID='settings-appearance-menu'
+              items={APPEARANCE_OPTIONS.map(({ key, labelKey }) => ({
+                id: key,
+                title: t(labelKey),
+                checked: key === themePreference,
+                onPress: () => setThemePreference(key),
+              }))}>
+              {trailingValue(
+                t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey),
+                "unfold-more-horizontal"
+              )}
+            </NativeMenu>
+          }
+        />
         <Row
           icon='bell-outline'
           label={t("profile.dailyReminder")}

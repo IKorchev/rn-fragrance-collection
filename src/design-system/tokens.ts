@@ -161,11 +161,9 @@ export const radius = {
   chip: "rounded-lg",
 } as const
 
-// Type scale. `display` is Fraunces (loaded in _layout.tsx, mapped in
-// tailwind.config.js) and is reserved for screen headers — everything else is
-// the system face.
+// Type scale. Everything is the system face — `display` is the screen-header size.
 export const typography = {
-  display: "font-display",
+  display: "text-2xl font-bold",
   title: "text-base font-semibold",
   body: "text-base",
   label: "text-sm font-semibold",

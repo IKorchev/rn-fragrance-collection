@@ -24,7 +24,7 @@ import StartupRecovery from "@/components/startup-recovery"
 
 initSentry()
 
-// Keep the native splash up until fonts + the initial auth check resolve —
+// Keep the native splash up until the initial auth check resolves —
 // hidden explicitly by useStartupReadiness. Without this, expo-splash-screen
 // auto-hides on first frame, revealing the blank `return null` render while
 // still loading (see the `ready` gate below).

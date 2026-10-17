@@ -163,8 +163,11 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
 
         <Text className={`${mutedTextClass} text-xs pt-3`}>
           {selected
-            ? `${selected.date.toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" })} — ${selected.count} ${selected.count === 1 ? "entry" : "entries"}`
-            : "Tap a day to see entries"}
+            ? t("heatmap.dayDetail", {
+                date: selected.date.toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" }),
+                count: selected.count,
+              })
+            : t("heatmap.tapHint")}
         </Text>
       </View>
     </View>

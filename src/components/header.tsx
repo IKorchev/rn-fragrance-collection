@@ -52,7 +52,7 @@ export default function Header({ title, navigation, back, right }: HeaderProps) 
         )}
         <Text
           accessibilityRole='header'
-          className={`${headerColors.font} font-display text-2xl flex-1`}
+          className={`${headerColors.font} text-2xl font-bold flex-1`}
           numberOfLines={1}>
           {title}
         </Text>

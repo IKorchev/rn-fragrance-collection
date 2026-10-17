@@ -71,7 +71,7 @@ const CollectionListItem = ({
           {(iconColor) => <AntDesign name='delete' color={iconColor} size={18} />}
         </Card.ActionButton>
       }
-      accessibilityActions={[{ name: "delete", label: "Delete" }]}
+      accessibilityActions={[{ name: "delete", label: t("actions.delete") }]}
       onAccessibilityAction={(event) => {
         if (event.nativeEvent.actionName === "delete") handleDelete()
       }}>

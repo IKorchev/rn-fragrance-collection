@@ -72,8 +72,8 @@ const TopScreen = () => {
       {section === "fragrances" ? (
         <>
           <View className='py-3 flex-row justify-evenly w-full'>
-            {WEAR_PERIODS.map(({ key, label }) => (
-              <FilterChip key={key} label={label} selected={key === period} onPress={() => setPeriod(key)} />
+            {WEAR_PERIODS.map(({ key, labelKey }) => (
+              <FilterChip key={key} label={t(labelKey)} selected={key === period} onPress={() => setPeriod(key)} />
             ))}
           </View>
           {isLoading ? (
@@ -81,9 +81,9 @@ const TopScreen = () => {
           ) : error ? (
             <EmptyState
               icon='cloud-alert'
-              title="Couldn't load the leaderboard"
-              message='Check your connection and try again.'
-              actionLabel='Try again'
+              title={t("top.errorTitle")}
+              message={t("collection.loadErrorMessage")}
+              actionLabel={t("collection.tryAgain")}
               onAction={() => refetch()}
             />
           ) : (

@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 
 interface DialogProps {
   visible: boolean
@@ -25,8 +26,9 @@ interface DialogProps {
 // No statusBarTranslucent — it disables Android's adjustResize, leaving the
 // keyboard covering the card's lower half (KeyboardAvoidingView only handles
 // iOS here).
-const Dialog = ({ visible, title, onClose, cancelLabel = "Cancel", children }: DialogProps) => {
+const Dialog = ({ visible, title, onClose, cancelLabel, children }: DialogProps) => {
   const { modalColors, baseTextClass, accentTextClass } = useTheme()
+  const { t } = useLocale()
 
   // Tap-outside while typing means "dismiss the keyboard", not "throw away
   // everything I typed" — only a second tap with the keyboard down closes.
@@ -53,7 +55,7 @@ const Dialog = ({ visible, title, onClose, cancelLabel = "Cancel", children }: D
             <View className='flex-row items-center justify-between pt-4 pb-2'>
               <Text className={`${baseTextClass} text-lg font-bold`}>{title}</Text>
               <TouchableOpacity onPress={onClose} hitSlop={8}>
-                <Text className={`${accentTextClass} text-base font-semibold`}>{cancelLabel}</Text>
+                <Text className={`${accentTextClass} text-base font-semibold`}>{cancelLabel ?? t("common.cancel")}</Text>
               </TouchableOpacity>
             </View>
             {children}

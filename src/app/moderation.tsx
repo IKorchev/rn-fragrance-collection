@@ -36,6 +36,7 @@ interface SubmissionRowProps {
 
 const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps) => {
   const { theme, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
+  const { t } = useLocale()
   const [rejecting, setRejecting] = useState(false)
   const [note, setNote] = useState("")
   const busy = busyAction !== null
@@ -71,7 +72,7 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
           <TextField
             value={note}
             onChangeText={setNote}
-            placeholder='Optional note for the submitter'
+            placeholder={t("moderation.noteForSubmitter")}
             multiline
             rounded='xl'
           />
@@ -79,7 +80,7 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
             <Button
               variant='secondary'
               shape='rounded'
-              label='Cancel'
+              label={t("common.cancel")}
               disabled={busy}
               className='flex-1'
               onPress={() => {
@@ -90,8 +91,8 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
             <Button
               variant='danger'
               shape='rounded'
-              label='Confirm reject'
-              loadingLabel='Rejecting…'
+              label={t("moderation.confirmReject")}
+              loadingLabel={t("moderation.rejecting")}
               loading={busyAction === "reject"}
               disabled={busy}
               className='flex-1'
@@ -104,8 +105,8 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
           <Button
             variant='primary'
             shape='rounded'
-            label='Approve'
-            loadingLabel='Approving…'
+            label={t("moderation.approve")}
+            loadingLabel={t("moderation.approving")}
             loading={busyAction === "approve"}
             disabled={busy}
             className='flex-1'
@@ -116,8 +117,8 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
               variant='secondary'
               tone='accent'
               shape='rounded'
-              label='Merge'
-              loadingLabel='Merging…'
+              label={t("moderation.merge")}
+              loadingLabel={t("moderation.merging")}
               loading={busyAction === "merge"}
               disabled={busy}
               className='flex-1'
@@ -128,7 +129,7 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
             variant='secondary'
             tone='danger'
             shape='rounded'
-            label='Reject'
+            label={t("moderation.reject")}
             disabled={busy}
             className='flex-1'
             onPress={() => setRejecting(true)}
@@ -180,7 +181,7 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
           <TextField
             value={note}
             onChangeText={setNote}
-            placeholder='Optional note (kept for moderators only)'
+            placeholder={t("moderation.noteForModerators")}
             multiline
             rounded='xl'
           />
@@ -188,7 +189,7 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
             <Button
               variant='secondary'
               shape='rounded'
-              label='Cancel'
+              label={t("common.cancel")}
               disabled={busy}
               className='flex-1'
               onPress={() => {
@@ -199,8 +200,8 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
             <Button
               variant='danger'
               shape='rounded'
-              label='Confirm dismiss'
-              loadingLabel='Dismissing…'
+              label={t("moderation.confirmDismiss")}
+              loadingLabel={t("moderation.dismissing")}
               loading={busyAction === "dismiss"}
               disabled={busy}
               className='flex-1'
@@ -213,8 +214,8 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
           <Button
             variant='primary'
             shape='rounded'
-            label='Mark resolved'
-            loadingLabel='Saving…'
+            label={t("moderation.markResolved")}
+            loadingLabel={t("voting.saving")}
             loading={busyAction === "resolve"}
             disabled={busy}
             className='flex-1'
@@ -224,7 +225,7 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
             variant='secondary'
             tone='danger'
             shape='rounded'
-            label='Dismiss'
+            label={t("moderation.dismiss")}
             disabled={busy}
             className='flex-1'
             onPress={() => setDismissing(true)}
@@ -472,14 +473,14 @@ const ModerationScreen = () => {
             submissionsError ? (
               <EmptyState
                 icon='alert-circle-outline'
-                title="Couldn't load the queue"
-                message='Something went wrong, please try again later.'
+                title={t("moderation.loadFailedTitle")}
+                message={t("auth.tryAgainLater")}
               />
             ) : submissionsPending ? null : (
               <EmptyState
                 icon='check-circle-outline'
-                title='All caught up'
-                message='No pending suggestions right now.'
+                title={t("moderation.caughtUpTitle")}
+                message={t("moderation.noSuggestions")}
               />
             )
           }
@@ -501,14 +502,14 @@ const ModerationScreen = () => {
             reportsError ? (
               <EmptyState
                 icon='alert-circle-outline'
-                title="Couldn't load the queue"
-                message='Something went wrong, please try again later.'
+                title={t("moderation.loadFailedTitle")}
+                message={t("auth.tryAgainLater")}
               />
             ) : reportsPending ? null : (
               <EmptyState
                 icon='check-circle-outline'
-                title='All caught up'
-                message='No pending reports right now.'
+                title={t("moderation.caughtUpTitle")}
+                message={t("moderation.noReports")}
               />
             )
           }

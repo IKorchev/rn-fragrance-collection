@@ -172,11 +172,11 @@ export interface RatingSummary {
 export const MIN_SEARCH_LENGTH = 3
 
 export const WEAR_PERIODS = [
-  { key: "day", label: "Today" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-  { key: "year", label: "Year" },
-  { key: "all", label: "All Time" },
+  { key: "day", labelKey: "top.periods.day" },
+  { key: "week", labelKey: "top.periods.week" },
+  { key: "month", labelKey: "top.periods.month" },
+  { key: "year", labelKey: "top.periods.year" },
+  { key: "all", labelKey: "top.periods.all" },
 ] as const
 
 export type WearPeriod = (typeof WEAR_PERIODS)[number]["key"]
