@@ -24,7 +24,7 @@ import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
 import useLocale from "@/contexts/locale-context"
 import TopListItem from "@/components/top-list-item"
-import OnboardingChecklist from "@/components/onboarding-checklist"
+import SearchBrowse from "@/components/search-browse"
 import FilterPickerModal from "@/components/filter-picker-modal"
 import ManualAddModal from "@/components/manual-add-modal"
 import EmptyState from "@/components/shared/ui/empty-state"
@@ -76,9 +76,9 @@ const SearchScreen = () => {
 
   const resultsLabel =
     data && data.length > 0
-      ? `${data.length.toLocaleString()} result${data.length === 1 ? "" : "s"}${
-          brand ? ` in ${brand}` : ""
-        }`
+      ? brand
+        ? t("search.resultsInBrand", { count: data.length, brand })
+        : t("search.results", { count: data.length })
       : null
 
   // Recent-search popover: shows while the field is focused and empty (the
@@ -141,22 +141,12 @@ const SearchScreen = () => {
         </View>
       )}
 
-      {/* Where a brand-new user goes to add their first bottle, so the
-          checklist lives here rather than only on the Collection tab.
-          Idle-state only: it steps out of the way once there's a query. */}
-      {!queryEnabled && <OnboardingChecklist />}
-
       <View className='flex-1' style={{ position: "relative" }}>
-        {!queryEnabled && !tooShort && (
-          <EmptyState
-            icon='text-search'
-            title={t("search.idleTitle")}
-            message={t("search.idleMessage")}
-          />
-        )}
+        {/* Idle: browse sections (they step aside once there's a query) */}
+        {!queryEnabled && !tooShort && <SearchBrowse onPickBrand={setBrand} />}
         {tooShort && (
           <Text className={`${mutedTextClass} text-center mt-6 px-6`}>
-            Please enter at least {MIN_SEARCH_LENGTH} characters.
+            {t("search.tooShort", { count: MIN_SEARCH_LENGTH })}
           </Text>
         )}
         {queryEnabled && isLoading && <SkeletonList />}
@@ -189,7 +179,7 @@ const SearchScreen = () => {
               resultsLabel ? (
                 <Text className={`${mutedTextClass} text-sm px-4 pb-2`}>
                   {resultsLabel}
-                  {isFetching ? " · updating…" : ""}
+                  {isFetching ? ` · ${t("search.updating")}` : ""}
                 </Text>
               ) : null
             }

@@ -272,6 +272,42 @@ $$;
 REVOKE EXECUTE ON FUNCTION top_worn_fragrances(text, int) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION top_worn_fragrances(text, int) TO authenticated;
 
+-- Popular brands: catalog brands ranked by how many distinct collectors own or
+-- wishlist something from them, once at least 3 do (below that it's one
+-- person's shelf, not popularity — the client tops up from featured brands).
+-- SECURITY DEFINER like top_worn_fragrances, but it returns only the brand and
+-- its catalog size, never per-user rows or the collector counts themselves.
+CREATE OR REPLACE FUNCTION popular_brands(max_results int DEFAULT 12)
+RETURNS TABLE (brand text, fragrance_count bigint)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  WITH holders AS (
+    SELECT f.brand, uf.user_id
+    FROM user_fragrances uf
+    JOIN fragrances f ON f.id = uf.fragrance_id
+    UNION
+    SELECT f.brand, w.user_id
+    FROM wishlist_items w
+    JOIN fragrances f ON f.id = w.fragrance_id
+  ),
+  ranked AS (
+    SELECT h.brand, COUNT(DISTINCT h.user_id) AS collectors
+    FROM holders h
+    GROUP BY h.brand
+    HAVING COUNT(DISTINCT h.user_id) >= 3
+    ORDER BY collectors DESC, h.brand
+    LIMIT GREATEST(1, LEAST(max_results, 50))
+  )
+  SELECT r.brand,
+         (SELECT COUNT(*) FROM fragrances f WHERE lower(f.brand) = lower(r.brand) AND f.brand = r.brand)::bigint
+  FROM ranked r
+  ORDER BY r.collectors DESC, r.brand
+$$;
+
+REVOKE EXECUTE ON FUNCTION popular_brands(int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION popular_brands(int) TO authenticated;
+
 -- Community fragrance ratings — decoupled from user_fragrances so a rating
 -- survives collection-row deletion/duplication and isn't tied to ownership.
 -- One rating per user per catalog fragrance. Mirrors the wear_events split:
