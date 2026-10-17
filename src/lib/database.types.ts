@@ -679,6 +679,13 @@ export type Database = {
           reported_user_id: string
         }[]
       }
+      popular_brands: {
+        Args: { max_results?: number }
+        Returns: {
+          brand: string
+          fragrance_count: number
+        }[]
+      }
       recommend_fragrances: {
         Args: { max_results?: number }
         Returns: {

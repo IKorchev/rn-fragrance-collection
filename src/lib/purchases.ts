@@ -9,8 +9,10 @@ const apiKey = Platform.select({
 
 // Every export here no-ops when the platform key isn't set (e.g. local dev
 // without RevenueCat configured yet) so callers don't need to guard every
-// call site.
-export const purchasesEnabled = !!apiKey
+// call site. RevenueCat Test Store keys (`test_…`) are debug-only: in a release
+// build the SDK shows an alert and closes the app, so release builds run
+// without purchases until a real App Store / Play Store key replaces them.
+export const purchasesEnabled = !!apiKey && (__DEV__ || !apiKey.startsWith("test_"))
 
 // Entitlement identifier configured in the RevenueCat dashboard for the Pro
 // tier — must match what's attached to the App Store Connect / Play Console

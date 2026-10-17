@@ -15,17 +15,21 @@ import useLocale from "@/contexts/locale-context"
 import TopListItem from "@/components/top-list-item"
 import CollectorListItem from "@/components/collector-list-item"
 import EmptyState from "@/components/shared/ui/empty-state"
-import FilterChip from "@/components/shared/ui/filter-chip"
-import SegmentedControl from "@/components/shared/ui/segmented-control"
+import NativeMenu from "@/components/shared/ui/native-menu"
+import MenuChip from "@/components/shared/ui/menu-chip"
 import SkeletonList from "@/components/shared/ui/skeleton-list"
 
 type TopSection = "fragrances" | "collectors"
 
-// The "Top" sub-tab: both community rankings — most-worn fragrances and top
-// collectors — behind one segmented toggle. They used to be separate top-tabs,
-// but four fixed tabs wrapped their labels; the period chips are a
-// fragrances-only concern so the collectors view stays chrome-free.
-const TopScreen = () => {
+const SECTIONS = [
+  { key: "fragrances", labelKey: "top.mostWorn" },
+  { key: "collectors", labelKey: "top.topCollectors" },
+] as const
+
+// Discover's "Top" view: both community rankings — most-worn fragrances and
+// top collectors — picked from one dropdown, with the period dropdown beside it
+// for the fragrances ranking only.
+const DiscoverTop = () => {
   const insets = useSafeAreaInsets()
   const [section, setSection] = useState<TopSection>("fragrances")
   const [period, setPeriod] = useState<WearPeriod>("week")
@@ -40,9 +44,8 @@ const TopScreen = () => {
   const { refreshing, onRefresh } = usePullToRefresh(
     section === "fragrances" ? refetch : refetchCollectors
   )
-  const { viewColors, accentColors, mutedTextClass, highlightColors } = useTheme()
+  const { viewColors, accentColors, mutedTextClass } = useTheme()
   const { t } = useLocale()
-  const highlightTint = getColor(highlightColors)
 
   const refreshControl = (
     <RefreshControl
@@ -58,32 +61,50 @@ const TopScreen = () => {
 
   return (
     <View className={`${viewColors.background} flex-1`}>
-      <View className='px-4 pt-3'>
-        <SegmentedControl
-          options={[
-            { label: t("collectors.segmentFragrances"), value: "fragrances" as const, tint: highlightTint, testID: "top-segment-fragrances" },
-            { label: t("collectors.segmentCollectors"), value: "collectors" as const, tint: highlightTint, testID: "top-segment-collectors" },
-          ]}
-          value={section}
-          onChange={setSection}
-        />
+      <View className='flex-row items-center justify-between px-4 pt-3 pb-2'>
+        <NativeMenu
+          title={t("top.sectionTitle")}
+          testID='top-section-menu'
+          items={SECTIONS.map(({ key, labelKey }) => ({
+            id: key,
+            title: t(labelKey),
+            checked: key === section,
+            onPress: () => setSection(key),
+          }))}>
+          <MenuChip
+            label={t(SECTIONS.find(({ key }) => key === section)!.labelKey)}
+            accessibilityLabel={t("top.sectionTitle")}
+          />
+        </NativeMenu>
+        {section === "fragrances" && (
+          <NativeMenu
+            title={t("top.periodTitle")}
+            testID='top-period-menu'
+            items={WEAR_PERIODS.map(({ key, labelKey }) => ({
+              id: key,
+              title: t(labelKey),
+              checked: key === period,
+              onPress: () => setPeriod(key),
+            }))}>
+            <MenuChip
+              label={t(WEAR_PERIODS.find(({ key }) => key === period)!.labelKey)}
+              accessibilityLabel={t("top.periodTitle")}
+              active={period !== "week"}
+            />
+          </NativeMenu>
+        )}
       </View>
 
       {section === "fragrances" ? (
         <>
-          <View className='py-3 flex-row justify-evenly w-full'>
-            {WEAR_PERIODS.map(({ key, label }) => (
-              <FilterChip key={key} label={label} selected={key === period} onPress={() => setPeriod(key)} />
-            ))}
-          </View>
           {isLoading ? (
             <SkeletonList />
           ) : error ? (
             <EmptyState
               icon='cloud-alert'
-              title="Couldn't load the leaderboard"
-              message='Check your connection and try again.'
-              actionLabel='Try again'
+              title={t("top.errorTitle")}
+              message={t("collection.loadErrorMessage")}
+              actionLabel={t("collection.tryAgain")}
               onAction={() => refetch()}
             />
           ) : (
@@ -105,8 +126,7 @@ const TopScreen = () => {
               )}
               ListEmptyComponent={
                 <Text className={`${mutedTextClass} text-center mt-12 px-6`}>
-                  No scents logged {period === "all" ? "yet" : "in this period yet"} — hit the spray
-                  button on something in your collection!
+                  {period === "all" ? t("top.emptyAll") : t("top.emptyPeriod")}
                 </Text>
               }
             />
@@ -125,7 +145,7 @@ const TopScreen = () => {
       ) : (
         <FlatList
           data={collectors ?? []}
-          className='px-4 pt-3'
+          className='px-4 pt-1'
           contentContainerStyle={listBottomPadding}
           refreshControl={refreshControl}
           keyExtractor={(item) => item.user_id}
@@ -143,4 +163,4 @@ const TopScreen = () => {
   )
 }
 
-export default TopScreen
+export default DiscoverTop

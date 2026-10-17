@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import Constants from "expo-constants"
+import { translateDefault } from "@/lib/i18n/translate"
 import { Alert, Platform } from "react-native"
 import { supabase } from "@/lib/supabase"
 import { reportError } from "@/lib/sentry"
@@ -28,8 +29,8 @@ export const WEAR_REMINDER_ACTIONS = {
 if (Platform.OS !== "web") {
   // Both actions open the app — the wear RPC needs the signed-in session
   Notifications.setNotificationCategoryAsync(WEAR_REMINDER_CATEGORY, [
-    { identifier: WEAR_REMINDER_ACTIONS.wear, buttonTitle: "Wear it" },
-    { identifier: WEAR_REMINDER_ACTIONS.openPicker, buttonTitle: "Open picker" },
+    { identifier: WEAR_REMINDER_ACTIONS.wear, buttonTitle: translateDefault("reminders.wearIt") },
+    { identifier: WEAR_REMINDER_ACTIONS.openPicker, buttonTitle: translateDefault("reminders.openPicker") },
   ]).catch((error) => reportError(error, { flow: "register-notification-category" }))
 }
 
@@ -128,12 +129,12 @@ export const offerDailyReminderOnce = async (userId: string, onEnabled: () => vo
   // undo for a mistapped first wear
   await new Promise((resolve) => setTimeout(resolve, 4500))
   Alert.alert(
-    "Get a daily reminder?",
-    "Whiff can nudge you once a day to pick today's scent. You can turn it off any time in Profile.",
+    translateDefault("reminders.offerTitle"),
+    translateDefault("reminders.offerMessage"),
     [
-      { text: "Not now", style: "cancel" },
+      { text: translateDefault("upsell.notNow"), style: "cancel" },
       {
-        text: "Turn on",
+        text: translateDefault("reminders.turnOn"),
         onPress: async () => {
           if ((await requestNotificationPermission()) && (await syncPushToken(userId))) onEnabled()
         },

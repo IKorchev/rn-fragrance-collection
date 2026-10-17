@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { AppState } from "react-native"
 import * as Updates from "expo-updates"
+import { translateDefault } from "@/lib/i18n/translate"
 import useToast from "@/contexts/toast-context"
 import { reportError } from "@/lib/sentry"
 
@@ -23,8 +24,8 @@ export const useAppUpdates = () => {
         if (!isAvailable) return
         await Updates.fetchUpdateAsync()
         showToast({
-          message: "An update is ready",
-          actionLabel: "Restart",
+          message: translateDefault("updates.ready"),
+          actionLabel: translateDefault("updates.restart"),
           onAction: () => Updates.reloadAsync(),
           duration: 8000,
         })

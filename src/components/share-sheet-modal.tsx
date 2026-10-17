@@ -33,7 +33,7 @@ interface ShareSheetModalProps {
 // exact text is always shown before Share.share() fires, so the user always
 // sees precisely what's about to leave the app.
 const ShareSheetModal = ({ visible, title, message, toggles, onClose }: ShareSheetModalProps) => {
-  const { baseTextClass, mutedTextClass, baseBorderClass, accentColors } = useTheme()
+  const { baseTextClass, mutedTextClass, baseBorderClass, switchTrackColor, cardColors } = useTheme()
   const { t } = useLocale()
   const { showToast } = useToast()
   const [sharing, setSharing] = useState(false)
@@ -58,7 +58,7 @@ const ShareSheetModal = ({ visible, title, message, toggles, onClose }: ShareShe
         accessibilityRole='text'>
         {t("share.previewLabel")}
       </Text>
-      <View className={`rounded-2xl border ${baseBorderClass} p-3`}>
+      <View className={`rounded-2xl ${cardColors.background} p-3`}>
         <Text className={`${baseTextClass} text-sm leading-5`}>{message}</Text>
       </View>
 
@@ -68,7 +68,7 @@ const ShareSheetModal = ({ visible, title, message, toggles, onClose }: ShareShe
           <Switch
             value={toggle.value}
             onValueChange={toggle.onChange}
-            trackColor={{ true: getColor(accentColors) }}
+            trackColor={{ true: switchTrackColor }}
             accessibilityRole='switch'
             accessibilityLabel={toggle.label}
           />

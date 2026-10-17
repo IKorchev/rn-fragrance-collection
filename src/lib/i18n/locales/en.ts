@@ -91,8 +91,19 @@ const en: Dictionary = {
     brandFilterActive: "Brand filter: {{brand}}",
     filterByBrand: "Filter by brand",
     clearBrandFilter: "Clear brand filter",
-    idleTitle: "Search the catalog",
-    idleMessage: "Type a name or brand, or filter by brand above.",
+    results_one: "{{count}} result",
+    results_other: "{{count}} results",
+    resultsInBrand_one: "{{count}} result in {{brand}}",
+    resultsInBrand_other: "{{count}} results in {{brand}}",
+    updating: "updating…",
+    tooShort: "Enter at least {{count}} characters.",
+    browse: {
+      trendingWeek: "Trending this week",
+      trendingAll: "Most worn",
+      popularBrands: "Popular brands",
+      explore: "Explore",
+      shuffle: "Shuffle",
+    },
     errorTitle: "Search failed",
     noResultsTitle: "No results found",
     noResultsMessage: "The catalog doesn't have everything — you can add it yourself.",
@@ -124,6 +135,9 @@ const en: Dictionary = {
     unwornOnly: "Only fragrances I haven't worn yet",
     tagsAnyOf: "Tags (any of)",
     apply: "Apply",
+    proLabel: "Picker filters — Pro feature",
+    upsellTitle: "Picker filters are a Pro feature",
+    upsellMessage: "Upgrade to Pro to narrow the picker by tag, brand, or unworn-only.",
   },
 
   actions: {
@@ -133,6 +147,7 @@ const en: Dictionary = {
     addLabel: "Add {{name}}",
     deleteLabel: "Delete {{name}}",
     deleted: "{{name}} deleted",
+    delete: "Delete",
     undo: "Undo",
   },
 
@@ -142,6 +157,7 @@ const en: Dictionary = {
     clearFilters: "Clear filters",
     spinLabel: "Spin the picker",
     spinHint: "Picks a fragrance from your collection",
+    close: "Close picker",
   },
 
   manualAdd: {
@@ -166,6 +182,7 @@ const en: Dictionary = {
   },
 
   tags: {
+    add: "Add tag",
     removeLabel: "Remove tag {{tag}}",
     hint: "Tag it — \"signature\", \"winter\", \"gift\" — to filter the picker and your scent diary later.",
     limit: "Up to {{count}} tags per fragrance.",
@@ -175,6 +192,9 @@ const en: Dictionary = {
     title: "Scent activity",
     summary_one: "Last {{weeks}} weeks: {{entries}} entries across {{count}} day",
     summary_other: "Last {{weeks}} weeks: {{entries}} entries across {{count}} days",
+    tapHint: "Tap a day to see entries",
+    dayDetail_one: "{{date}} — {{count}} entry",
+    dayDetail_other: "{{date}} — {{count}} entries",
     less: "Less",
     more: "More",
   },
@@ -305,6 +325,56 @@ const en: Dictionary = {
     wearLoggedGeneric: "Scent logged for today",
   },
 
+  top: {
+    errorTitle: "Couldn't load the leaderboard",
+    mostWorn: "Most worn",
+    topCollectors: "Top collectors",
+    sectionTitle: "Leaderboard",
+    periodTitle: "Time period",
+    emptyPeriod: "No scents logged in this period yet — wear something from your collection!",
+    emptyAll: "No scents logged yet — wear something from your collection!",
+    periods: {
+      day: "Today",
+      week: "This week",
+      month: "This month",
+      year: "This year",
+      all: "All time",
+    },
+  },
+
+  card: {
+    communityWorn: "Worn {{count}}×",
+    notWornYet: "Not worn yet",
+    worn: "Worn",
+    alreadyWornLabel: "{{label}}, already worn today",
+  },
+
+  relative: {
+    today: "today",
+    yesterday: "yesterday",
+    days_one: "{{count}} day ago",
+    days_other: "{{count}} days ago",
+    weeks_one: "{{count}} week ago",
+    weeks_other: "{{count}} weeks ago",
+    months_one: "{{count}} month ago",
+    months_other: "{{count}} months ago",
+    years_one: "{{count}} year ago",
+    years_other: "{{count}} years ago",
+  },
+
+  updates: {
+    ready: "An update is ready",
+    restart: "Restart",
+  },
+
+  reminders: {
+    wearIt: "Wear it",
+    openPicker: "Open picker",
+    offerTitle: "Get a daily reminder?",
+    offerMessage: "Whiff can nudge you once a day to pick today's scent. You can turn it off any time in Settings.",
+    turnOn: "Turn on",
+  },
+
   quickActions: {
     pick: "Pick for me",
   },
@@ -417,8 +487,6 @@ const en: Dictionary = {
   },
 
   collectors: {
-    segmentFragrances: "Fragrances",
-    segmentCollectors: "Collectors",
     meta: "Worn {{count}}× · {{badges}} badges",
     emptyTitle: "No public collectors yet",
     emptyMessage: "Make your profile public to be the first one here.",
@@ -483,6 +551,17 @@ const en: Dictionary = {
   },
 
   moderation: {
+    noteForSubmitter: "Optional note for the submitter",
+    confirmReject: "Confirm reject",
+    rejecting: "Rejecting…",
+    approve: "Approve",
+    approving: "Approving…",
+    merge: "Merge",
+    merging: "Merging…",
+    reject: "Reject",
+    markResolved: "Mark resolved",
+    noSuggestions: "No pending suggestions right now.",
+    noReports: "No pending reports right now.",
     profilesTab: "Profiles",
     profilesEmpty: "No pending profile reports right now.",
     profileHiddenLabel: "Already private",

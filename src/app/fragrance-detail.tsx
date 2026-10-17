@@ -10,7 +10,6 @@ import {
   Switch,
   type AccessibilityActionEvent,
 } from "react-native"
-import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
@@ -30,32 +29,6 @@ import TagInput from "@/components/tag-input"
 import FragranceVoting from "@/components/fragrance-voting"
 import ShareSheetModal from "@/components/share-sheet-modal"
 
-// Soft radial glow behind the hero image — same device as SignInBackdrop,
-// scaled down to sit just behind the bottle instead of filling the screen.
-const HeroGlow = () => {
-  const { theme } = useTheme()
-  const { width } = useWindowDimensions()
-  const dark = theme === "dark"
-  const size = width * 1.1
-  const glow = getColor(dark ? "emerald-500" : "emerald-400")
-
-  return (
-    <Svg
-      width={size}
-      height={size}
-      style={{ position: "absolute", top: -size * 0.32 }}
-      pointerEvents='none'>
-      <Defs>
-        <RadialGradient id='detail-glow'>
-          <Stop offset='0' stopColor={glow} stopOpacity={dark ? 0.25 : 0.35} />
-          <Stop offset='1' stopColor={glow} stopOpacity='0' />
-        </RadialGradient>
-      </Defs>
-      <Circle cx={size / 2} cy={size / 2} r={size / 2} fill='url(#detail-glow)' />
-    </Svg>
-  )
-}
-
 // Param-driven for display data: the catalog only holds name/brand/image (all
 // other scraped metadata was dropped as untrustworthy), so there's nothing to
 // fetch. Collection rows additionally pass their `id`, which resolves the live
@@ -74,7 +47,7 @@ const FragranceDetailScreen = () => {
     lastWorn?: string
     fragranceId?: string
   }>()
-  const { modalColors, mutedColors, baseBorderClass, baseTextClass, mutedTextClass, theme } = useTheme()
+  const { modalColors, mutedColors, baseColors, baseBorderClass, baseTextClass, mutedTextClass, theme, switchTrackColor, cardColors } = useTheme()
   const { user, userCollection, updateFragrance, rateFragrance, addFragranceToCollection } = useAuth()
   const { t } = useLocale()
 
@@ -225,7 +198,6 @@ const FragranceDetailScreen = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'>
         <View className='items-center justify-center' style={{ minHeight: 224 }}>
-          <HeroGlow />
           {imageUrl ? (
             // White backing keeps product shots (white backgrounds) from clashing in dark mode
             <View className='h-56 w-56 items-center justify-center bg-white rounded-3xl' style={heroShadow}>
@@ -238,7 +210,7 @@ const FragranceDetailScreen = () => {
             </View>
           ) : (
             <View
-              className={`h-56 w-56 items-center justify-center rounded-3xl border ${baseBorderClass} ${modalColors.background}`}
+              className={`h-56 w-56 items-center justify-center rounded-3xl ${cardColors.background}`}
               style={heroShadow}>
               <MaterialCommunityIcons name='image-off' size={44} color={getColor(mutedColors)} />
             </View>
@@ -339,7 +311,7 @@ const FragranceDetailScreen = () => {
                       size={30}
                       color={
                         (currentRating ?? 0) >= star
-                          ? getColor("amber-400")
+                          ? getColor(baseColors)
                           : getColor(mutedColors)
                       }
                     />
@@ -364,7 +336,7 @@ const FragranceDetailScreen = () => {
                 value={runningLow}
                 onValueChange={changeRunningLow}
                 accessibilityLabel={t("detail.runningLow")}
-                trackColor={{ true: getColor(theme === "dark" ? "amber-500" : "amber-600") }}
+                trackColor={{ true: switchTrackColor }}
               />
             </View>
 

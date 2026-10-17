@@ -18,7 +18,7 @@ import Button from "@/components/shared/ui/button"
 // user owns, with Unblock. Blocking itself happens on user-profile.tsx.
 const BlockedUsersScreen = () => {
   const insets = useSafeAreaInsets()
-  const { theme, modalColors, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
+  const { theme, modalColors, baseTextClass, mutedTextClass, baseBorderClass, cardColors } = useTheme()
   const { user, unblockUser } = useAuth()
   const { showToast } = useToast()
   const { t, formatDate } = useLocale()
@@ -73,7 +73,7 @@ const BlockedUsersScreen = () => {
         )
       }
       renderItem={({ item }) => (
-        <View className={`flex-row items-center mb-3 p-3 rounded-2xl border ${baseBorderClass}`}>
+        <View className={`flex-row items-center mb-3 p-3 rounded-2xl ${cardColors.background}`}>
           <Avatar
             size={40}
             rounded

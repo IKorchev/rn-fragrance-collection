@@ -17,6 +17,7 @@ import { EmptyCollectionIllustration, NoResultsIllustration } from "@/components
 import FilterChip from "@/components/shared/ui/filter-chip"
 import IconButton from "@/components/shared/ui/icon-button"
 import NativeMenu from "@/components/shared/ui/native-menu"
+import MenuChip from "@/components/shared/ui/menu-chip"
 import SearchField from "@/components/shared/ui/search-field"
 import SkeletonList from "@/components/shared/ui/skeleton-list"
 
@@ -34,7 +35,7 @@ const CollectionScreen = () => {
   const insets = useSafeAreaInsets()
   const { visibleSortedCollection, collectionPending, collectionError, refetchCollection } =
     useAuth()
-  const { viewColors, accentColors, mutedColors, highlightColors, highlightTintBg, cardBorderColors, mutedTextClass, primaryBg } =
+  const { viewColors, accentColors, mutedColors, mutedTextClass, primaryBg, onPrimaryColors } =
     useTheme()
   const { t } = useLocale()
   const { refreshing, onRefresh } = usePullToRefresh(refetchCollection)
@@ -69,7 +70,7 @@ const CollectionScreen = () => {
     }
   }, [visibleSortedCollection, filter, sort, tagFilter])
 
-  const goToSearch = () => router.navigate("/(tabs)/(discover)/(top-tabs)/search")
+  const goToSearch = () => router.navigate("/(tabs)/(search)")
 
   if (collectionPending) {
     return (
@@ -106,8 +107,7 @@ const CollectionScreen = () => {
             <Text className={`${mutedTextClass} text-sm`}>
               {t("collection.count", { count: shownCollection.length })}
             </Text>
-            {/* Native pop-up menu, so the trigger is a plain View styled like a FilterChip */}
-            <NativeMenu
+                        <NativeMenu
               title={t("collection.sortTitle")}
               testID='collection-sort-menu'
               items={SORT_OPTIONS.map(({ key, labelKey }) => ({
@@ -116,31 +116,11 @@ const CollectionScreen = () => {
                 checked: key === sort,
                 onPress: () => setSort(key),
               }))}>
-              <View
-                accessible
-                accessibilityRole='button'
+              <MenuChip
+                label={t(SORT_OPTIONS.find(({ key }) => key === sort)!.labelKey)}
                 accessibilityLabel={t("collection.sortTitle")}
-                className='flex-row items-center rounded-full px-3 py-1.5'
-                style={{
-                  gap: 2,
-                  borderWidth: 1,
-                  borderColor: getColor(sort === "least-worn" ? cardBorderColors : highlightColors),
-                  backgroundColor: sort === "least-worn" ? undefined : highlightTintBg,
-                }}>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: getColor(sort === "least-worn" ? mutedColors : highlightColors),
-                  }}>
-                  {t(SORT_OPTIONS.find(({ key }) => key === sort)!.labelKey)}
-                </Text>
-                <MaterialCommunityIcons
-                  name='chevron-down'
-                  size={16}
-                  color={getColor(sort === "least-worn" ? mutedColors : highlightColors)}
-                />
-              </View>
+                active={sort !== "least-worn"}
+              />
             </NativeMenu>
           </View>
           {tagOptions.length > 0 && (
@@ -234,7 +214,7 @@ const CollectionScreen = () => {
             shadowRadius: 5,
             elevation: 5,
           }}>
-          <MaterialCommunityIcons name='slot-machine' size={28} color='white' />
+          <MaterialCommunityIcons name='slot-machine' size={28} color={getColor(onPrimaryColors)} />
         </IconButton>
       )}
     </View>

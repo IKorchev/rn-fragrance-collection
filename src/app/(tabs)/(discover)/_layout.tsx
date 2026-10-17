@@ -1,20 +1,15 @@
 import React from "react"
 import { Stack } from "expo-router"
-import { getHeaderTitle } from "expo-router/react-navigation"
-import Header from "@/components/header"
 import useLocale from "@/contexts/locale-context"
+import { useNativeHeaderOptions } from "@/lib/utils/use-native-header-options"
 
 export default function DiscoverLayout() {
   const { t } = useLocale()
+  const headerOptions = useNativeHeaderOptions()
 
   return (
-    <Stack
-      screenOptions={{
-        header: ({ route, options, navigation }) => (
-          <Header title={getHeaderTitle(options, route.name)} navigation={navigation} />
-        ),
-      }}>
-      <Stack.Screen name="(top-tabs)" options={{ title: t("discover.title") }} />
+    <Stack screenOptions={headerOptions}>
+      <Stack.Screen name="index" options={{ title: t("discover.title"), headerLargeTitle: true }} />
     </Stack>
   )
 }

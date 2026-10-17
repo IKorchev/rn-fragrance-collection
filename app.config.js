@@ -39,6 +39,13 @@ const APP_ID = "2d22eb15-8b4a-48df-abcf-fab2af5e91c2"
 
 module.exports = ({ config }) => ({
   ...config,
+  // google-services.json is gitignored, so EAS Build never receives it — there
+  // it arrives as the GOOGLE_SERVICES_JSON file env var (a path to the
+  // uploaded copy). Local builds keep using the checked-out file.
+  android: {
+    ...config.android,
+    googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? config.android?.googleServicesFile,
+  },
   updates: {
     url: `${baseUrl ?? "http://localhost:3000"}/manifest`,
     enabled: true,

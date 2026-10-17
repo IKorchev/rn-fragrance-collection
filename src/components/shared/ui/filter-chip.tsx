@@ -13,26 +13,26 @@ interface FilterChipProps {
 }
 
 // Selectable pill chip — brand filter, sort options, wear-period selector.
+// iOS-style: grey control fill at rest, solid ink (inverted text) when selected.
 // None of this is className, so it's unaffected by NativeWind's literal-scan
 // constraint; colors come straight from useTheme()'s bare tokens.
 const FilterChip = ({ label, selected, onPress, testID, paddingHorizontal = 12 }: FilterChipProps) => {
-  const { highlightColors, cardBorderColors, mutedColors, highlightTintBg } = useTheme()
+  const { baseColors, onPrimaryColors, controlFillBg } = useTheme()
 
   return (
     <Chip
       testID={testID}
-      type='outline'
-      containerStyle={{
+      type='solid'
+      containerStyle={{ borderRadius: 9999 }}
+      buttonStyle={{
+        paddingHorizontal,
         borderRadius: 9999,
-        borderWidth: 1,
-        borderColor: selected ? getColor(highlightColors) : getColor(cardBorderColors),
-        backgroundColor: selected ? highlightTintBg : undefined,
+        backgroundColor: selected ? getColor(baseColors) : controlFillBg,
       }}
-      buttonStyle={{ paddingHorizontal, borderRadius: 9999 }}
       titleStyle={{
         fontSize: 13,
         fontWeight: "600",
-        color: selected ? getColor(highlightColors) : getColor(mutedColors),
+        color: selected ? getColor(onPrimaryColors) : getColor(baseColors),
       }}
       title={label}
       onPress={onPress}

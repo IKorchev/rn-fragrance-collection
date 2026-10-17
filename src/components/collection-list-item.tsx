@@ -5,6 +5,7 @@ import { AntDesign } from "@expo/vector-icons"
 import useAuth from "@/contexts/auth-context"
 import useToast from "@/contexts/toast-context"
 import useLocale from "@/contexts/locale-context"
+import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
 import { isWornToday } from "@/lib/utils/worn-today"
 import Card from "./card"
@@ -32,6 +33,7 @@ const CollectionListItem = ({
   const { incrementWear, requestDelete, cancelDelete } = useAuth()
   const { showToast } = useToast()
   const { t } = useLocale()
+  const { danger } = useTheme()
   const [brand, title] = name.split(" - ")
   const displayTitle = title ?? name
 
@@ -71,7 +73,7 @@ const CollectionListItem = ({
           {(iconColor) => <AntDesign name='delete' color={iconColor} size={18} />}
         </Card.ActionButton>
       }
-      accessibilityActions={[{ name: "delete", label: "Delete" }]}
+      accessibilityActions={[{ name: "delete", label: t("actions.delete") }]}
       onAccessibilityAction={(event) => {
         if (event.nativeEvent.actionName === "delete") handleDelete()
       }}>
@@ -82,7 +84,7 @@ const CollectionListItem = ({
           {brand}
           {/* A full bottle is the unremarkable default, so only decants/samples are called out */}
           {bottleType === "decant" || bottleType === "sample" ? ` · ${t(`detail.bottleTypes.${bottleType}`)}` : ""}
-          {runningLow && <Text style={{ color: getColor("amber-600") }}>{` · ${t("detail.runningLow")}`}</Text>}
+          {runningLow && <Text style={{ color: getColor(danger.color) }}>{` · ${t("detail.runningLow")}`}</Text>}
         </Card.Subtitle>
         <Card.WearInfoText timesWorn={timesWorn} lastWorn={lastWorn} />
       </Card.Content>

@@ -12,7 +12,8 @@ import RecommendationListItem from "@/components/recommendation-list-item"
 import EmptyState from "@/components/shared/ui/empty-state"
 import SkeletonList from "@/components/shared/ui/skeleton-list"
 
-const RecommendationsScreen = () => {
+// Discover's "For You" view — rendered by the Discover screen's segmented control
+const DiscoverForYou = () => {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const { t } = useLocale()
@@ -53,7 +54,7 @@ const RecommendationsScreen = () => {
               title={t("discover.forYou.emptyTitle")}
               message={t("discover.forYou.emptyMessage")}
               actionLabel={t("discover.forYou.emptyAction")}
-              onAction={() => router.navigate("/(tabs)/(discover)/(top-tabs)/search")}
+              onAction={() => router.navigate("/(tabs)/(search)")}
             />
           }
         />
@@ -62,4 +63,4 @@ const RecommendationsScreen = () => {
   )
 }
 
-export default RecommendationsScreen
+export default DiscoverForYou

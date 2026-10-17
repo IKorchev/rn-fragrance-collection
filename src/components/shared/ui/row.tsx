@@ -15,7 +15,7 @@ interface RowProps {
   // "accent" = tinted background, no border, accent-colored icon/label/chevron
   // (profile's "Upgrade to Pro" row); "danger" = rose icon/label, no chevron
   // (it's an action, not navigation — profile's "Sign out"); default "base"
-  // is the bordered/neutral look
+  // is the neutral filled-card look
   tone?: "base" | "accent" | "danger"
   // Margin is intentionally not baked in — every call site's spacing differs
   // (most rows use mt-4, the accent upgrade row uses mt-6)
@@ -26,12 +26,12 @@ interface RowProps {
 // Icon + label + trailing-accessory row — profile's settings list. Inside a
 // RowGroup the group's card supplies border/rounding, so the row renders flat.
 const Row = ({ icon, label, onPress, trailing, tone = "base", className, testID }: RowProps) => {
-  const { baseTextClass, accentTextClass, baseBorderClass, mutedColors, accentColors, accentTintBg, danger } =
+  const { baseTextClass, accentTextClass, cardColors, mutedColors, accentColors, accentTintBg, danger } =
     useTheme()
   const grouped = useContext(RowGroupContext)
   const iconColor = getColor(tone === "accent" ? accentColors : tone === "danger" ? danger.color : mutedColors)
   const labelClass = tone === "accent" ? accentTextClass : tone === "danger" ? danger.textClass : baseTextClass
-  const shellClass = grouped ? "" : `rounded-2xl ${tone === "base" ? `border ${baseBorderClass}` : ""}`
+  const shellClass = grouped ? "" : `rounded-2xl ${tone === "accent" ? "" : cardColors.background}`
   const containerClass = `flex-row items-center w-full px-4 py-3 ${shellClass} ${className ?? ""}`
   const style = tone === "accent" ? { backgroundColor: accentTintBg } : undefined
 

@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -44,6 +45,9 @@ export type CatalogFragrance =
   Database["public"]["Functions"]["search_fragrances"]["Returns"][number]
 
 export type BrandFacet = Database["public"]["Functions"]["list_brands"]["Returns"][number]
+
+export type ExploreFragrance =
+  Database["public"]["Functions"]["discover_fragrances"]["Returns"][number]
 
 export type TopWornFragrance =
   Database["public"]["Functions"]["top_worn_fragrances"]["Returns"][number]
@@ -172,11 +176,11 @@ export interface RatingSummary {
 export const MIN_SEARCH_LENGTH = 3
 
 export const WEAR_PERIODS = [
-  { key: "day", label: "Today" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-  { key: "year", label: "Year" },
-  { key: "all", label: "All Time" },
+  { key: "day", labelKey: "top.periods.day" },
+  { key: "week", labelKey: "top.periods.week" },
+  { key: "month", labelKey: "top.periods.month" },
+  { key: "year", labelKey: "top.periods.year" },
+  { key: "all", labelKey: "top.periods.all" },
 ] as const
 
 export type WearPeriod = (typeof WEAR_PERIODS)[number]["key"]
@@ -629,6 +633,69 @@ export const useBrands = () =>
       return data ?? []
     },
   })
+
+// Search tab idle state: a handful of random catalog fragrances, photo-only
+// (discover_fragrances skips imageless rows). Refetched on pull-to-refresh.
+export const useExploreFragrances = (count = 6) =>
+  useQuery({
+    queryKey: ["explore-fragrances", count],
+    staleTime: 30 * 60 * 1000,
+    queryFn: async (): Promise<ExploreFragrance[]> => {
+      const { data, error } = await supabase.rpc("discover_fragrances", { max_results: count })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+// Well-known houses that fill "Popular brands" while community data is thin.
+// Spellings match the catalog's brand names exactly; any that ever go missing
+// from the catalog are dropped by the existence check below.
+const FEATURED_BRANDS = [
+  "Dior",
+  "Chanel",
+  "Creed",
+  "Tom Ford",
+  "Yves Saint Laurent",
+  "Parfums de Marly",
+  "Maison Francis Kurkdjian",
+  "Guerlain",
+  "Hermès",
+  "Le Labo",
+  "Xerjoff",
+  "Amouage",
+  "Lattafa",
+  "Giorgio Armani",
+]
+
+// Brands ranked by how many collectors own or wishlist them (popular_brands),
+// topped up from FEATURED_BRANDS, each with its catalog size from list_brands
+export const usePopularBrands = (max = 6) => {
+  const brands = useBrands()
+  const community = useQuery({
+    queryKey: ["popular-brands", max],
+    staleTime: 60 * 60 * 1000,
+    queryFn: async (): Promise<BrandFacet[]> => {
+      const { data, error } = await supabase.rpc("popular_brands", { max_results: max })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+
+  const data = useMemo(() => {
+    if (!brands.data) return undefined
+    const counts = new Map(brands.data.map((b) => [b.brand, b.fragrance_count]))
+    const picked: BrandFacet[] = []
+    for (const brand of [...(community.data ?? []).map((b) => b.brand), ...FEATURED_BRANDS]) {
+      if (picked.length >= max) break
+      const count = counts.get(brand)
+      if (count === undefined || picked.some((b) => b.brand === brand)) continue
+      picked.push({ brand, fragrance_count: count })
+    }
+    return picked
+  }, [brands.data, community.data, max])
+
+  return { data, isLoading: brands.isLoading, refetch: community.refetch }
+}
 
 // "Want to try" list — catalog-only, name/image read through the fragrances
 // embed. Names are composed to the same "Brand - Title" shape as collection rows

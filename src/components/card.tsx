@@ -13,6 +13,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { getColor } from "@/lib/utils/colors"
 import useTheme from "@/contexts/theme-context"
+import useLocale from "@/contexts/locale-context"
 import { getImageSource } from "@/lib/utils/image-source"
 import { formatRelativeDay } from "@/lib/utils/relative-time"
 import IconButton from "@/components/shared/ui/icon-button"
@@ -36,25 +37,18 @@ const Root = ({
   onAccessibilityAction,
   children,
 }: RootProps) => {
-  const { theme, cardColors, cardBorderColors } = useTheme()
+  const { cardColors } = useTheme()
   const a11yProps = { accessibilityActions, onAccessibilityAction }
 
   const containerStyle = {
     backgroundColor: getColor(cardColors.background.replace("bg-", "")),
-    borderWidth: 1,
-    borderColor: getColor(cardBorderColors),
     borderRadius: 16,
-    marginVertical: 4,
+    marginVertical: 3,
     marginHorizontal: 12,
     padding: 0,
     // min, not fixed: rows grow with large accessibility text sizes instead of clipping
     minHeight: 84,
     overflow: "hidden" as const,
-    shadowColor: "#000",
-    shadowOpacity: theme === "light" ? 0.06 : 0,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: theme === "light" ? 2 : 0,
   }
 
   if (swipeActions) {
@@ -206,8 +200,9 @@ const WearInfoText = ({
   ratingCount?: number | null
 }) => {
   const { theme, mutedTextClass } = useTheme()
+  const { t } = useLocale()
 
-  // Neutral (not accent) tint on purpose — the emerald ActionPill on the same
+  // Neutral (not accent) tint on purpose — the ActionPill on the same
   // row is the action, the badge is just info
   const badgeBg = overlay ? "bg-white/15" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"
   const badgeTextClass = overlay ? "text-white/90" : theme === "dark" ? "text-zinc-300" : "text-zinc-600"
@@ -216,11 +211,11 @@ const WearInfoText = ({
     : getColor(theme === "dark" ? "zinc-400" : "zinc-500")
   const metaClass = overlay ? "text-white/80" : mutedTextClass
 
-  const badgeLabel = community ? `Worn ${timesWorn.toLocaleString()}×` : `${timesWorn}×`
+  const badgeLabel = community ? t("card.communityWorn", { count: timesWorn.toLocaleString() }) : `${timesWorn}×`
 
   const meta: string[] = []
   if (!community) {
-    if (timesWorn === 0) meta.push("Not worn yet")
+    if (timesWorn === 0) meta.push(t("card.notWornYet"))
     else if (lastWorn) meta.push(formatRelativeDay(lastWorn))
   }
   if (avgRating != null && ratingCount) meta.push(`★ ${avgRating.toFixed(1)} (${ratingCount})`)
@@ -319,6 +314,7 @@ const ActionPill = ({
   accessibilityLabel,
 }: ActionPillProps) => {
   const { pill } = useTheme()
+  const { t } = useLocale()
   const a11yLabel = accessibilityLabel ?? label
 
   const bgClass = worn
@@ -349,7 +345,7 @@ const ActionPill = ({
       className={`${bgClass} ${sizeClass} flex-row items-center justify-center rounded-full ${disabled ? "opacity-40" : ""} ${className ?? ""}`}
       style={style}
       testID={testID}
-      accessibilityLabel={worn ? `${a11yLabel}, already worn today` : a11yLabel}>
+      accessibilityLabel={worn ? t("card.alreadyWornLabel", { label: a11yLabel }) : a11yLabel}>
       {worn && (
         <MaterialCommunityIcons
           name='check'
@@ -361,7 +357,7 @@ const ActionPill = ({
         />
       )}
       <Text className={`${textClass} font-semibold ${size === "lg" ? "text-base" : "text-sm"}`}>
-        {worn ? "Worn" : label}
+        {worn ? t("card.worn") : label}
       </Text>
     </PressableScale>
   )

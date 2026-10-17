@@ -38,7 +38,7 @@ const TextField = ({
   testID,
 }: TextFieldProps) => {
   const { theme, baseColors, mutedColors } = useTheme()
-  const inputBgClass = theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"
+  const inputBgClass = theme === "dark" ? "bg-zinc-800" : "bg-zinc-200/70"
   const roundedClass = rounded === "xl" ? "rounded-xl" : "rounded-2xl"
 
   return (

@@ -38,7 +38,7 @@ interface WearHeatmapProps {
 // diary. Tap a day for its exact count (a hover tooltip doesn't translate to
 // touch, so a tap-to-reveal caption is the mobile equivalent).
 const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
-  const { theme, accentColors, baseBorderClass, mutedTextClass } = useTheme()
+  const { theme, accentColors, baseBorderClass, mutedTextClass, cardColors } = useTheme()
   const { t } = useLocale()
   const [selected, setSelected] = useState<{ date: Date; count: number } | null>(null)
 
@@ -85,7 +85,7 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
   }, [columns, countByDay])
 
   return (
-    <View className={`w-full rounded-2xl border ${baseBorderClass} p-4 ${className ?? ""}`}>
+    <View className={`w-full rounded-2xl ${cardColors.background} p-4 ${className ?? ""}`}>
       <Text className={`${mutedTextClass} text-xs font-semibold uppercase pb-4`}>
         {t("heatmap.title")}
       </Text>
@@ -163,8 +163,11 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
 
         <Text className={`${mutedTextClass} text-xs pt-3`}>
           {selected
-            ? `${selected.date.toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" })} — ${selected.count} ${selected.count === 1 ? "entry" : "entries"}`
-            : "Tap a day to see entries"}
+            ? t("heatmap.dayDetail", {
+                date: selected.date.toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" }),
+                count: selected.count,
+              })
+            : t("heatmap.tapHint")}
         </Text>
       </View>
     </View>

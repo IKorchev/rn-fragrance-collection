@@ -66,7 +66,7 @@ const WishlistScreen = () => {
             title={t("wishlist.emptyTitle")}
             message={t("wishlist.emptyMessage")}
             actionLabel={t("collection.emptyAction")}
-            onAction={() => router.navigate("/(tabs)/(discover)/(top-tabs)/search")}
+            onAction={() => router.navigate("/(tabs)/(search)")}
           />
         }
       />

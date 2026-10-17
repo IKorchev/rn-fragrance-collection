@@ -35,7 +35,7 @@ const APPEARANCE_OPTIONS: { key: ThemePreference; labelKey: string }[] = [
 const SettingsScreen = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { modalColors, mutedTextClass, mutedColors, theme, themePreference, setThemePreference } = useTheme()
+  const { modalColors, mutedTextClass, mutedColors, switchTrackColor, themePreference, setThemePreference } = useTheme()
   const { user, logOut, deleteAccount, userCollection } = useAuth()
   const { t } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
@@ -47,7 +47,7 @@ const SettingsScreen = () => {
   const { data: myProfile } = useMyProfile(user?.id)
   const gamification = useGamification()
   const [deleting, setDeleting] = useState(false)
-  const switchTrack = { true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }
+  const switchTrack = { true: switchTrackColor }
 
   // Publishing writes the full snapshot eagerly — without it a just-published
   // profile would sit at zero wears until use-profile-sync's next pass.
@@ -147,24 +147,28 @@ const SettingsScreen = () => {
       contentContainerClassName='px-5 pt-6 pb-12 items-center'
       showsVerticalScrollIndicator={false}>
       <RowGroup title={t("profile.sectionPreferences")}>
-        <NativeMenu
-          title={t("profile.appearance")}
-          testID='settings-appearance-menu'
-          items={APPEARANCE_OPTIONS.map(({ key, labelKey }) => ({
-            id: key,
-            title: t(labelKey),
-            checked: key === themePreference,
-            onPress: () => setThemePreference(key),
-          }))}>
-          <Row
-            icon='theme-light-dark'
-            label={t("profile.appearance")}
-            trailing={trailingValue(
-              t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey),
-              "unfold-more-horizontal"
-            )}
-          />
-        </NativeMenu>
+        <Row
+          icon='theme-light-dark'
+          label={t("profile.appearance")}
+          trailing={
+            // Only the trailing value is the menu trigger: Android's native menu view sizes to its
+            // content, so wrapping the whole row squashes the label
+            <NativeMenu
+              title={t("profile.appearance")}
+              testID='settings-appearance-menu'
+              items={APPEARANCE_OPTIONS.map(({ key, labelKey }) => ({
+                id: key,
+                title: t(labelKey),
+                checked: key === themePreference,
+                onPress: () => setThemePreference(key),
+              }))}>
+              {trailingValue(
+                t(APPEARANCE_OPTIONS.find((o) => o.key === themePreference)!.labelKey),
+                "unfold-more-horizontal"
+              )}
+            </NativeMenu>
+          }
+        />
         <Row
           icon='bell-outline'
           label={t("profile.dailyReminder")}

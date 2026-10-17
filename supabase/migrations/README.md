@@ -30,8 +30,12 @@ appear here too.
   access than schema.sql declares. Every migration that (re)creates a
   function must end with its full REVOKE/GRANT block.
   (`lock_down_wear_writes_and_rpc_grants` cleaned up exactly this drift.)
-- `REVOKE ... FROM anon` alone does not block anon — revoke from `PUBLIC`
-  and grant `authenticated` explicitly
-  (see `fix_public_grant_leak_on_security_definer_rpcs`).
+- Neither `REVOKE ... FROM anon` nor `REVOKE ... FROM PUBLIC` alone blocks
+  anon on a newly created function: anon gets EXECUTE both through PUBLIC and
+  directly, via Supabase's default privileges. Use
+  `REVOKE EXECUTE ... FROM PUBLIC, anon;` then grant `authenticated`
+  explicitly, and check `pg_proc.proacl` after applying
+  (see `fix_public_grant_leak_on_security_definer_rpcs`,
+  `revoke_anon_popular_brands`).
 - Data-changing statements (backfills) belong in migrations too, so the
   history replays correctly (see `add_fragrance_ratings_community_table`).

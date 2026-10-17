@@ -6,7 +6,7 @@ import * as Sentry from "@sentry/react-native"
 import * as SplashScreen from "expo-splash-screen"
 import { initializeAds } from "@/lib/ads"
 import { Stack } from "expo-router"
-import { getHeaderTitle } from "expo-router/react-navigation"
+import { StatusBar } from "expo-status-bar"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
 import { AuthProvider } from "@/contexts/auth-context"
@@ -17,14 +17,15 @@ import { LocaleContextProvider } from "@/contexts/locale-context"
 import useLocale from "@/contexts/locale-context"
 import { useAppUpdates } from "@/lib/utils/use-app-updates"
 import { useStartupReadiness } from "@/lib/utils/use-startup-readiness"
+import { useNativeHeaderOptions } from "@/lib/utils/use-native-header-options"
+import useTheme from "@/contexts/theme-context"
 import { initSentry, sentryEnabled } from "@/lib/sentry"
-import Header from "@/components/header"
 import AppCrashFallback from "@/components/app-crash-fallback"
 import StartupRecovery from "@/components/startup-recovery"
 
 initSentry()
 
-// Keep the native splash up until fonts + the initial auth check resolve —
+// Keep the native splash up until the initial auth check resolves —
 // hidden explicitly by useStartupReadiness. Without this, expo-splash-screen
 // auto-hides on first frame, revealing the blank `return null` render while
 // still loading (see the `ready` gate below).
@@ -54,6 +55,8 @@ function RootNavigator() {
   const { user } = useAuth()
   const { t } = useLocale()
   const { ready, needsRecovery, retrying, retry } = useStartupReadiness()
+  const headerOptions = useNativeHeaderOptions()
+  const { theme } = useTheme()
 
   // Runs regardless of auth state — an OTA fix shouldn't wait on sign-in
   useAppUpdates()
@@ -74,8 +77,10 @@ function RootNavigator() {
   }
 
   return (
+    <>
+    <StatusBar style={theme === "dark" ? "light" : "dark"} />
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <Stack>
+      <Stack screenOptions={headerOptions}>
         <Stack.Protected guard={!!user}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
@@ -106,50 +111,30 @@ function RootNavigator() {
             name="wear-history"
             options={{
               title: t("screens.wearHistory"),
-              header: ({ navigation, route, options, back }) => (
-                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
-              ),
             }}
           />
           <Stack.Screen
             name="wishlist"
             options={{
               title: t("screens.wishlist"),
-              header: ({ navigation, route, options, back }) => (
-                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
-              ),
             }}
           />
           <Stack.Screen
             name="badges"
             options={{
               title: t("screens.badges"),
-              header: ({ navigation, route, options, back }) => (
-                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
-              ),
             }}
           />
           <Stack.Screen
             name="user-profile"
             options={{
               title: t("screens.userProfile"),
-              header: ({ navigation, route, options, back }) => (
-                <Header
-                  title={getHeaderTitle(options, route.name)}
-                  navigation={navigation}
-                  back={back}
-                  right={options.headerRight?.({ canGoBack: !!back })}
-                />
-              ),
             }}
           />
           <Stack.Screen
             name="blocked-users"
             options={{
               title: t("screens.blockedUsers"),
-              header: ({ navigation, route, options, back }) => (
-                <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
-              ),
             }}
           />
           <Stack.Screen
@@ -201,21 +186,16 @@ function RootNavigator() {
           name="privacy-policy"
           options={{
             title: t("screens.privacyPolicy"),
-            header: ({ navigation, route, options, back }) => (
-              <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
-            ),
           }}
         />
         <Stack.Screen
           name="terms"
           options={{
             title: t("screens.terms"),
-            header: ({ navigation, route, options, back }) => (
-              <Header title={getHeaderTitle(options, route.name)} navigation={navigation} back={back} />
-            ),
           }}
         />
       </Stack>
     </TouchableWithoutFeedback>
+    </>
   )
 }

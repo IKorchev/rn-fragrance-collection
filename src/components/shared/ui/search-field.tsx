@@ -39,7 +39,7 @@ const SearchField = ({
   return (
     <View
       className={`flex-row items-center rounded-full px-3 ${
-        theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"
+        theme === "dark" ? "bg-zinc-800" : "bg-zinc-200/70"
       } ${className ?? ""}`}>
       <MaterialCommunityIcons name='magnify' size={20} color={getColor(mutedColors)} />
       <TextInput

@@ -14,21 +14,21 @@ import { useOnboarding, type OnboardingStep } from "@/lib/utils/use-onboarding"
 // resumable if the user skips it and comes back via the Profile tab row).
 const OnboardingChecklist = () => {
   const router = useRouter()
-  const { theme, baseTextClass, mutedTextClass, accentColors, accentTintBg, baseBorderClass } = useTheme()
+  const { theme, baseTextClass, mutedTextClass, accentColors, accentTintBg, baseBorderClass, cardColors } = useTheme()
   const { loaded, dismissed, dismiss, steps, allDone } = useOnboarding()
   const { t } = useLocale()
 
   if (!loaded || dismissed || allDone) return null
 
   const onStepPress = (key: OnboardingStep["key"]) => {
-    if (key === "add") router.navigate("/(tabs)/(discover)/(top-tabs)/search")
+    if (key === "add") router.navigate("/(tabs)/(search)")
     else if (key === "wear") router.navigate("/(tabs)/(collection)")
     else router.push("/picker")
   }
 
   return (
     <View
-      className={`mx-3 mt-3 mb-1 rounded-2xl border ${baseBorderClass} p-4`}
+      className={`mx-3 mt-3 mb-1 rounded-2xl ${cardColors.background} p-4`}
       accessibilityRole='summary'
       accessibilityLabel={t("onboarding.title")}>
       <View className='flex-row items-center justify-between'>
