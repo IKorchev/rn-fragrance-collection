@@ -37,7 +37,7 @@ const Button = ({
   className,
   testID,
 }: ButtonProps) => {
-  const { primaryBg, baseBorderClass, baseTextClass, accentTextClass, danger } = useTheme()
+  const { primaryBg, onPrimaryTextClass, baseBorderClass, baseTextClass, accentTextClass, danger } = useTheme()
   const isDisabled = disabled || loading
   const shapeClass = shape === "pill" ? "rounded-full" : "rounded-2xl"
   // fullWidth only ever adds "w-full" — it has no opinion when false, so a
@@ -58,7 +58,7 @@ const Button = ({
   }
 
   const labelByVariant: Record<ButtonVariant, string> = {
-    primary: "text-white font-semibold",
+    primary: `${onPrimaryTextClass} font-semibold`,
     secondary: `${toneTextClass} font-semibold`,
     danger: `${danger.textClass} font-semibold`,
     ghost: `${toneTextClass} font-semibold ${size === "sm" ? "text-sm" : "text-base"}`,

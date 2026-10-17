@@ -13,11 +13,11 @@ interface RowGroupProps {
   className?: string
 }
 
-// Settings-style section: muted caption above one bordered card holding Rows
+// Settings-style section: muted caption above one filled card holding Rows
 // separated by hairlines. The hairline inset (48 = px-4 + icon + pl-3) aligns
 // separators with the label column, iOS-style.
 const RowGroup = ({ title, children, className }: RowGroupProps) => {
-  const { mutedTextClass, baseBorderClass, cardBorderColors } = useTheme()
+  const { mutedTextClass, baseBorderClass, cardBorderColors, cardColors } = useTheme()
   const rows = React.Children.toArray(children)
 
   return (
@@ -27,7 +27,7 @@ const RowGroup = ({ title, children, className }: RowGroupProps) => {
           {title}
         </Text>
       )}
-      <View className={`rounded-2xl border ${baseBorderClass} overflow-hidden`}>
+      <View className={`rounded-2xl ${cardColors.background} overflow-hidden`}>
         <RowGroupContext.Provider value={true}>
           {rows.map((row, index) => (
             <React.Fragment key={index}>

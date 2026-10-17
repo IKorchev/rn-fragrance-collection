@@ -18,7 +18,7 @@ interface BadgeTileProps {
 // description (so a locked tile still tells you how close you are).
 const BadgeTile = ({ badge, size = "md" }: BadgeTileProps) => {
   const { t } = useLocale()
-  const { baseTextClass, mutedTextClass, baseBorderClass, accentColors, accentTintBg, mutedColors } = useTheme()
+  const { baseTextClass, mutedTextClass, baseBorderClass, accentColors, accentTintBg, mutedColors, cardColors } = useTheme()
 
   const iconSize = size === "sm" ? 26 : 30
   const widthClass = size === "sm" ? "w-24" : "w-full"
@@ -27,7 +27,7 @@ const BadgeTile = ({ badge, size = "md" }: BadgeTileProps) => {
 
   return (
     <View
-      className={`items-center rounded-2xl border ${baseBorderClass} px-2 py-3 ${widthClass} ${badge.earned ? "" : "opacity-70"}`}>
+      className={`items-center rounded-2xl ${cardColors.background} px-2 py-3 ${widthClass} ${badge.earned ? "" : "opacity-70"}`}>
       <View
         className='w-14 h-14 rounded-full items-center justify-center'
         style={{ backgroundColor: iconBg }}>

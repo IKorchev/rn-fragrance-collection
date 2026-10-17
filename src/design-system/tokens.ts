@@ -63,10 +63,12 @@ interface ThemeTokens {
   // Content
   ink: TextRole
   inkMuted: TextRole
-  // Brand/action color — buttons, active pills, positive emphasis
+  // The palette is deliberately hueless (iOS-native: greys plus ink) — color
+  // comes from the bottle photos. Accent and highlight are both ink; they stay
+  // separate roles so a hue can return to either without touching consumers.
+  // Action emphasis — buttons, links, stat values
   accent: TextRole
-  // Warm "you are here" color for selection/navigation (active tabs, selected
-  // chips). Deliberately NOT accent: emerald means "act", amber means "here".
+  // Selection/navigation — active tabs, selected chips
   highlight: IconRole
   // Destructive
   danger: DangerRole
@@ -77,13 +79,18 @@ interface ThemeTokens {
   card: SurfaceRole
   modal: SurfaceRole
   header: SurfaceRole
-  // Filled primary button background
+  // Filled primary button background, and the ink that sits on it (white on
+  // the light theme's black button, black on the dark theme's white one)
   primaryBg: string
+  onPrimary: TextRole
   // Tinted backgrounds are raw color strings, not classNames, because they're
   // consumed via style={{ backgroundColor }} — so they're exempt from the
   // literal-scanner rule above and can use rgba for alpha.
   accentTintBg: string
   highlightTintBg: string
+  // On-state Switch track. Not ink in dark mode: a near-white track under the
+  // white thumb would hide the thumb.
+  switchTrack: string
   // NativeTabs' backgroundColor prop takes a ColorValue, not a className.
   // Matches header.background so the Android tab bar isn't stuck light.
   tabBarBackground: string
@@ -94,28 +101,30 @@ export const tokens: Record<Theme, ThemeTokens> = {
   light: {
     ink: { token: "zinc-900", text: "text-zinc-900" },
     inkMuted: { token: "zinc-500", text: "text-zinc-500" },
-    accent: { token: "emerald-600", text: "text-emerald-600" },
-    highlight: { token: "amber-600" },
-    danger: { token: "rose-600", text: "text-rose-600", bg: "bg-rose-500/10" },
+    accent: { token: "zinc-900", text: "text-zinc-900" },
+    highlight: { token: "zinc-900" },
+    danger: { token: "red-600", text: "text-red-600", bg: "bg-red-500/10" },
     line: { token: "zinc-200", border: "border-zinc-200" },
 
-    page: { font: "text-zinc-900", background: "bg-zinc-50" },
+    page: { font: "text-zinc-900", background: "bg-zinc-100" },
     card: { font: "text-zinc-900", background: "bg-white" },
-    modal: { font: "text-zinc-900", background: "bg-white" },
-    header: { font: "text-zinc-900", background: "bg-white" },
+    modal: { font: "text-zinc-900", background: "bg-zinc-100" },
+    header: { font: "text-zinc-900", background: "bg-zinc-100" },
 
-    primaryBg: "bg-emerald-600",
-    accentTintBg: getColor("emerald-50"),
-    highlightTintBg: getColor("amber-50"),
-    tabBarBackground: "white",
+    primaryBg: "bg-zinc-900",
+    onPrimary: { token: "white", text: "text-white" },
+    accentTintBg: "rgba(0, 0, 0, 0.06)",
+    highlightTintBg: "rgba(0, 0, 0, 0.06)",
+    switchTrack: getColor("zinc-900"),
+    tabBarBackground: getColor("zinc-100"),
 
     pill: {
-      tintBg: "bg-emerald-600/10",
-      tintText: "text-emerald-700",
-      solidBg: "bg-emerald-600",
-      solidText: "text-white",
+      tintBg: "bg-zinc-100",
+      tintText: "text-zinc-900",
+      solidBg: "bg-white",
+      solidText: "text-zinc-900",
       wornBg: "bg-zinc-100",
-      wornText: "text-zinc-500",
+      wornText: "text-zinc-400",
       wornOverlayBg: "bg-white/15",
       wornOverlayText: "text-white/70",
     },
@@ -124,28 +133,30 @@ export const tokens: Record<Theme, ThemeTokens> = {
   dark: {
     ink: { token: "zinc-100", text: "text-zinc-100" },
     inkMuted: { token: "zinc-400", text: "text-zinc-400" },
-    accent: { token: "emerald-400", text: "text-emerald-400" },
-    highlight: { token: "amber-400" },
-    danger: { token: "rose-400", text: "text-rose-400", bg: "bg-rose-500/20" },
+    accent: { token: "zinc-100", text: "text-zinc-100" },
+    highlight: { token: "zinc-100" },
+    danger: { token: "red-400", text: "text-red-400", bg: "bg-red-500/20" },
     line: { token: "zinc-800", border: "border-zinc-800" },
 
-    page: { font: "text-zinc-100", background: "bg-zinc-950" },
+    page: { font: "text-zinc-100", background: "bg-black" },
     card: { font: "text-zinc-100", background: "bg-zinc-900" },
-    modal: { font: "text-zinc-100", background: "bg-zinc-900" },
-    header: { font: "text-zinc-100", background: "bg-zinc-950" },
+    modal: { font: "text-zinc-100", background: "bg-black" },
+    header: { font: "text-zinc-100", background: "bg-black" },
 
-    primaryBg: "bg-emerald-500",
-    accentTintBg: "rgba(52, 211, 153, 0.15)",
-    highlightTintBg: "rgba(251, 191, 36, 0.15)",
-    tabBarBackground: getColor("zinc-950"),
+    primaryBg: "bg-zinc-100",
+    onPrimary: { token: "zinc-900", text: "text-zinc-900" },
+    accentTintBg: "rgba(255, 255, 255, 0.12)",
+    highlightTintBg: "rgba(255, 255, 255, 0.12)",
+    switchTrack: getColor("zinc-500"),
+    tabBarBackground: "black",
 
     pill: {
-      tintBg: "bg-emerald-400/15",
-      tintText: "text-emerald-400",
-      solidBg: "bg-emerald-500",
-      solidText: "text-white",
+      tintBg: "bg-zinc-800",
+      tintText: "text-zinc-100",
+      solidBg: "bg-white",
+      solidText: "text-zinc-900",
       wornBg: "bg-zinc-800",
-      wornText: "text-zinc-400",
+      wornText: "text-zinc-500",
       wornOverlayBg: "bg-white/15",
       wornOverlayText: "text-white/70",
     },

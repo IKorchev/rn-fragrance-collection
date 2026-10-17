@@ -35,7 +35,7 @@ interface SubmissionRowProps {
 }
 
 const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps) => {
-  const { theme, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
+  const { theme, baseTextClass, mutedTextClass, baseBorderClass, cardColors } = useTheme()
   const { t } = useLocale()
   const [rejecting, setRejecting] = useState(false)
   const [note, setNote] = useState("")
@@ -45,7 +45,7 @@ const SubmissionRow = ({ submission, busyAction, onReview }: SubmissionRowProps)
     submission.similarity != null ? Math.round(submission.similarity * 100) : null
 
   return (
-    <View className={`mx-3 my-1.5 rounded-2xl border ${baseBorderClass} p-4`}>
+    <View className={`mx-3 my-1.5 rounded-2xl ${cardColors.background} p-4`}>
       <Text className={`${baseTextClass} text-base font-semibold`}>{submission.title}</Text>
       <Text className={`${mutedTextClass} text-sm pt-0.5`}>{submission.brand}</Text>
 
@@ -147,7 +147,7 @@ interface ReportRowProps {
 }
 
 const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
-  const { theme, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
+  const { theme, baseTextClass, mutedTextClass, baseBorderClass, cardColors } = useTheme()
   const { t } = useLocale()
   const reasonKey = reportReasonLabelKey(report.reason)
   const [dismissing, setDismissing] = useState(false)
@@ -155,7 +155,7 @@ const ReportRow = ({ report, busyAction, onReview }: ReportRowProps) => {
   const busy = busyAction !== null
 
   return (
-    <View className={`mx-3 my-1.5 rounded-2xl border ${baseBorderClass} p-4`}>
+    <View className={`mx-3 my-1.5 rounded-2xl ${cardColors.background} p-4`}>
       <View
         className={`flex-row items-center p-2 rounded-xl ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}>
         <Card.Thumbnail imageUrl={report.image_url} compact />
@@ -246,7 +246,7 @@ interface ProfileReportRowProps {
 // the profile private, clears its header photo, settles every other pending
 // report against it), and dismiss mirrors ReportRow above.
 const ProfileReportRow = ({ report, busyAction, onReview }: ProfileReportRowProps) => {
-  const { theme, baseTextClass, mutedTextClass, baseBorderClass } = useTheme()
+  const { theme, baseTextClass, mutedTextClass, baseBorderClass, cardColors } = useTheme()
   const { t } = useLocale()
   const [confirming, setConfirming] = useState<ProfileReportAction | null>(null)
   const [note, setNote] = useState("")
@@ -255,7 +255,7 @@ const ProfileReportRow = ({ report, busyAction, onReview }: ProfileReportRowProp
   const reasonKey = profileReportReasonLabelKey(report.reason)
 
   return (
-    <View className={`mx-3 my-1.5 rounded-2xl border ${baseBorderClass} p-4`}>
+    <View className={`mx-3 my-1.5 rounded-2xl ${cardColors.background} p-4`}>
       <View className={`rounded-xl overflow-hidden ${theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}>
         {headerUrl && <Image source={{ uri: headerUrl }} className='w-full h-24' resizeMode='cover' />}
         <View className='flex-row items-center p-2'>

@@ -251,7 +251,6 @@ const ProfileScreen = () => {
       {purchasesEnabled && (!isPro || __DEV__) && (
         <Row
           icon='star-four-points'
-          tone='accent'
           className='mt-6 w-full'
           label={isPro ? t("profile.viewPaywallDev") : t("profile.upgradeToPro")}
           onPress={handleUpgrade}
@@ -287,7 +286,6 @@ const ProfileScreen = () => {
       {!onboardingDone && (
         <Row
           icon='rocket-launch-outline'
-          tone='accent'
           className='mt-6'
           label={t("profile.gettingStartedGuide")}
           onPress={() => {

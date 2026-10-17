@@ -38,7 +38,7 @@ interface WearHeatmapProps {
 // diary. Tap a day for its exact count (a hover tooltip doesn't translate to
 // touch, so a tap-to-reveal caption is the mobile equivalent).
 const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
-  const { theme, accentColors, baseBorderClass, mutedTextClass } = useTheme()
+  const { theme, accentColors, baseBorderClass, mutedTextClass, cardColors } = useTheme()
   const { t } = useLocale()
   const [selected, setSelected] = useState<{ date: Date; count: number } | null>(null)
 
@@ -85,7 +85,7 @@ const WearHeatmap = ({ events, className }: WearHeatmapProps) => {
   }, [columns, countByDay])
 
   return (
-    <View className={`w-full rounded-2xl border ${baseBorderClass} p-4 ${className ?? ""}`}>
+    <View className={`w-full rounded-2xl ${cardColors.background} p-4 ${className ?? ""}`}>
       <Text className={`${mutedTextClass} text-xs font-semibold uppercase pb-4`}>
         {t("heatmap.title")}
       </Text>

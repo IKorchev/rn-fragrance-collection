@@ -35,7 +35,7 @@ const APPEARANCE_OPTIONS: { key: ThemePreference; labelKey: string }[] = [
 const SettingsScreen = () => {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { modalColors, mutedTextClass, mutedColors, theme, themePreference, setThemePreference } = useTheme()
+  const { modalColors, mutedTextClass, mutedColors, switchTrackColor, themePreference, setThemePreference } = useTheme()
   const { user, logOut, deleteAccount, userCollection } = useAuth()
   const { t } = useLocale()
   const { data: remindersEnabled } = useRemindersEnabled(user?.id)
@@ -47,7 +47,7 @@ const SettingsScreen = () => {
   const { data: myProfile } = useMyProfile(user?.id)
   const gamification = useGamification()
   const [deleting, setDeleting] = useState(false)
-  const switchTrack = { true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }
+  const switchTrack = { true: switchTrackColor }
 
   // Publishing writes the full snapshot eagerly — without it a just-published
   // profile would sit at zero wears until use-profile-sync's next pass.

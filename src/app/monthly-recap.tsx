@@ -30,7 +30,7 @@ const MonthlyRecapScreen = () => {
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ month?: string }>()
   const { user, userCollection } = useAuth()
-  const { viewColors, baseTextClass, mutedTextClass, mutedColors, baseBorderClass } = useTheme()
+  const { viewColors, baseTextClass, mutedTextClass, mutedColors, baseBorderClass, cardColors } = useTheme()
   const { t, formatDate } = useLocale()
   const { data: allEvents } = useWearHistory(user?.id)
   const [shareVisible, setShareVisible] = useState(false)
@@ -187,7 +187,7 @@ const MonthlyRecapScreen = () => {
               </View>
             )}
 
-            <View className={`items-center rounded-2xl border ${baseBorderClass} mt-8 py-6`}>
+            <View className={`items-center rounded-2xl ${cardColors.background} mt-8 py-6`}>
               <View className='flex-row items-center' style={{ gap: 8 }}>
                 <MaterialCommunityIcons
                   name='fire'

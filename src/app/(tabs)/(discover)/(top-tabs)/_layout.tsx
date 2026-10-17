@@ -10,7 +10,7 @@ const { Navigator } = createMaterialTopTabNavigator()
 export const MaterialTopTabs = withLayoutContext(Navigator)
 
 export default function TopTabsLayout() {
-  const { mutedColors, highlightColors, theme } = useTheme()
+  const { mutedColors, highlightColors, headerColors } = useTheme()
   const { t } = useLocale()
   return (
     <View className='flex-1'>
@@ -27,8 +27,11 @@ export default function TopTabsLayout() {
             height: 3,
             borderRadius: 3,
           },
+          // Flush with the native header above it: same color, no shadow
           tabBarStyle: {
-            backgroundColor: theme === "dark" ? getColor("zinc-950") : "white",
+            backgroundColor: getColor(headerColors.background.replace("bg-", "")),
+            elevation: 0,
+            shadowOpacity: 0,
           },
         }}>
         {/* Top leads: it's populated for everyone, while For You stays empty

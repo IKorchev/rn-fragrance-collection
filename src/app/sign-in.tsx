@@ -4,7 +4,7 @@ import * as AppleAuthentication from "expo-apple-authentication"
 import { Platform, Text, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
-import { SignInBackdrop, SignInHero } from "@/components/sign-in-hero"
+import { SignInHero } from "@/components/sign-in-hero"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import useLocale from "@/contexts/locale-context"
@@ -27,12 +27,11 @@ export default function SigninScreen() {
 
   return (
     <View className={`flex-1 ${viewColors.background}`}>
-      <SignInBackdrop />
       <SafeAreaView className='flex-1'>
         <View className='flex-1 items-center justify-center px-8'>
           <View
             className={`items-center justify-center rounded-full p-9 ${
-              dark ? "bg-emerald-500/10" : "bg-emerald-100/60"
+              dark ? "bg-white/5" : "bg-white"
             }`}>
             <SignInHero size={150} />
           </View>

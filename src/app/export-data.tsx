@@ -172,7 +172,7 @@ const buildJson = (
 // whatever the user picks in that sheet (Files, Mail, a messaging app, etc);
 // nothing is uploaded by this screen.
 const ExportDataScreen = () => {
-  const { modalColors, baseTextClass, mutedTextClass, baseBorderClass, accentColors, mutedColors } = useTheme()
+  const { modalColors, baseTextClass, mutedTextClass, baseBorderClass, accentColors, mutedColors, cardColors } = useTheme()
   const { user, userCollection } = useAuth()
   const { t } = useLocale()
   const {
@@ -302,7 +302,7 @@ const ExportDataScreen = () => {
         <FilterChip label='JSON' selected={format === "json"} onPress={() => setFormat("json")} />
       </View>
 
-      <View className={`rounded-2xl border ${baseBorderClass} p-4 mt-6`}>
+      <View className={`rounded-2xl ${cardColors.background} p-4 mt-6`}>
         {offline ? (
           <View className='items-center py-4'>
             <MaterialCommunityIcons name='wifi-off' size={28} color={getColor(mutedColors)} />

@@ -1,34 +1,25 @@
 import React from "react"
 import { TouchableOpacity } from "react-native"
 import { Stack, useRouter } from "expo-router"
-import { getHeaderTitle } from "expo-router/react-navigation"
 import { Ionicons } from "@expo/vector-icons"
-import Header from "@/components/header"
 import useLocale from "@/contexts/locale-context"
 import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
+import { useNativeHeaderOptions } from "@/lib/utils/use-native-header-options"
 
 export default function ProfileLayout() {
   const { t } = useLocale()
   const { headerColors } = useTheme()
   const router = useRouter()
+  const headerOptions = useNativeHeaderOptions()
 
   return (
-    <Stack
-      screenOptions={{
-        header: ({ route, options, navigation, back }) => (
-          <Header
-            title={getHeaderTitle(options, route.name)}
-            navigation={navigation}
-            back={back}
-            right={options.headerRight?.({ canGoBack: !!back })}
-          />
-        ),
-      }}>
+    <Stack screenOptions={headerOptions}>
       <Stack.Screen
         name="index"
         options={{
           title: t("profile.title"),
+          headerLargeTitle: true,
           headerRight: () => (
             <TouchableOpacity
               testID='profile-settings-button'

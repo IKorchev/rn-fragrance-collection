@@ -32,8 +32,7 @@ const PickerFilterSheet = ({
   onChange,
   onClose,
 }: PickerFilterSheetProps) => {
-  const { modalColors, baseTextClass, mutedTextClass, accentTextClass, baseBorderClass, theme } =
-    useTheme()
+  const { modalColors, baseTextClass, mutedTextClass, accentTextClass, baseBorderClass, switchTrackColor, cardColors } = useTheme()
 
   const { t } = useLocale()
   const setFilters = (next: Partial<PickerFilters>) => onChange({ ...filters, ...next })
@@ -57,14 +56,14 @@ const PickerFilterSheet = ({
           )}
 
           <View
-            className={`flex-row items-center justify-between rounded-2xl border ${baseBorderClass} px-4 py-3`}>
+            className={`flex-row items-center justify-between rounded-2xl ${cardColors.background} px-4 py-3`}>
             <Text className={`${baseTextClass} text-base font-semibold flex-1 pr-3`}>
               {t("pickerFilters.unwornOnly")}
             </Text>
             <Switch
               value={filters.unwornOnly}
               onValueChange={(value) => setFilters({ unwornOnly: value })}
-              trackColor={{ true: getColor(theme === "dark" ? "emerald-500" : "emerald-600") }}
+              trackColor={{ true: switchTrackColor }}
               testID='picker-filter-unworn-switch'
             />
           </View>

@@ -34,7 +34,7 @@ const CollectionScreen = () => {
   const insets = useSafeAreaInsets()
   const { visibleSortedCollection, collectionPending, collectionError, refetchCollection } =
     useAuth()
-  const { viewColors, accentColors, mutedColors, highlightColors, highlightTintBg, cardBorderColors, mutedTextClass, primaryBg } =
+  const { viewColors, accentColors, mutedColors, highlightColors, highlightTintBg, cardBorderColors, mutedTextClass, primaryBg, onPrimaryColors } =
     useTheme()
   const { t } = useLocale()
   const { refreshing, onRefresh } = usePullToRefresh(refetchCollection)
@@ -234,7 +234,7 @@ const CollectionScreen = () => {
             shadowRadius: 5,
             elevation: 5,
           }}>
-          <MaterialCommunityIcons name='slot-machine' size={28} color='white' />
+          <MaterialCommunityIcons name='slot-machine' size={28} color={getColor(onPrimaryColors)} />
         </IconButton>
       )}
     </View>

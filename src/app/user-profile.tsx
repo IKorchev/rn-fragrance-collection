@@ -114,7 +114,7 @@ const UserProfileScreen = () => {
           !isOwnProfile && profile?.is_public ? (
             <NativeMenu title={displayName} items={actionItems} testID='user-profile-actions'>
               <GlassCircle
-                fallbackBgClassName={theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"}
+                fallbackBgClassName={theme === "dark" ? "bg-zinc-800" : "bg-zinc-200"}
                 accessibilityLabel={t("userProfile.moreActions")}>
                 <MaterialCommunityIcons
                   name='dots-horizontal'

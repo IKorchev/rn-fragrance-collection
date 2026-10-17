@@ -275,13 +275,13 @@ const WearHistoryScreen = () => {
         }}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          isFetchingNextPage ? <ActivityIndicator className='py-6' color={getColor("emerald-500")} /> : null
+          isFetchingNextPage ? <ActivityIndicator className='py-6' color={getColor("zinc-400")} /> : null
         }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={getColor("emerald-500")}
+            tintColor={getColor("zinc-400")}
           />
         }
         ListHeaderComponent={

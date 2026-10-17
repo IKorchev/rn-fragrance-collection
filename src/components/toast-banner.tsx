@@ -37,7 +37,7 @@ const ToastBanner = ({ toast, onDismiss }: ToastBannerProps) => {
         <MaterialCommunityIcons
           name='check-circle'
           size={20}
-          color={getColor(theme === "dark" ? "emerald-600" : "emerald-400")}
+          color={getColor(theme === "dark" ? "zinc-500" : "zinc-400")}
         />
         <Text
           className={`${theme === "dark" ? "text-black" : "text-white"} flex-1 text-base pl-2.5 pr-2`}>
@@ -50,9 +50,9 @@ const ToastBanner = ({ toast, onDismiss }: ToastBannerProps) => {
               onDismiss()
             }}
             className='ml-3'>
-            {/* Toast bg is inverted relative to the theme, so the accent inverts too */}
+            {/* Toast bg is inverted relative to the theme, so the label inverts too */}
             <Text
-              className={`${theme === "dark" ? "text-emerald-700" : "text-emerald-400"} text-base font-bold`}>
+              className={`${theme === "dark" ? "text-black" : "text-white"} text-base font-bold underline`}>
               {toast.actionLabel}
             </Text>
           </TouchableOpacity>

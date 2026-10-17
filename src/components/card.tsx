@@ -37,25 +37,18 @@ const Root = ({
   onAccessibilityAction,
   children,
 }: RootProps) => {
-  const { theme, cardColors, cardBorderColors } = useTheme()
+  const { cardColors } = useTheme()
   const a11yProps = { accessibilityActions, onAccessibilityAction }
 
   const containerStyle = {
     backgroundColor: getColor(cardColors.background.replace("bg-", "")),
-    borderWidth: 1,
-    borderColor: getColor(cardBorderColors),
     borderRadius: 16,
-    marginVertical: 4,
+    marginVertical: 3,
     marginHorizontal: 12,
     padding: 0,
     // min, not fixed: rows grow with large accessibility text sizes instead of clipping
     minHeight: 84,
     overflow: "hidden" as const,
-    shadowColor: "#000",
-    shadowOpacity: theme === "light" ? 0.06 : 0,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: theme === "light" ? 2 : 0,
   }
 
   if (swipeActions) {
@@ -209,7 +202,7 @@ const WearInfoText = ({
   const { theme, mutedTextClass } = useTheme()
   const { t } = useLocale()
 
-  // Neutral (not accent) tint on purpose — the emerald ActionPill on the same
+  // Neutral (not accent) tint on purpose — the ActionPill on the same
   // row is the action, the badge is just info
   const badgeBg = overlay ? "bg-white/15" : theme === "dark" ? "bg-zinc-800" : "bg-zinc-100"
   const badgeTextClass = overlay ? "text-white/90" : theme === "dark" ? "text-zinc-300" : "text-zinc-600"

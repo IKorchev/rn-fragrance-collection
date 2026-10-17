@@ -12,7 +12,7 @@ import Svg, {
 import useTheme from "@/contexts/theme-context"
 import { getColor } from "@/lib/utils/colors"
 
-// Hand-drawn atomizer bottle in the app's emerald/zinc palette — the sign-in
+// Hand-drawn atomizer bottle in the app's zinc palette — the sign-in
 // screen's hero mark. Pure SVG so it stays crisp at any size and re-tints
 // with the theme (unlike the rasterized tab icon, this renders pre-auth where
 // arbitrary components are allowed).
@@ -20,11 +20,11 @@ export function SignInHero({ size = 150 }: { size?: number }) {
   const { theme } = useTheme()
   const dark = theme === "dark"
 
-  const glassTop = getColor(dark ? "emerald-400" : "emerald-500")
-  const glassBottom = getColor(dark ? "emerald-600" : "emerald-700")
+  const glassTop = getColor(dark ? "zinc-500" : "zinc-300")
+  const glassBottom = getColor(dark ? "zinc-700" : "zinc-500")
   const metalLight = getColor(dark ? "zinc-300" : "zinc-400")
   const metalDark = getColor(dark ? "zinc-500" : "zinc-600")
-  const mist = getColor(dark ? "emerald-300" : "emerald-500")
+  const mist = getColor(dark ? "zinc-400" : "zinc-400")
 
   return (
     <Svg width={size * 0.8} height={size} viewBox='0 0 160 200'>
@@ -79,48 +79,6 @@ export function SignInHero({ size = 150 }: { size?: number }) {
         d='M80 105 C 75 113, 71.5 117.5, 71.5 122 A 8.5 8.5 0 0 0 88.5 122 C 88.5 117.5, 85 113, 80 105 Z'
         fill={glassBottom}
         opacity={0.85}
-      />
-    </Svg>
-  )
-}
-
-// Full-screen soft radial glows behind the sign-in content — emerald (brand)
-// top-right, sky (secondary) bottom-left.
-export function SignInBackdrop() {
-  const { theme } = useTheme()
-  const { width, height } = useWindowDimensions()
-  const dark = theme === "dark"
-
-  const emerald = getColor(dark ? "emerald-500" : "emerald-400")
-  const sky = getColor(dark ? "sky-500" : "sky-400")
-
-  return (
-    <Svg
-      width={width}
-      height={height}
-      style={{ position: "absolute" }}
-      pointerEvents='none'>
-      <Defs>
-        <RadialGradient id='glow-emerald'>
-          <Stop offset='0' stopColor={emerald} stopOpacity={dark ? 0.22 : 0.3} />
-          <Stop offset='1' stopColor={emerald} stopOpacity='0' />
-        </RadialGradient>
-        <RadialGradient id='glow-sky'>
-          <Stop offset='0' stopColor={sky} stopOpacity={dark ? 0.14 : 0.2} />
-          <Stop offset='1' stopColor={sky} stopOpacity='0' />
-        </RadialGradient>
-      </Defs>
-      <Circle
-        cx={width * 0.85}
-        cy={height * 0.12}
-        r={width * 0.6}
-        fill='url(#glow-emerald)'
-      />
-      <Circle
-        cx={width * 0.08}
-        cy={height * 0.88}
-        r={width * 0.55}
-        fill='url(#glow-sky)'
       />
     </Svg>
   )

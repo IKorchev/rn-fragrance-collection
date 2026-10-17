@@ -61,18 +61,22 @@ interface ThemeContextValue {
   mutedTextClass: string
   accentTextClass: string
   baseBorderClass: string
-  // Button's filled/primary background — complete literal
+  // Button's filled/primary background — complete literal — plus the text
+  // class and bare token for content on top of it
   primaryBg: string
+  onPrimaryTextClass: string
+  onPrimaryColors: string
   // Selected-chip / tinted-badge background — a bare rgba/hex string for
   // style={{backgroundColor}}, not a className, so it's exempt from the
   // literal-scanner constraint above
   accentTintBg: string
-  // Warm "you are here" accent for selection/navigation states (active tabs,
-  // selected filter chips) — emerald stays the brand/action color. Bare
+  // Selection/navigation states (active tabs, selected filter chips). Bare
   // token + tint background, mirroring accentColors/accentTintBg; all
   // consumers are style objects, so no literal classNames needed.
   highlightColors: string
   highlightTintBg: string
+  // Switch trackColor.true — a resolved color string
+  switchTrackColor: string
   // NativeTabs' backgroundColor prop takes a ColorValue, not a className —
   // matches headerColors.background so the bottom bar isn't stuck light on
   // Android (NativeTabs doesn't follow in-app theme automatically there)
@@ -143,9 +147,12 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
   const pill: PillGroup = t.pill
 
   const primaryBg = t.primaryBg
+  const onPrimaryTextClass = t.onPrimary.text
+  const onPrimaryColors = t.onPrimary.token
   const accentTintBg = t.accentTintBg
   const highlightColors = t.highlight.token
   const highlightTintBg = t.highlightTintBg
+  const switchTrackColor = t.switchTrack
   const tabBarBackgroundColor = t.tabBarBackground
   const danger: DangerGroup = {
     textClass: t.danger.text,
@@ -165,9 +172,12 @@ export const ThemeContextProvider = ({ children }: { children: ReactNode }) => {
         accentTextClass,
         baseBorderClass,
         primaryBg,
+        onPrimaryTextClass,
+        onPrimaryColors,
         accentTintBg,
         highlightColors,
         highlightTintBg,
+        switchTrackColor,
         tabBarBackgroundColor,
         viewColors,
         headerColors,

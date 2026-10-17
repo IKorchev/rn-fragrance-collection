@@ -35,7 +35,7 @@ const CollectorListItem = ({ profile, place }: CollectorListItemProps) => {
 
   return (
     <TouchableOpacity
-      className={`flex-row items-center border ${baseBorderClass} ${cardColors.background} rounded-2xl px-4 py-3 mb-2`}
+      className={`flex-row items-center ${cardColors.background} rounded-2xl px-4 py-3 mb-2`}
       testID={`collector-row-${place}`}
       onPress={() => router.push({ pathname: "/user-profile", params: { userId: profile.user_id } })}>
       <Text className={`${rankClass} w-7 text-center font-bold ${place <= 3 ? "text-lg" : "text-base"}`}>

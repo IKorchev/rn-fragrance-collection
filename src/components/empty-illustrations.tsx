@@ -13,7 +13,7 @@ export function EmptyCollectionIllustration({ size = 88 }: { size?: number }) {
   const { theme } = useTheme()
   const dark = theme === "dark"
   const stroke = getColor(dark ? "zinc-600" : "zinc-300")
-  const tint = getColor(dark ? "emerald-500" : "emerald-400")
+  const tint = getColor(dark ? "zinc-400" : "zinc-500")
 
   return (
     <Svg width={size} height={size} viewBox='0 0 96 96'>
