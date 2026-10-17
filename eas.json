@@ -10,8 +10,12 @@
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
-        "XPREM_CHANNEL": "preview"
+        "XPREM_CHANNEL": "preview",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "ios-simulator": {
@@ -19,9 +23,6 @@
       "environment": "preview",
       "ios": {
         "simulator": true
-      },
-      "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
