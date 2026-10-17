@@ -84,7 +84,24 @@ The usual path is GitHub Actions (`.github/workflows/ota-publish.yml`):
 
   The version in the tag must equal `app.json`'s (the runtime) — the job fails
   otherwise. Don't bump `app.json` to make a tag: that changes the runtime and
-  no installed binary would take the update;
+  no installed binary would take the update.
+
+  Once `main` is bumped for a native change (say to 1.5.0), it can no longer
+  ship updates to the 1.4.0 binaries still in the store. Fix those on a release
+  branch cut from the last 1.4.0 tag, tag the fix there, and cherry-pick it to
+  `main`; delete the branch once nobody runs 1.4.0. The job accepts tags on
+  `main` or any `release/*` branch:
+
+  ```bash
+  git switch -c release/1.4 v1.4.0-ota.2
+  # commit the fix, then
+  git push origin release/1.4
+  git tag v1.4.0-ota.3
+  git push origin v1.4.0-ota.3
+  ```
+
+  Push the branch before the tag: the job checks the tag against the branches
+  already on GitHub;
 - Actions → OTA publish → Run workflow publishes to `preview` or `production`
   for a chosen platform — for hotfixes and rollbacks. It runs the same
 `yarn ota:publish` (preflight included), after `eas env:pull` writes the

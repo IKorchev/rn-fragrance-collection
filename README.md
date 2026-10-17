@@ -52,13 +52,13 @@ GitHub Actions (`.github/workflows/`):
 |---|---|---|
 | `ci.yml` | PRs, pushes to `main` | Typecheck |
 | `ota-publish.yml` | Push to `main` | OTA update → `preview` |
-| | Tag `v<app version>-ota.<n>` on `main` | OTA update → `production`, after approval on the `production` environment |
+| | Tag `v<app version>-ota.<n>` on `main` or `release/*` | OTA update → `production`, after approval on the `production` environment |
 | | Manual dispatch | Either branch, chosen platform (hotfixes, rollbacks) |
 | `eas-build.yml` | Manual dispatch | Queue an EAS build |
 
 The OTA job pulls the bundle-time `EXPO_PUBLIC_*` values from the matching EAS environment. Repo secrets: `EXPO_TOKEN`, `XPREM_BASE_URL`, `EOO_TOKEN`.
 
-The runtime version follows `app.json`'s `version`. Native changes need a version bump and a store build; an OTA tag must match the current version, which is never bumped just to tag a release.
+The runtime version follows `app.json`'s `version`. Native changes need a version bump and a store build; an OTA tag must match the current version, which is never bumped just to tag a release. Once `main` moves to a new version, fixes for the previous store version are tagged on a `release/<version>` branch and cherry-picked to `main`.
 
 ## Layout
 
