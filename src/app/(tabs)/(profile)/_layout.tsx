@@ -19,7 +19,6 @@ export default function ProfileLayout() {
         name="index"
         options={{
           title: t("profile.title"),
-          headerLargeTitle: true,
           headerRight: () => (
             <TouchableOpacity
               testID='profile-settings-button'

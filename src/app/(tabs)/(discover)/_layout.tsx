@@ -9,7 +9,7 @@ export default function DiscoverLayout() {
 
   return (
     <Stack screenOptions={headerOptions}>
-      <Stack.Screen name="index" options={{ title: t("discover.title"), headerLargeTitle: true }} />
+      <Stack.Screen name="index" options={{ title: t("discover.title") }} />
     </Stack>
   )
 }

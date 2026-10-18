@@ -9,7 +9,7 @@ export default function SearchLayout() {
 
   return (
     <Stack screenOptions={headerOptions}>
-      <Stack.Screen name="index" options={{ title: t("discover.tabs.search"), headerLargeTitle: true }} />
+      <Stack.Screen name="index" options={{ title: t("discover.tabs.search") }} />
     </Stack>
   )
 }

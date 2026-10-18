@@ -4,8 +4,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "cross-env DISABLE_CODE_SIGNING=1 expo start",
-    "android": "cross-env DISABLE_CODE_SIGNING=1 expo run:android",
-    "ios": "cross-env DISABLE_CODE_SIGNING=1 expo run:ios",
+    "android": "cross-env DISABLE_CODE_SIGNING=1 SENTRY_DISABLE_AUTO_UPLOAD=true expo run:android",
+    "ios": "cross-env DISABLE_CODE_SIGNING=1 SENTRY_DISABLE_AUTO_UPLOAD=true expo run:ios",
     "web": "cross-env DISABLE_CODE_SIGNING=1 expo start --web",
     "typecheck": "tsc --noEmit",
     "ota:preflight": "dotenv -e .env.local -- node scripts/preflight-ota.mjs",

@@ -10,7 +10,6 @@ import { tagFacets, brandFacets } from "@/lib/utils/collection-facets"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
 import useLocale from "@/contexts/locale-context"
-import { markPickerTried } from "@/lib/utils/use-onboarding"
 import { buildPickerResultShareText } from "@/lib/share"
 import Picker from "@/components/picker"
 import PickerFilterSheet from "@/components/picker-filter-sheet"
@@ -40,12 +39,6 @@ const PickerScreen = () => {
     () => (frag ? buildPickerResultShareText(t, { name: frag.name }) : ""),
     [t, frag]
   )
-
-  // Marks the "Try the picker" onboarding step done regardless of whether the
-  // user actually pulls the lever — opening the modal is the tried part.
-  useEffect(() => {
-    markPickerTried(user?.id)
-  }, [user?.id])
 
   // Interstitial on close (X button or Android hardware back — unmount
   // catches both), and only if the lever was actually pulled; the frequency

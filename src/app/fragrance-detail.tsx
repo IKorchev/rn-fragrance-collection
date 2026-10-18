@@ -182,220 +182,227 @@ const FragranceDetailScreen = () => {
   useEffect(() => () => saveNotesRef.current(), [])
 
   return (
+    // react-native-screens special-cases a ScrollView it finds directly in a
+    // formSheet (it hooks it up to the sheet's drag gesture) — with this
+    // layout that left the scroll view unpainted and the sheet blank. The
+    // non-collapsable wrapper keeps it out of that path; the share button and
+    // modal live inside the scroll content so the sheet root has one child.
     <View className={`flex-1 ${modalColors.background}`}>
-      <TouchableOpacity
-        accessibilityRole='button'
-        accessibilityLabel={t("share.action")}
-        hitSlop={8}
-        className='absolute right-4 top-3 z-10 h-9 w-9 items-center justify-center'
-        testID='fragrance-detail-share'
-        onPress={() => setShareVisible(true)}>
-        <MaterialCommunityIcons name='share-variant' size={22} color={getColor(mutedColors)} />
-      </TouchableOpacity>
-      <ScrollView
-        className='flex-1'
-        contentContainerClassName='px-5 pt-6 pb-12'
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps='handled'>
-        <View className='items-center justify-center' style={{ minHeight: 224 }}>
-          {imageUrl ? (
-            // White backing keeps product shots (white backgrounds) from clashing in dark mode
-            <View className='h-56 w-56 items-center justify-center bg-white rounded-3xl' style={heroShadow}>
-              <Image
-                style={{ height: 184, width: 184 }}
-                contentFit='contain'
-                transition={150}
-                source={{ uri: imageUrl }}
-              />
-            </View>
-          ) : (
-            <View
-              className={`h-56 w-56 items-center justify-center rounded-3xl ${cardColors.background}`}
-              style={heroShadow}>
-              <MaterialCommunityIcons name='image-off' size={44} color={getColor(mutedColors)} />
-            </View>
-          )}
-        </View>
-
-        <Card.Title centered>{title}</Card.Title>
-        <Card.Subtitle centered>{brand}</Card.Subtitle>
-
-        {collectionItem ? (
-          <StatTile
-            className='mt-5'
-            items={[
-              { value: timesWorn, label: t("detail.timesWorn") },
-              {
-                value: lastWorn
-                  ? formatRelativeDay(lastWorn).replace(/^./, (c) => c.toUpperCase())
-                  : t("detail.never"),
-                label: t("detail.lastWorn"),
-              },
-              ...(community?.avg != null && community.count
-                ? [
-                    {
-                      value: `★ ${community.avg.toFixed(1)}`,
-                      label: t("detail.ratingCount", { count: community.count }),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-        ) : (
-          <Card.WearInfoText
-            timesWorn={timesWorn}
-            lastWorn={lastWorn}
-            centered
-            avgRating={community?.avg}
-            ratingCount={community?.count}
-          />
-        )}
-
-        {!collectionItem && fragranceId && (
-          <View className='flex-row pt-5' style={{ gap: 10 }}>
-            <View className='flex-1'>
-              <Button
-                fullWidth
-                label={ownedCatalogRow ? t("wishlist.inCollection") : t("wishlist.addToCollection")}
-                disabled={ownedCatalogRow}
-                loading={adding}
-                onPress={addToCollection}
-                testID='detail-add-button'
-              />
-            </View>
-            {!ownedCatalogRow && (
-              <View className='flex-1'>
-                <Button
-                  fullWidth
-                  variant='secondary'
-                  tone={onWishlist ? "accent" : "base"}
-                  label={onWishlist ? t("wishlist.onWishlist") : t("wishlist.wantToTry")}
-                  onPress={toggleWishlist}
-                  testID='detail-wishlist-button'
+      <View collapsable={false} style={{ flex: 1 }}>
+        <ScrollView
+          className='flex-1'
+          contentContainerClassName='px-5 pt-6 pb-12'
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'>
+          <TouchableOpacity
+            accessibilityRole='button'
+            accessibilityLabel={t("share.action")}
+            hitSlop={8}
+            className='absolute right-4 top-3 z-10 h-9 w-9 items-center justify-center'
+            testID='fragrance-detail-share'
+            onPress={() => setShareVisible(true)}>
+            <MaterialCommunityIcons name='share-variant' size={22} color={getColor(mutedColors)} />
+          </TouchableOpacity>
+          <View className='items-center justify-center' style={{ minHeight: 224 }}>
+            {imageUrl ? (
+              // White backing keeps product shots (white backgrounds) from clashing in dark mode
+              <View className='h-56 w-56 items-center justify-center bg-white rounded-3xl' style={heroShadow}>
+                <Image
+                  style={{ height: 184, width: 184 }}
+                  contentFit='contain'
+                  transition={150}
+                  source={{ uri: imageUrl }}
                 />
+              </View>
+            ) : (
+              <View
+                className={`h-56 w-56 items-center justify-center rounded-3xl ${cardColors.background}`}
+                style={heroShadow}>
+                <MaterialCommunityIcons name='image-off' size={44} color={getColor(mutedColors)} />
               </View>
             )}
           </View>
-        )}
 
-        {collectionItem && (
-          <>
-            <View
-              className='items-center pt-5'
-              accessible
-              accessibilityRole='adjustable'
-              accessibilityLabel={t("detail.yourRating")}
-              accessibilityValue={{
-                min: 0,
-                max: 5,
-                now: currentRating ?? 0,
-                text: currentRating ? t("detail.ratingValue", { count: currentRating }) : t("detail.notRated"),
-              }}
-              // "activate" is declared and ignored: otherwise a double-tap is
-              // replayed as a touch on the middle star, rating it 3
-              accessibilityActions={[
-                { name: "increment" },
-                { name: "decrement" },
-                { name: "activate" },
-              ]}
-              onAccessibilityAction={onRatingAccessibilityAction}>
-              {/* Android would still focus each star inside an accessible parent */}
-              <View
-                className='flex-row'
-                style={{ gap: 6 }}
-                importantForAccessibility='no-hide-descendants'>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <PressableScale key={star} onPress={() => onStarPress(star)} hitSlop={6}>
-                    <MaterialCommunityIcons
-                      name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
-                      size={30}
-                      color={
-                        (currentRating ?? 0) >= star
-                          ? getColor(baseColors)
-                          : getColor(mutedColors)
-                      }
-                    />
-                  </PressableScale>
-                ))}
-              </View>
-            </View>
+          <Card.Title centered>{title}</Card.Title>
+          <Card.Subtitle centered>{brand}</Card.Subtitle>
 
-            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.bottle")}</Text>
-            <SegmentedControl
-              options={BOTTLE_TYPES.map((type) => ({
-                value: type,
-                label: t(`detail.bottleTypes.${type}`),
-                testID: `detail-bottle-${type}`,
-              }))}
-              value={bottleType}
-              onChange={changeBottleType}
-            />
-            <View className='flex-row items-center justify-between pt-3'>
-              <Text className={`${baseTextClass} text-sm`}>{t("detail.runningLow")}</Text>
-              <Switch
-                value={runningLow}
-                onValueChange={changeRunningLow}
-                accessibilityLabel={t("detail.runningLow")}
-                trackColor={{ true: switchTrackColor }}
-              />
-            </View>
-
-            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.tags")}</Text>
-            <TagInput
-              tags={collectionItem.tags}
-              onChange={(tags) => updateFragrance({ id: collectionItem.id }, { tags })}
-            />
-
-            <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.notes")}</Text>
-            <TextField
-              value={notes}
-              onChangeText={setNotes}
-              onEndEditing={saveNotes}
-              onBlur={saveNotes}
-              multiline
-              maxLength={2000}
-              minHeightClass='min-h-[96px]'
-              placeholder={t("detail.notesPlaceholder")}
-            />
-            <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
-              {t("detail.savedAutomatically")}
-            </Text>
-          </>
-        )}
-
-        {fragranceId && user && <FragranceVoting userId={user.id} fragranceId={fragranceId} />}
-
-        {/* Only catalog-linked rows have a fragranceId to report against — a
-            manual add has nothing in the shared catalog to flag */}
-        {fragranceId && (
-          <TouchableOpacity
-            className='flex-row items-center justify-center pt-8'
-            hitSlop={8}
-            accessibilityRole='button'
-            accessibilityLabel={t("detail.reportListing")}
-            onPress={() =>
-              router.push({
-                pathname: "/report-fragrance",
-                params: {
-                  fragranceId,
-                  name,
-                  ...(imageUrl ? { imageUrl } : {}),
+          {collectionItem ? (
+            <StatTile
+              className='mt-5'
+              items={[
+                { value: timesWorn, label: t("detail.timesWorn") },
+                {
+                  value: lastWorn
+                    ? formatRelativeDay(lastWorn).replace(/^./, (c) => c.toUpperCase())
+                    : t("detail.never"),
+                  label: t("detail.lastWorn"),
                 },
-              })
-            }>
-            <MaterialCommunityIcons name='flag-outline' size={15} color={getColor(mutedColors)} />
-            <Text className={`${mutedTextClass} text-xs pl-1.5`}>{t("detail.reportListing")}</Text>
-          </TouchableOpacity>
-        )}
-      </ScrollView>
+                ...(community?.avg != null && community.count
+                  ? [
+                      {
+                        value: `★ ${community.avg.toFixed(1)}`,
+                        label: t("detail.ratingCount", { count: community.count }),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          ) : (
+            <Card.WearInfoText
+              timesWorn={timesWorn}
+              lastWorn={lastWorn}
+              centered
+              avgRating={community?.avg}
+              ratingCount={community?.count}
+            />
+          )}
 
-      <ShareSheetModal
-        visible={shareVisible}
-        title={t("share.sheetTitleFragrance")}
-        message={shareMessage}
-        toggles={shareToggles}
-        onClose={() => setShareVisible(false)}
-      />
+          {!collectionItem && fragranceId && (
+            <View className='flex-row pt-5' style={{ gap: 10 }}>
+              <View className='flex-1'>
+                <Button
+                  fullWidth
+                  label={ownedCatalogRow ? t("wishlist.inCollection") : t("wishlist.addToCollection")}
+                  disabled={ownedCatalogRow}
+                  loading={adding}
+                  onPress={addToCollection}
+                  testID='detail-add-button'
+                />
+              </View>
+              {!ownedCatalogRow && (
+                <View className='flex-1'>
+                  <Button
+                    fullWidth
+                    variant='secondary'
+                    tone={onWishlist ? "accent" : "base"}
+                    label={onWishlist ? t("wishlist.onWishlist") : t("wishlist.wantToTry")}
+                    onPress={toggleWishlist}
+                    testID='detail-wishlist-button'
+                  />
+                </View>
+              )}
+            </View>
+          )}
+
+          {collectionItem && (
+            <>
+              <View
+                className='items-center pt-5'
+                accessible
+                accessibilityRole='adjustable'
+                accessibilityLabel={t("detail.yourRating")}
+                accessibilityValue={{
+                  min: 0,
+                  max: 5,
+                  now: currentRating ?? 0,
+                  text: currentRating ? t("detail.ratingValue", { count: currentRating }) : t("detail.notRated"),
+                }}
+                // "activate" is declared and ignored: otherwise a double-tap is
+                // replayed as a touch on the middle star, rating it 3
+                accessibilityActions={[
+                  { name: "increment" },
+                  { name: "decrement" },
+                  { name: "activate" },
+                ]}
+                onAccessibilityAction={onRatingAccessibilityAction}>
+                {/* Android would still focus each star inside an accessible parent */}
+                <View
+                  className='flex-row'
+                  style={{ gap: 6 }}
+                  importantForAccessibility='no-hide-descendants'>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <PressableScale key={star} onPress={() => onStarPress(star)} hitSlop={6}>
+                      <MaterialCommunityIcons
+                        name={(currentRating ?? 0) >= star ? "star" : "star-outline"}
+                        size={30}
+                        color={
+                          (currentRating ?? 0) >= star
+                            ? getColor(baseColors)
+                            : getColor(mutedColors)
+                        }
+                      />
+                    </PressableScale>
+                  ))}
+                </View>
+              </View>
+
+              <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.bottle")}</Text>
+              <SegmentedControl
+                options={BOTTLE_TYPES.map((type) => ({
+                  value: type,
+                  label: t(`detail.bottleTypes.${type}`),
+                  testID: `detail-bottle-${type}`,
+                }))}
+                value={bottleType}
+                onChange={changeBottleType}
+              />
+              <View className='flex-row items-center justify-between pt-3'>
+                <Text className={`${baseTextClass} text-sm`}>{t("detail.runningLow")}</Text>
+                <Switch
+                  value={runningLow}
+                  onValueChange={changeRunningLow}
+                  accessibilityLabel={t("detail.runningLow")}
+                  trackColor={{ true: switchTrackColor }}
+                />
+              </View>
+
+              <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.tags")}</Text>
+              <TagInput
+                tags={collectionItem.tags}
+                onChange={(tags) => updateFragrance({ id: collectionItem.id }, { tags })}
+              />
+
+              <Text className={`${baseTextClass} text-sm font-semibold pt-6 pb-2`}>{t("detail.notes")}</Text>
+              <TextField
+                value={notes}
+                onChangeText={setNotes}
+                onEndEditing={saveNotes}
+                onBlur={saveNotes}
+                multiline
+                maxLength={2000}
+                minHeightClass='min-h-[96px]'
+                placeholder={t("detail.notesPlaceholder")}
+              />
+              <Text className={`${mutedTextClass} text-xs pt-1 text-right`}>
+                {t("detail.savedAutomatically")}
+              </Text>
+            </>
+          )}
+
+          {fragranceId && user && <FragranceVoting userId={user.id} fragranceId={fragranceId} />}
+
+          {/* Only catalog-linked rows have a fragranceId to report against — a
+              manual add has nothing in the shared catalog to flag */}
+          {fragranceId && (
+            <TouchableOpacity
+              className='flex-row items-center justify-center pt-8'
+              hitSlop={8}
+              accessibilityRole='button'
+              accessibilityLabel={t("detail.reportListing")}
+              onPress={() =>
+                router.push({
+                  pathname: "/report-fragrance",
+                  params: {
+                    fragranceId,
+                    name,
+                    ...(imageUrl ? { imageUrl } : {}),
+                  },
+                })
+              }>
+              <MaterialCommunityIcons name='flag-outline' size={15} color={getColor(mutedColors)} />
+              <Text className={`${mutedTextClass} text-xs pl-1.5`}>{t("detail.reportListing")}</Text>
+            </TouchableOpacity>
+          )}
+
+          <ShareSheetModal
+            visible={shareVisible}
+            title={t("share.sheetTitleFragrance")}
+            message={shareMessage}
+            toggles={shareToggles}
+            onClose={() => setShareVisible(false)}
+          />
+        </ScrollView>
+      </View>
     </View>
   )
 }

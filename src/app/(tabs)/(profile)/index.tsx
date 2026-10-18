@@ -13,7 +13,6 @@ import {
   headerPhotoUrl,
   type HeaderPhotoSource,
 } from "@/lib/profile-header-photo"
-import { useOnboarding } from "@/lib/utils/use-onboarding"
 import { purchasesEnabled, presentPaywall, PAYWALL_RESULT } from "@/lib/purchases"
 import { FREE_COLLECTION_LIMIT } from "@/lib/entitlements"
 import { isWornToday } from "@/lib/utils/worn-today"
@@ -24,6 +23,7 @@ import useAuth from "@/contexts/auth-context"
 import useLocale from "@/contexts/locale-context"
 import { reportError } from "@/lib/sentry"
 import useGamification from "@/lib/utils/use-gamification"
+import { useTabBottomPadding } from "@/lib/utils/use-tab-bottom-padding"
 import { pickHighlightBadges } from "@/lib/utils/badge-highlights"
 import { useMonthlyRecapPrompt } from "@/lib/utils/use-monthly-recap-prompt"
 import Badge from "@/components/shared/ui/badge"
@@ -44,9 +44,9 @@ const ProfileScreen = () => {
   const { user, userCollection, isPro } = useAuth()
   const { showToast } = useToast()
   const { t, formatDate } = useLocale()
+  const bottomPadding = useTabBottomPadding(48)
   const { data: events } = useWearHistory(user?.id)
   const { data: wishlist } = useWishlist(user?.id)
-  const { allDone: onboardingDone, resume: resumeOnboarding } = useOnboarding()
   // Once-per-month "your recap is ready" toast — fires at most once per
   // calendar month, see use-monthly-recap-prompt.ts for the AsyncStorage marker.
   useMonthlyRecapPrompt()
@@ -197,9 +197,11 @@ const ProfileScreen = () => {
   ]
 
   return (
+    <View className={`flex-1 ${modalColors.background}`}>
     <ScrollView
-      className={`flex-1 ${modalColors.background}`}
-      contentContainerClassName='px-5 pt-8 pb-12 items-center'
+      contentInsetAdjustmentBehavior='automatic'
+      contentContainerClassName='px-5 pt-2 items-center'
+      contentContainerStyle={{ paddingBottom: bottomPadding }}
       showsVerticalScrollIndicator={false}>
       <ProfileHero
         headerImageUrl={headerUrl}
@@ -283,18 +285,6 @@ const ProfileScreen = () => {
         </Text>
       )}
 
-      {!onboardingDone && (
-        <Row
-          icon='rocket-launch-outline'
-          className='mt-6'
-          label={t("profile.gettingStartedGuide")}
-          onPress={() => {
-            resumeOnboarding()
-            router.navigate("/(tabs)/(collection)")
-          }}
-        />
-      )}
-
       <WearHeatmap events={events ?? []} className='mt-6' />
 
       <RowGroup title={t("profile.sectionActivity")} className='mt-8'>
@@ -342,6 +332,7 @@ const ProfileScreen = () => {
         />
       )}
     </ScrollView>
+    </View>
   )
 }
 

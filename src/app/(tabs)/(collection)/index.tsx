@@ -3,6 +3,7 @@ import { View, Text, RefreshControl, ScrollView } from "react-native"
 import Animated, { LinearTransition } from "react-native-reanimated"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useTabBottomPadding } from "@/lib/utils/use-tab-bottom-padding"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import useAuth from "@/contexts/auth-context"
 import useTheme from "@/contexts/theme-context"
@@ -11,7 +12,6 @@ import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import { tagFacets } from "@/lib/utils/collection-facets"
 import CollectionListItem from "@/components/collection-list-item"
-import OnboardingChecklist from "@/components/onboarding-checklist"
 import EmptyState from "@/components/shared/ui/empty-state"
 import { EmptyCollectionIllustration, NoResultsIllustration } from "@/components/empty-illustrations"
 import FilterChip from "@/components/shared/ui/filter-chip"
@@ -33,6 +33,7 @@ type SortKey = (typeof SORT_OPTIONS)[number]["key"]
 const CollectionScreen = () => {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const bottomPadding = useTabBottomPadding()
   const { visibleSortedCollection, collectionPending, collectionError, refetchCollection } =
     useAuth()
   const { viewColors, accentColors, mutedColors, mutedTextClass, primaryBg, onPrimaryColors } =
@@ -72,17 +73,20 @@ const CollectionScreen = () => {
 
   const goToSearch = () => router.navigate("/(tabs)/(search)")
 
+  // The large-title header is laid over the screen, so everything here lives
+  // inside a scroll view with automatic content insets (a View above the list
+  // would sit hidden behind the title) — the filter controls are the list header.
   if (collectionPending) {
     return (
-      <View className={`flex-1 ${viewColors.background}`}>
+      <ScrollView contentInsetAdjustmentBehavior='automatic' className={`flex-1 ${viewColors.background}`}>
         <SkeletonList />
-      </View>
+      </ScrollView>
     )
   }
 
   if (collectionError) {
     return (
-      <View className={`flex-1 ${viewColors.background}`}>
+      <ScrollView contentInsetAdjustmentBehavior='automatic' className={`flex-1 ${viewColors.background}`}>
         <EmptyState
           icon='cloud-alert'
           title={t("collection.loadErrorTitle")}
@@ -90,13 +94,11 @@ const CollectionScreen = () => {
           actionLabel={t("collection.tryAgain")}
           onAction={() => refetchCollection()}
         />
-      </View>
+      </ScrollView>
     )
   }
 
-  return (
-    <View className={`flex-1 ${viewColors.background}`}>
-      {hasCollection && (
+  const listHeader = hasCollection ? (
         <View className='px-3 pt-3 pb-1'>
           <SearchField
             value={filter}
@@ -107,7 +109,7 @@ const CollectionScreen = () => {
             <Text className={`${mutedTextClass} text-sm`}>
               {t("collection.count", { count: shownCollection.length })}
             </Text>
-                        <NativeMenu
+            <NativeMenu
               title={t("collection.sortTitle")}
               testID='collection-sort-menu'
               items={SORT_OPTIONS.map(({ key, labelKey }) => ({
@@ -145,16 +147,20 @@ const CollectionScreen = () => {
             </ScrollView>
           )}
         </View>
-      )}
+  ) : null
+
+  return (
+    <View className={`flex-1 ${viewColors.background}`}>
       {/* Animated.FlatList: deletes, undo re-inserts, and sort changes slide
           rows into place instead of snapping */}
       <Animated.FlatList
         data={shownCollection}
         itemLayoutAnimation={LinearTransition}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom }}
+        contentInsetAdjustmentBehavior='automatic'
+        contentContainerStyle={{ paddingBottom: bottomPadding }}
+        ListHeaderComponent={listHeader}
         keyboardShouldPersistTaps='handled'
-        ListHeaderComponent={<OnboardingChecklist />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

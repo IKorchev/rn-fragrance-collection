@@ -1,14 +1,13 @@
 import React from "react"
 import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useTabBottomPadding } from "@/lib/utils/use-tab-bottom-padding"
 import useTheme from "@/contexts/theme-context"
 import useLocale from "@/contexts/locale-context"
 import { useExploreFragrances, useFragranceRatings, usePopularBrands, useTopWorn } from "@/lib/queries"
 import { getColor } from "@/lib/utils/colors"
 import { usePullToRefresh } from "@/lib/utils/use-pull-to-refresh"
 import TopListItem from "./top-list-item"
-import OnboardingChecklist from "./onboarding-checklist"
 import Row from "./shared/ui/row"
 import RowGroup from "./shared/ui/row-group"
 
@@ -18,7 +17,7 @@ const TRENDING_COUNT = 5
 // popular brands to browse (tapping one applies the brand filter), and a few
 // random catalog picks with photos. Every section hides itself when empty.
 const SearchBrowse = ({ onPickBrand }: { onPickBrand: (brand: string) => void }) => {
-  const insets = useSafeAreaInsets()
+  const bottomPadding = useTabBottomPadding(60)
   const { mutedTextClass, mutedColors, accentColors } = useTheme()
   const { t } = useLocale()
 
@@ -54,8 +53,10 @@ const SearchBrowse = ({ onPickBrand }: { onPickBrand: (brand: string) => void })
 
   return (
     <ScrollView
+      contentInsetAdjustmentBehavior='automatic'
       keyboardShouldPersistTaps='handled'
-      contentContainerStyle={{ paddingBottom: insets.bottom + 60 }}
+      keyboardDismissMode='on-drag'
+      contentContainerStyle={{ paddingBottom: bottomPadding }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -64,10 +65,6 @@ const SearchBrowse = ({ onPickBrand }: { onPickBrand: (brand: string) => void })
           colors={[getColor(accentColors)]}
         />
       }>
-      {/* Where a brand-new user goes to add their first bottle, so the
-          checklist lives here rather than only on the Collection tab */}
-      <OnboardingChecklist />
-
       {trending.length > 0 && (
         <>
           {sectionTitle(weekHasData ? t("search.browse.trendingWeek") : t("search.browse.trendingAll"))}

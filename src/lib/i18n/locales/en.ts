@@ -168,19 +168,6 @@ const en: Dictionary = {
     adding: "Adding…",
   },
 
-  onboarding: {
-    title: "Getting started",
-    skip: "Skip",
-    skipLabel: "Skip getting started guide",
-    stepDone: "{{label}}, done",
-    addLabel: "Add your first fragrance",
-    addDescription: "Search the catalog, or add one by hand if we're missing it.",
-    wearLabel: "Log your first wear",
-    wearDescription: "Tap Wear next time you spritz something on.",
-    pickerLabel: "Try the picker",
-    pickerDescription: "Can't decide? Let the picker do the sniffing for you.",
-  },
-
   tags: {
     add: "Add tag",
     removeLabel: "Remove tag {{tag}}",
@@ -442,7 +429,6 @@ const en: Dictionary = {
     sectionPreferences: "Preferences",
     sectionAccount: "Account",
     freeCollectionLimit: "{{count}}/{{limit}} in your free collection",
-    gettingStartedGuide: "Getting started guide",
     exportData: "Export your data",
     appearance: "Appearance",
     appearanceSystem: "Match system",

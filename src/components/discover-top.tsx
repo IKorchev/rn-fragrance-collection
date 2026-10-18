@@ -1,6 +1,6 @@
 import React, { useState } from "react"
-import { View, FlatList, Text, RefreshControl } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { View, FlatList, Text, RefreshControl, ScrollView } from "react-native"
+import { useTabBottomPadding } from "@/lib/utils/use-tab-bottom-padding"
 import {
   useTopWorn,
   useFragranceRatings,
@@ -29,8 +29,11 @@ const SECTIONS = [
 // Discover's "Top" view: both community rankings — most-worn fragrances and
 // top collectors — picked from one dropdown, with the period dropdown beside it
 // for the fragrances ranking only.
-const DiscoverTop = () => {
-  const insets = useSafeAreaInsets()
+// `header` (Discover's segmented control) plus this view's own menus render at
+// the top of whichever state is showing, inside the scroll view, so they clear
+// the large title
+const DiscoverTop = ({ header }: { header?: React.ReactNode }) => {
+  const bottomPadding = useTabBottomPadding(60)
   const [section, setSection] = useState<TopSection>("fragrances")
   const [period, setPeriod] = useState<WearPeriod>("week")
   const { data, isLoading, error, refetch } = useTopWorn(period)
@@ -57,10 +60,11 @@ const DiscoverTop = () => {
   )
   // NativeTabs' bar floats over content — pad the scroll end so the last row
   // clears it (~49pt bar + home-indicator inset)
-  const listBottomPadding = { paddingBottom: insets.bottom + 60 }
+  const listBottomPadding = { paddingBottom: bottomPadding }
 
-  return (
-    <View className={`${viewColors.background} flex-1`}>
+  const listHeader = (
+    <>
+      {header}
       <View className='flex-row items-center justify-between px-4 pt-3 pb-2'>
         <NativeMenu
           title={t("top.sectionTitle")}
@@ -94,22 +98,38 @@ const DiscoverTop = () => {
           </NativeMenu>
         )}
       </View>
+    </>
+  )
 
+  // Loading / error states: same header, in a plain inset-adjusted scroll view
+  const statusView = (content: React.ReactNode) => (
+    <ScrollView contentInsetAdjustmentBehavior='automatic'>
+      {listHeader}
+      {content}
+    </ScrollView>
+  )
+
+  return (
+    <View className={`${viewColors.background} flex-1`}>
       {section === "fragrances" ? (
         <>
           {isLoading ? (
-            <SkeletonList />
+            statusView(<SkeletonList />)
           ) : error ? (
-            <EmptyState
-              icon='cloud-alert'
-              title={t("top.errorTitle")}
-              message={t("collection.loadErrorMessage")}
-              actionLabel={t("collection.tryAgain")}
-              onAction={() => refetch()}
-            />
+            statusView(
+              <EmptyState
+                icon='cloud-alert'
+                title={t("top.errorTitle")}
+                message={t("collection.loadErrorMessage")}
+                actionLabel={t("collection.tryAgain")}
+                onAction={() => refetch()}
+              />
+            )
           ) : (
             <FlatList
               data={data ?? []}
+              contentInsetAdjustmentBehavior='automatic'
+              ListHeaderComponent={listHeader}
               contentContainerStyle={listBottomPadding}
               refreshControl={refreshControl}
               keyExtractor={(item) => `${item.place}-${item.name}`}
@@ -133,23 +153,30 @@ const DiscoverTop = () => {
           )}
         </>
       ) : collectorsLoading ? (
-        <SkeletonList />
+        statusView(<SkeletonList />)
       ) : collectorsError ? (
-        <EmptyState
-          icon='cloud-alert'
-          title={t("collectors.errorTitle")}
-          message={t("collectors.errorMessage")}
-          actionLabel={t("collectors.errorAction")}
-          onAction={() => refetchCollectors()}
-        />
+        statusView(
+          <EmptyState
+            icon='cloud-alert'
+            title={t("collectors.errorTitle")}
+            message={t("collectors.errorMessage")}
+            actionLabel={t("collectors.errorAction")}
+            onAction={() => refetchCollectors()}
+          />
+        )
       ) : (
         <FlatList
           data={collectors ?? []}
-          className='px-4 pt-1'
+          contentInsetAdjustmentBehavior='automatic'
+          ListHeaderComponent={<View className='pb-1'>{listHeader}</View>}
           contentContainerStyle={listBottomPadding}
           refreshControl={refreshControl}
           keyExtractor={(item) => item.user_id}
-          renderItem={({ item, index }) => <CollectorListItem profile={item} place={index + 1} />}
+          renderItem={({ item, index }) => (
+            <View className='px-4'>
+              <CollectorListItem profile={item} place={index + 1} />
+            </View>
+          )}
           ListEmptyComponent={
             <EmptyState
               icon='account-group-outline'

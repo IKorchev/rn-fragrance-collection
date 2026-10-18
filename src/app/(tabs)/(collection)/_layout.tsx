@@ -9,7 +9,7 @@ export default function CollectionLayout() {
 
   return (
     <Stack screenOptions={headerOptions}>
-      <Stack.Screen name="index" options={{ title: t("collection.title"), headerLargeTitle: true }} />
+      <Stack.Screen name="index" options={{ title: t("collection.title") }} />
     </Stack>
   )
 }
